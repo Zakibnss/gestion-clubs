@@ -1940,6 +1940,16 @@
         }
 
         async function generateCard(member, backgroundUrl) {
+  // Créer un conteneur principal (carte + bouton)
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText = `
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  `;
+
+  // === CARTE ===
   const cardDiv = document.createElement("div");
   cardDiv.style.cssText = `
     width: 350px;
@@ -1960,9 +1970,8 @@
     box-shadow: 0 8px 16px rgba(0,0,0,0.3);
   `;
 
-  // === PHOTO DU MEMBRE ===
-  let photo; // Déclaration avant tout usage
-
+  // === PHOTO ===
+  let photo;
   if (member.photo_url) {
     photo = document.createElement("img");
     photo.crossOrigin = "anonymous";
@@ -1973,7 +1982,7 @@
       const reader = new FileReader();
       await new Promise((resolve) => {
         reader.onloadend = () => {
-          photo.src = reader.result; // assignation base64
+          photo.src = reader.result;
           resolve();
         };
         reader.readAsDataURL(blob);
@@ -1991,7 +2000,6 @@
       border: 3px solid white;
     `;
   } else {
-    // Icône par défaut si pas de photo
     photo = document.createElement("div");
     photo.style.cssText = `
       width: 150px;
@@ -2011,10 +2019,9 @@
       </svg>
     `;
   }
-
   cardDiv.appendChild(photo);
 
-  // === INFORMATIONS ===
+  // === INFOS ===
   const infoDiv = document.createElement("div");
   infoDiv.style.cssText = `
     display: flex;
@@ -2053,15 +2060,17 @@
   new QRCode(qrWrapper, { text: member.id, width: 80, height: 80 });
   cardDiv.appendChild(qrDiv);
 
-  // === BOUTON EXPORT PNG ===
+  // === BOUTON EN DEHORS DE LA CARTE ===
   const exportBtn = document.createElement("button");
   exportBtn.textContent = "💾 Télécharger PNG";
   exportBtn.className = "btn btn-info btn-sm";
-  exportBtn.style.marginTop = "10px";
   exportBtn.onclick = () => exportCardAsPNG(cardDiv, member);
-  cardDiv.appendChild(exportBtn);
 
-  return cardDiv;
+  // Assembler le tout
+  wrapper.appendChild(cardDiv);
+  wrapper.appendChild(exportBtn);
+
+  return wrapper;
 }
 
 
