@@ -1878,34 +1878,6 @@
                 console.error('Error loading members for cards:', error);
             }
         }
-
-        async function generateSelectedCards() {
-            const selected = Array.from(document.querySelectorAll('input[name="cardMember"]:checked')).map(cb => cb.value);
-            if (selected.length === 0) {
-                alert('Sélectionnez au moins un adhérent');
-                return;
-            }
-
-            // Get uploaded background image file
-            const backgroundInput = document.getElementById('cardBackgroundImage');
-            if (!backgroundInput || backgroundInput.files.length === 0) {
-                alert('Veuillez importer une image de fond pour la carte');
-                return;
-            }
-            const backgroundFile = backgroundInput.files[0];
-            const backgroundUrl = URL.createObjectURL(backgroundFile);
-
-            const { data: members } = await supabase.from('members').select('*').in('id', selected);
-            const preview = document.getElementById('cardsPreview');
-
-            preview.innerHTML = '<h3>Cartes générées</h3>';
-
-            for (const member of members) {
-                const card = await generateCard(member, backgroundUrl);
-                preview.appendChild(card);
-            }
-        }
-
         async function generateCard(member, backgroundUrl) {
   const cardDiv = document.createElement('div');
   cardDiv.style.cssText = `
@@ -1988,23 +1960,6 @@
   return container;
 }
 
-            `;
-
-            cardDiv.appendChild(qrDiv);
-
-            // Export button
-            const exportBtn = document.createElement('button');
-            exportBtn.textContent = '💾 Télécharger PNG';
-            exportBtn.className = 'btn btn-info btn-sm';
-            exportBtn.style.marginTop = '10px';
-            exportBtn.onclick = () => exportCardAsPNG(cardDiv, member.id);
-
-            const container = document.createElement('div');
-            container.appendChild(cardDiv);
-            container.appendChild(exportBtn);
-
-            return container;
-        }
 
         async function exportCardAsPNG(cardElement, memberId) {
             const canvas = await html2canvas(cardElement);
