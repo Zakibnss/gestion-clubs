@@ -797,8 +797,9 @@
                             </div>
                         </div>
                         <div class="form-group">
-                            <label>URL du logo</label>
-                            <input type="url" id="prefLogo" class="form-control" placeholder="https://...">
+                            <label>Uploader un logo</label>
+                            <input type="file" id="prefLogoUpload" class="form-control" accept="image/*">
+                            <small class="form-text text-muted">Veuillez sélectionner une image à utiliser comme logo du club.</small>
                         </div>
                         <button type="submit" class="btn btn-success">💾 Enregistrer les modifications</button>
                     </form>
@@ -867,6 +868,11 @@
                                 <label>Date de début *</label>
                                 <input type="date" id="memberStartDate" class="form-control" required>
                             </div>
+                            <div class="form-group">
+                                <label>Numéro téléphone<label>
+                                <input type="text" id="memberPhone" class="form-control" required>
+                              </div>
+                              
                         </div>
                         <button type="submit" class="btn btn-success">💾 Ajouter l'adhérent</button>
                     </form>
@@ -1571,10 +1577,7 @@
         // EXCEL IMPORT/EXPORT
         // ============================================
         function downloadTemplate() {
-            const template = [
-                ['ID', 'Club_ID', 'Nom', 'Prénom', 'Date_Naissance', 'Groupe_Sanguin', 'Abonnement', 'Date_Début'],
-                ['KYO001', currentClub.id, 'BENALI', 'Ahmed', '1990-05-15', 'A+', 'monthly', '2024-01-01']
-            ];
+            const template = ["ID", "Nom", "Prénom", "DateNaissance", "GroupeSanguin", "NuméroTéléphone", "Abonnement", "DateDébut"];
 
             const wb = XLSX.utils.book_new();
             const ws = XLSX.utils.aoa_to_sheet(template);
@@ -1600,15 +1603,16 @@
                     showMessage('importMessage', `Import de ${rows.length} adhérents...`, 'info');
 
                     const members = rows.map(row => ({
-                        id: row.ID,
-                        club_id: row.Club_ID || currentClub.id,
-                        last_name: row.Nom,
-                        first_name: row.Prénom,
-                        dob: row.Date_Naissance,
-                        blood_type: row.Groupe_Sanguin,
-                        subscription: row.Abonnement,
-                        start_date: row.Date_Début
-                    }));
+  id: row.ID,
+  clubid: currentClub.id,
+  lastname: row.Nom,
+  firstname: row.Prénom,
+  dob: row.DateNaissance,
+  bloodtype: row.GroupeSanguin,
+  subscription: row.Abonnement,
+  startdate: row.DateDébut,
+  phone: row.NuméroTéléphone // à ajouter
+}));
 
                     const { error } = await supabase.from('members').insert(members);
                     if (error) throw error;
@@ -1921,7 +1925,7 @@
 
             // Generate QR code
             const qrDiv = document.createElement('div');
-            qrDiv.style.cssText = 'position: absolute; top: 20px; right: 20px; background: white; padding: 5px; border-radius: 5px;';
+            qrDiv.style.cssText = 'position: absolute; bottom: 20px; left: 20px; background: white; padding: 5px; border-radius: 5px;';
             new QRCode(qrDiv, {
                 text: member.id,
                 width: 60,
@@ -1944,6 +1948,12 @@
                     <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">${currentClub.name}</p>
                     <p style="margin: 0; font-size: 0.75rem; opacity: 0.7;">Groupe: ${member.blood_type || 'N/A'}</p>
                 </div>
+                 </div>
+    ${member.photourl
+      ? `<img src="${member.photourl}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid white;" />`
+      : `<div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 3px solid white;"></div>`
+    }
+  </div>
             `;
 
             cardDiv.appendChild(qrDiv);
