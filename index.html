@@ -906,8 +906,10 @@
                             <button class="btn btn-info" onclick="downloadTemplate()">📄 Télécharger Template Excel</button>
                             <script>
                                 function downloadTemplate() {
+                                    // Provide one example row (empty) after header to ensure aoa_to_sheet sees an array of arrays
                                     const template = [
-                                        ["ID", "Nom", "Prénom", "DateNaissance", "GroupeSanguin", "NuméroTéléphone", "Abonnement", "DateDébut"]
+                                        ["ID", "Nom", "Prénom", "DateNaissance", "GroupeSanguin", "NuméroTéléphone", "Abonnement", "DateDébut"],
+                                        ["", "", "", "", "", "", "", ""]
                                     ];
                                     const wb = XLSX.utils.book_new();
                                     const ws = XLSX.utils.aoa_to_sheet(template);
