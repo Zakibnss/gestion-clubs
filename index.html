@@ -1907,53 +1907,87 @@
         }
 
         async function generateCard(member, backgroundUrl) {
-            const cardDiv = document.createElement('div');
-            cardDiv.style.cssText = `
-                width: 350px;
-                height: 220px;
-                background-image: url('${backgroundUrl}');
-                background-size: cover;
-                background-position: center;
-                color: white;
-                border-radius: 15px;
-                padding: 20px;
-                margin: 10px;
-                display: inline-block;
-                position: relative;
-                box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-            `;
+  const cardDiv = document.createElement('div');
+  cardDiv.style.cssText = `
+    width: 350px;
+    height: 450px;
+    background-image: url('${backgroundUrl}');
+    background-size: cover;
+    background-position: center;
+    color: white;
+    border-radius: 15px;
+    padding: 20px;
+    margin: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    text-align: center;
+    position: relative;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+  `;
 
-            // Generate QR code
-            const qrDiv = document.createElement('div');
-            qrDiv.style.cssText = 'position: absolute; bottom: 20px; left: 20px; background: white; padding: 5px; border-radius: 5px;';
-            new QRCode(qrDiv, {
-                text: member.id,
-                width: 60,
-                height: 60
-            });
+  // Photo (rectangulaire)
+  const photo = document.createElement('img');
+  photo.src = member.photo_url || 'https://via.placeholder.com/200x150?text=No+Photo';
+  photo.alt = member.first_name;
+  photo.style.cssText = `
+    width: 200px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 0;
+    margin-bottom: 15px;
+  `;
+  cardDiv.appendChild(photo);
 
-            cardDiv.innerHTML = `
-                <div style="display: flex; gap: 15px;">
-                    ${member.photo_url ? 
-                        `<img src="${member.photo_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid white;">` : 
-                        `<div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 3px solid white;">👤</div>`
-                    }
-                    <div>
-                        <h3 style="margin: 0; font-size: 1.2rem;">${member.first_name} ${member.last_name}</h3>
-                        <p style="margin: 5px 0; opacity: 0.9;">ID: ${member.id}</p>
-                        <p style="margin: 5px 0; opacity: 0.9;">Abonnement: ${member.subscription}</p>
-                    </div>
-                </div>
-                <div style="position: absolute; bottom: 20px; left: 20px;">
-                    <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">${currentClub.name}</p>
-                    <p style="margin: 0; font-size: 0.75rem; opacity: 0.7;">Groupe: ${member.blood_type || 'N/A'}</p>
-                </div>
-                 </div>
-    ${member.photourl
-      ? `<img src="${member.photourl}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid white;" />`
-      : `<div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 3px solid white;"></div>`
-    }
-  </div>
+  // Informations adhérent
+  const infoDiv = document.createElement('div');
+  infoDiv.style.cssText = `
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.95rem;
+    margin-bottom: 25px;
+  `;
+  infoDiv.innerHTML = `
+    <div><strong>ID:</strong> ${member.id}</div>
+    <div><strong>Nom:</strong> ${member.last_name}</div>
+    <div><strong>Prénom:</strong> ${member.first_name}</div>
+    <div><strong>Date de naissance:</strong> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
+    <div><strong>Groupe sanguin:</strong> ${member.blood_type || 'N/A'}</div>
+  `;
+  cardDiv.appendChild(infoDiv);
+
+  // QR code centré en bas
+  const qrDiv = document.createElement('div');
+  qrDiv.style.cssText = `
+    background: white;
+    padding: 8px;
+    border-radius: 8px;
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+  `;
+  new QRCode(qrDiv, { text: member.id, width: 80, height: 80 });
+  cardDiv.appendChild(qrDiv);
+
+  // Bouton export PNG
+  const exportBtn = document.createElement('button');
+  exportBtn.textContent = '💾 Télécharger PNG';
+  exportBtn.className = 'btn btn-info btn-sm';
+  exportBtn.style.marginTop = '10px';
+  exportBtn.onclick = () => exportCardAsPNG(cardDiv, member.id);
+
+  // Conteneur final
+  const container = document.createElement('div');
+  container.appendChild(cardDiv);
+  container.appendChild(exportBtn);
+
+  return container;
+}
+
             `;
 
             cardDiv.appendChild(qrDiv);
