@@ -1544,7 +1544,7 @@
             try {
                 showMessage('photoMessage', 'Upload en cours...', 'info');
 
-                const fileName = `${selectedMemberForPhoto}_${Date.now()}.${file.name.split('.').pop()}`;
+                const fileName = `public/${selectedMemberForPhoto}_${Date.now()}.jpg`;
                 const { data, error } = await supabase.storage
                     .from('member-photos')
                     .upload(fileName, file);
