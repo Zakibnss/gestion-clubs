@@ -989,12 +989,9 @@
                         <h2 class="card-title">🎫 Génération de Cartes</h2>
                     </div>
                     <div class="form-group">
-                        <label>Choisir un arrière-plan</label>
-                        <select id="cardBackground" class="form-control">
-                            <option value="red">Rouge Kyokushin</option>
-                            <option value="black">Noir</option>
-                            <option value="gradient">Dégradé</option>
-                        </select>
+                        <label>Uploader une image d'arrière-plan</label>
+                        <input type="file" id="cardBackgroundImage" class="form-control" accept="image/*">
+                        <small class="form-text text-muted">Veuillez sélectionner une image à utiliser comme arrière-plan de la carte.</small>
                     </div>
                     <button class="btn btn-primary" onclick="loadMembersForCards()">📋 Charger les adhérents</button>
                     <div id="cardsGrid" class="grid grid-3" style="margin-top: 20px;"></div>
