@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informations Adhérent - Kyokushin</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #c8102e;
+            --secondary-color: #1a1a1a;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --shadow-lg: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #ff3b57;
+            --secondary-color: #2d2d2d;
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --text-primary: #f8f9fa;
+            --text-secondary: #adb5bd;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .card {
+            background: var(--bg-primary);
+            border-radius: 20px;
+            box-shadow: var(--shadow-lg);
+            max-width: 500px;
+            width: 100%;
+            overflow: hidden;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .card-header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .card-header p {
+            opacity: 0.9;
+            font-size: 0.95rem;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .member-photo {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            margin: -80px auto 20px;
+            background: white;
+            border: 5px solid white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+            object-fit: cover;
+        }
+
+        .club-logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            object-fit: cover;
+            margin: 0 auto 20px;
+            display: block;
+            border: 3px solid white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .info-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border-radius: 10px;
+            border-left: 4px solid var(--primary-color);
+        }
+
+        .info-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-top: 5px;
+        }
+
+        .status-active {
+            background: rgba(40, 167, 69, 0.2);
+            color: var(--success-color);
+        }
+
+        .status-expired {
+            background: rgba(220, 53, 69, 0.2);
+            color: var(--danger-color);
+        }
+
+        .loading, .error {
+            text-align: center;
+            padding: 50px;
+            color: var(--text-secondary);
+        }
+
+        .error {
+            color: var(--danger-color);
+        }
+
+        @media (max-width: 600px) {
+            .card {
+                margin: 10px;
+            }
+
+            .card-header h1 {
+                font-size: 1.5rem;
+            }
+
+            .info-value {
+                font-size: 1.1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <div class="card-header">
+            <h1>🥋 Kyokushin Manager</h1>
+            <p>Carte d'Adhérent</p>
+        </div>
+
+        <div class="card-body">
+            <!-- Loading State -->
+            <div id="loadingState" class="loading">
+                <p>⏳ Chargement des informations...</p>
+            </div>
+
+            <!-- Error State -->
+            <div id="errorState" class="error" style="display: none;">
+                <p>❌ Adhérent non trouvé</p>
+                <p style="font-size: 0.9rem; margin-top: 10px;">Veuillez vérifier l'ID de la carte.</p>
+            </div>
+
+            <!-- Member Info -->
+            <div id="memberInfo" style="display: none;">
+                <img id="clubLogo" class="club-logo" alt="Logo du club" style="display: none;">
+                
+                <img id="memberPhoto" class="member-photo" alt="Photo" style="display: none;">
+                <div id="memberPhotoPlaceholder" class="member-photo">👤</div>
+
+                <div class="info-group">
+                    <div class="info-label">ID Membre</div>
+                    <div class="info-value" id="memberId">-</div>
+                </div>
+
+                <div class="info-group">
+                    <div class="info-label">Nom Complet</div>
+                    <div class="info-value" id="memberName">-</div>
+                </div>
+
+                <div class="info-group">
+                    <div class="info-label">Club</div>
+                    <div class="info-value" id="clubName">-</div>
+                </div>
+
+                <div class="info-group">
+                    <div class="info-label">Date de Naissance</div>
+                    <div class="info-value" id="memberDob">-</div>
+                </div>
+
+                <div class="info-group">
+                    <div class="info-label">Groupe Sanguin</div>
+                    <div class="info-value" id="memberBloodType">-</div>
+                </div>
+
+                <div class="info-group">
+                    <div class="info-label">Type d'Abonnement</div>
+                    <div class="info-value" id="memberSubscription">-</div>
+                </div>
+
+                <div class="info-group">
+                    <div class="info-label">Date de Début</div>
+                    <div class="info-value" id="startDate">-</div>
+                </div>
+
+                <div class="info-group">
+                    <div class="info-label">Date de Fin d'Abonnement</div>
+                    <div class="info-value" id="endDate">-</div>
+                </div>
+
+                <div class="info-group" style="text-align: center;">
+                    <div class="info-label">Statut</div>
+                    <div id="statusBadge"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURATION SUPABASE
+        // ⚠️ REMPLACEZ PAR VOS VRAIES CLÉS !
+        // ============================================
+        const SUPABASE_URL = 'https://gmoyoflorwaltuanfswn.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdtb3lvZmxvcndhbHR1YW5mc3duIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxNTc0OTIsImV4cCI6MjA3NzczMzQ5Mn0.Yr0SFLvcPNbvRqNSjzwFdTZkrIz3Z6WZxcIyx8gwjZA';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ============================================
+        // GET MEMBER ID FROM URL
+        // ============================================
+        const urlParams = new URLSearchParams(window.location.search);
+        const memberId = urlParams.get('id');
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function calculateEndDate(startDate, subscriptionType) {
+            if (!startDate) return '-';
+            
+            const start = new Date(startDate);
+            let endDate = new Date(start);
+
+            switch(subscriptionType) {
+                case 'monthly':
+                    endDate.setMonth(endDate.getMonth() + 1);
+                    break;
+                case 'quarterly':
+                    endDate.setMonth(endDate.getMonth() + 3);
+                    break;
+                case 'biannual':
+                    endDate.setMonth(endDate.getMonth() + 6);
+                    break;
+                case 'annual':
+                    endDate.setFullYear(endDate.getFullYear() + 1);
+                    break;
+            }
+
+            return endDate.toISOString().split('T')[0];
+        }
+
+        function isSubscriptionActive(startDate, subscriptionType) {
+            if (!startDate) return false;
+            
+            const endDateStr = calculateEndDate(startDate, subscriptionType);
+            const endDate = new Date(endDateStr);
+            const today = new Date();
+            
+            today.setHours(0, 0, 0, 0);
+            endDate.setHours(0, 0, 0, 0);
+            
+            return today <= endDate;
+        }
+
+        function formatSubscriptionType(type) {
+            const types = {
+                'monthly': 'Mensuel',
+                'quarterly': 'Trimestriel',
+                'biannual': 'Semestriel',
+                'annual': 'Annuel'
+            };
+            return types[type] || type;
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('fr-FR');
+        }
+
+        // ============================================
+        // LOAD MEMBER INFORMATION
+        // ============================================
+        async function loadMemberInfo() {
+            if (!memberId) {
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('errorState').innerHTML = `
+                    <p>❌ Aucun ID fourni</p>
+                    <p style="font-size: 0.9rem; margin-top: 10px;">Veuillez scanner un QR code valide.</p>
+                `;
+                document.getElementById('errorState').style.display = 'block';
+                return;
+            }
+
+            try {
+                // Get member data
+                const { data: member, error: memberError } = await supabase
+                    .from('members')
+                    .select('*')
+                    .eq('id', memberId)
+                    .single();
+
+                if (memberError || !member) {
+                    throw new Error('Member not found');
+                }
+
+                // Get club data
+                const { data: club, error: clubError } = await supabase
+                    .from('clubs')
+                    .select('*')
+                    .eq('id', member.club_id)
+                    .single();
+
+                // Calculate end date and status
+                const endDate = calculateEndDate(member.start_date, member.subscription);
+                const isActive = isSubscriptionActive(member.start_date, member.subscription);
+
+                // Hide loading, show member info
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('memberInfo').style.display = 'block';
+
+                // Display club logo if available
+                if (club && club.logo) {
+                    const logoImg = document.getElementById('clubLogo');
+                    logoImg.src = club.logo;
+                    logoImg.style.display = 'block';
+                }
+
+                // Display member photo if available
+                if (member.photo_url) {
+                    const photoImg = document.getElementById('memberPhoto');
+                    photoImg.src = member.photo_url;
+                    photoImg.style.display = 'block';
+                    document.getElementById('memberPhotoPlaceholder').style.display = 'none';
+                }
+
+                // Fill in member information
+                document.getElementById('memberId').textContent = member.id;
+                document.getElementById('memberName').textContent = `${member.last_name} ${member.first_name}`;
+                document.getElementById('clubName').textContent = club ? club.name : 'N/A';
+                document.getElementById('memberDob').textContent = formatDate(member.dob);
+                document.getElementById('memberBloodType').textContent = member.blood_type || 'Non spécifié';
+                document.getElementById('memberSubscription').textContent = formatSubscriptionType(member.subscription);
+                document.getElementById('startDate').textContent = formatDate(member.start_date);
+                document.getElementById('endDate').textContent = formatDate(endDate);
+
+                // Display status badge
+                const statusBadge = document.getElementById('statusBadge');
+                statusBadge.innerHTML = `
+                    <span class="status-badge ${isActive ? 'status-active' : 'status-expired'}">
+                        ${isActive ? '✅ ACTIF' : '❌ EXPIRÉ'}
+                    </span>
+                `;
+
+            } catch (error) {
+                console.error('Erreur:', error);
+                document.getElementById('loadingState').style.display = 'none';
+                document.getElementById('errorState').style.display = 'block';
+            }
+        }
+
+        // ============================================
+        // LOAD ON PAGE READY
+        // ============================================
+        loadMemberInfo();
+    </script>
+</body>
+</html>

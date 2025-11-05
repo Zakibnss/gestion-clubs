@@ -1,0 +1,1988 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kyokushin Manager Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #c8102e;
+            --secondary-color: #1a1a1a;
+            --accent-color: #ffd700;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e9ecef;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --border-color: #dee2e6;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 8px rgba(0,0,0,0.15);
+            --shadow-lg: 0 8px 16px rgba(0,0,0,0.2);
+            --transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] {
+            --primary-color: #ff3b57;
+            --secondary-color: #2d2d2d;
+            --accent-color: #ffd700;
+            --bg-primary: #1a1a1a;
+            --bg-secondary: #2d2d2d;
+            --bg-tertiary: #3d3d3d;
+            --text-primary: #f8f9fa;
+            --text-secondary: #adb5bd;
+            --border-color: #495057;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 8px rgba(0,0,0,0.4);
+            --shadow-lg: 0 8px 16px rgba(0,0,0,0.5);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: var(--transition);
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header Styles */
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 20px 0;
+            box-shadow: var(--shadow-md);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: white;
+            padding: 5px;
+        }
+
+        .header-title h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .header-title p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .theme-toggle {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            transition: var(--transition);
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255,255,255,0.1);
+            padding: 8px 15px;
+            border-radius: 25px;
+        }
+
+        .btn-logout {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: var(--transition);
+            font-weight: 500;
+        }
+
+        .btn-logout:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        /* Login Page */
+        .login-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            padding: 20px;
+        }
+
+        .login-container {
+            background: var(--bg-primary);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: var(--shadow-lg);
+            max-width: 450px;
+            width: 100%;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .login-logo img {
+            width: 100px;
+            height: 100px;
+            margin-bottom: 15px;
+        }
+
+        .login-logo h2 {
+            color: var(--primary-color);
+            font-size: 2rem;
+            margin-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 1rem;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            transition: var(--transition);
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.1);
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+            width: 100%;
+            padding: 15px;
+        }
+
+        .btn-primary:hover {
+            background: #a50d26;
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-color);
+        }
+
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-info {
+            background: var(--info-color);
+            color: white;
+        }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 0.875rem;
+        }
+
+        /* Navigation Tabs */
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            background: var(--bg-primary);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow-sm);
+            overflow-x: auto;
+        }
+
+        .nav-tab {
+            padding: 12px 20px;
+            background: transparent;
+            border: 2px solid transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+            white-space: nowrap;
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+        .nav-tab:hover {
+            background: var(--bg-secondary);
+        }
+
+        .nav-tab.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        /* Content Section */
+        .content-section {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .card {
+            background: var(--bg-primary);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .grid {
+            display: grid;
+            gap: 20px;
+        }
+
+        .grid-2 {
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        }
+
+        .grid-3 {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        }
+
+        /* Table Styles */
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-primary);
+        }
+
+        thead {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid var(--border-color);
+            transition: var(--transition);
+        }
+
+        tbody tr:hover {
+            background: var(--bg-secondary);
+        }
+
+        /* Member Card */
+        .member-card {
+            background: var(--bg-primary);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            transition: var(--transition);
+        }
+
+        .member-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .member-photo {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            background: var(--bg-tertiary);
+        }
+
+        .member-info h3 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+        }
+
+        .member-details {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Alert Messages */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-success {
+            background: rgba(40, 167, 69, 0.1);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        .alert-danger {
+            background: rgba(220, 53, 69, 0.1);
+            border: 1px solid var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .alert-info {
+            background: rgba(23, 162, 184, 0.1);
+            border: 1px solid var(--info-color);
+            color: var(--info-color);
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: var(--bg-primary);
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideIn 0.3s ease;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 2rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        /* QR Code Display */
+        .qr-display {
+            text-align: center;
+            padding: 20px;
+        }
+
+        #qrcode {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+        }
+
+        /* Scanner */
+        #reader {
+            border-radius: 10px;
+            overflow: hidden;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* Stats Card */
+        .stats-card {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 25px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stats-number {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .stats-label {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .nav-tabs {
+                flex-wrap: wrap;
+            }
+
+            .grid-2, .grid-3 {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                width: 95%;
+                padding: 20px;
+            }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* File Upload */
+        .file-upload {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .file-upload-label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            padding: 15px;
+            background: var(--bg-secondary);
+            border: 2px dashed var(--border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+
+        .file-upload-label:hover {
+            border-color: var(--primary-color);
+            background: var(--bg-tertiary);
+        }
+
+        /* Photo Preview */
+        .photo-preview {
+            width: 150px;
+            height: 150px;
+            border-radius: 10px;
+            object-fit: cover;
+            margin: 10px auto;
+            display: block;
+            border: 3px solid var(--border-color);
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: rgba(40, 167, 69, 0.2);
+            color: var(--success-color);
+        }
+
+        .badge-danger {
+            background: rgba(220, 53, 69, 0.2);
+            color: var(--danger-color);
+        }
+
+        .badge-warning {
+            background: rgba(255, 193, 7, 0.2);
+            color: var(--warning-color);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Login Page -->
+    <div id="loginPage" class="login-page">
+        <div class="login-container">
+            <div class="login-logo">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Kyokushin-kaikan.png" alt="Logo">
+                <h2>Kyokushin Manager Pro</h2>
+                <p>Système de gestion des clubs</p>
+            </div>
+            <form id="loginForm">
+                <div class="form-group">
+                    <label>Nom d'utilisateur</label>
+                    <input type="text" id="loginUsername" class="form-control" placeholder="admin ou username du club" required>
+                </div>
+                <div class="form-group">
+                    <label>Mot de passe</label>
+                    <input type="password" id="loginPassword" class="form-control" placeholder="Entrez votre mot de passe" required>
+                </div>
+                <button type="submit" class="btn btn-primary">🔐 Se connecter</button>
+            </form>
+            <div id="loginMessage" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-content">
+                <div class="logo-section">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/9/97/Kyokushin-kaikan.png" alt="Logo" class="logo">
+                    <div class="header-title">
+                        <h1>Kyokushin Manager Pro</h1>
+                        <p id="clubNameDisplay">Système de gestion</p>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="theme-toggle" id="themeToggle">🌙</button>
+                    <div class="user-info">
+                        <span>👤</span>
+                        <span id="userDisplay">Utilisateur</span>
+                    </div>
+                    <button class="btn-logout" id="logoutBtn">Déconnexion</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="container">
+            <!-- Navigation Tabs -->
+            <div class="nav-tabs" id="navTabs">
+                <!-- Tabs will be generated dynamically -->
+            </div>
+
+            <!-- Dashboard Section (Admin & Club) -->
+            <div id="dashboardSection" class="content-section active">
+                <div class="grid grid-3">
+                    <div class="stats-card">
+                        <div class="stats-number" id="totalMembers">0</div>
+                        <div class="stats-label">👥 Adhérents</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-number" id="totalAttendance">0</div>
+                        <div class="stats-label">✅ Présences ce mois</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-number" id="totalClubs">1</div>
+                        <div class="stats-label">🏢 Clubs</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Manage Clubs Section (Admin Only) -->
+            <div id="manageClubsSection" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🏢 Gestion des Clubs</h2>
+                        <button class="btn btn-primary" id="addClubBtn">+ Ajouter un club</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Nom du club</th>
+                                    <th>Username</th>
+                                    <th>Logo</th>
+                                    <th>Date création</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="clubsList"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Preferences Section (Club Only) -->
+            <div id="preferencesSection" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">⚙️ Préférences du Club</h2>
+                    </div>
+                    <form id="preferencesForm">
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label>Nom du club</label>
+                                <input type="text" id="prefClubName" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Username</label>
+                                <input type="text" id="prefUsername" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label>Nouveau mot de passe (laisser vide pour ne pas changer)</label>
+                                <input type="password" id="prefPassword" class="form-control" placeholder="••••••••">
+                            </div>
+                            <div class="form-group">
+                                <label>Confirmer le mot de passe</label>
+                                <input type="password" id="prefPasswordConfirm" class="form-control" placeholder="••••••••">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>URL du logo</label>
+                            <input type="url" id="prefLogo" class="form-control" placeholder="https://...">
+                        </div>
+                        <button type="submit" class="btn btn-success">💾 Enregistrer les modifications</button>
+                    </form>
+                    <div id="prefMessage" style="margin-top: 15px;"></div>
+                </div>
+            </div>
+
+            <!-- Add Member Section -->
+            <div id="addMemberSection" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">➕ Ajouter un Adhérent</h2>
+                    </div>
+                    <form id="addMemberForm">
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label>ID Adhérent *</label>
+                                <input type="text" id="memberId" class="form-control" placeholder="KYO001" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Club (Admin uniquement)</label>
+                                <select id="memberClub" class="form-control"></select>
+                            </div>
+                        </div>
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label>Nom *</label>
+                                <input type="text" id="memberLastName" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Prénom *</label>
+                                <input type="text" id="memberFirstName" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label>Date de naissance *</label>
+                                <input type="date" id="memberDob" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Groupe sanguin</label>
+                                <select id="memberBloodType" class="form-control">
+                                    <option value="">Sélectionner</option>
+                                    <option value="A+">A+</option>
+                                    <option value="A-">A-</option>
+                                    <option value="B+">B+</option>
+                                    <option value="B-">B-</option>
+                                    <option value="AB+">AB+</option>
+                                    <option value="AB-">AB-</option>
+                                    <option value="O+">O+</option>
+                                    <option value="O-">O-</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label>Type d'abonnement *</label>
+                                <select id="memberSubscription" class="form-control" required>
+                                    <option value="monthly">Mensuel</option>
+                                    <option value="quarterly">Trimestriel</option>
+                                    <option value="biannual">Semestriel</option>
+                                    <option value="annual">Annuel</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Date de début *</label>
+                                <input type="date" id="memberStartDate" class="form-control" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-success">💾 Ajouter l'adhérent</button>
+                    </form>
+                    <div id="addMemberMessage" style="margin-top: 15px;"></div>
+                </div>
+            </div>
+
+            <!-- Members List Section -->
+            <div id="membersListSection" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">👥 Liste des Adhérents</h2>
+                        <button class="btn btn-primary" onclick="loadMembers()">🔄 Actualiser</button>
+                    </div>
+                    <div id="membersGrid" class="grid grid-3"></div>
+                </div>
+            </div>
+
+            <!-- Import/Export Section -->
+            <div id="importExportSection" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📁 Import / Export Excel</h2>
+                    </div>
+                    <div class="grid grid-2">
+                        <div>
+                            <h3>📥 Importer des adhérents</h3>
+                            <p style="margin-bottom: 15px; color: var(--text-secondary);">
+                                Téléchargez le template, remplissez-le et importez-le.
+                            </p>
+                            <button class="btn btn-info" onclick="downloadTemplate()">📄 Télécharger Template Excel</button>
+                            <div class="file-upload" style="margin-top: 15px;">
+                                <input type="file" id="excelFile" accept=".xlsx,.xls">
+                                <label for="excelFile" class="file-upload-label">
+                                    <span>📂</span>
+                                    <span>Choisir un fichier Excel</span>
+                                </label>
+                            </div>
+                            <button class="btn btn-success" onclick="importExcel()" style="margin-top: 15px;">📥 Importer</button>
+                        </div>
+                        <div>
+                            <h3>📤 Exporter les données</h3>
+                            <p style="margin-bottom: 15px; color: var(--text-secondary);">
+                                Exportez la liste complète des adhérents.
+                            </p>
+                            <button class="btn btn-primary" onclick="exportMembers()">📊 Exporter Adhérents</button>
+                            <button class="btn btn-primary" onclick="exportAttendance()" style="margin-top: 10px;">📊 Exporter Présences</button>
+                        </div>
+                    </div>
+                    <div id="importMessage" style="margin-top: 15px;"></div>
+                </div>
+            </div>
+
+            <!-- Scanner Section -->
+            <div id="scannerSection" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📱 Scanner QR Code</h2>
+                    </div>
+                    <div id="reader" style="margin-bottom: 20px;"></div>
+                    <div style="text-align: center;">
+                        <button class="btn btn-primary" id="startScanBtn">▶️ Démarrer le scanner</button>
+                        <button class="btn btn-danger hidden" id="stopScanBtn">⏹️ Arrêter le scanner</button>
+                    </div>
+                    <div id="scanResult" style="margin-top: 20px;"></div>
+                </div>
+            </div>
+
+            <!-- Manual Validation Section -->
+            <div id="validationSection" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">✅ Validation Manuelle</h2>
+                    </div>
+                    <div class="grid grid-2">
+                        <div>
+                            <div class="form-group">
+                                <label>ID Adhérent</label>
+                                <input type="text" id="validateMemberId" class="form-control" placeholder="KYO001">
+                            </div>
+                            <button class="btn btn-success" onclick="validateAttendance()">✅ Valider Présence</button>
+                        </div>
+                    </div>
+                    <div id="validationMessage" style="margin-top: 15px;"></div>
+                </div>
+            </div>
+
+            <!-- Attendance List Section -->
+            <div id="attendanceListSection" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📋 Présences Mensuelles</h2>
+                        <div>
+                            <input type="month" id="attendanceMonth" class="form-control" style="display: inline-block; width: auto;">
+                            <button class="btn btn-primary" onclick="loadMonthlyAttendance()">🔍 Rechercher</button>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Nom</th>
+                                    <th>Prénom</th>
+                                    <th>Mois</th>
+                                    <th>Séances (sur 8)</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="attendanceList"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cards Generation Section -->
+            <div id="cardsSection" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🎫 Génération de Cartes</h2>
+                    </div>
+                    <div class="form-group">
+                        <label>Choisir un arrière-plan</label>
+                        <select id="cardBackground" class="form-control">
+                            <option value="red">Rouge Kyokushin</option>
+                            <option value="black">Noir</option>
+                            <option value="gradient">Dégradé</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="loadMembersForCards()">📋 Charger les adhérents</button>
+                    <div id="cardsGrid" class="grid grid-3" style="margin-top: 20px;"></div>
+                    <div id="cardsPreview" style="margin-top: 20px;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add Club Modal -->
+    <div id="addClubModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>➕ Ajouter un Club</h2>
+                <button class="modal-close" onclick="closeModal('addClubModal')">&times;</button>
+            </div>
+            <form id="addClubForm">
+                <div class="form-group">
+                    <label>Nom du club *</label>
+                    <input type="text" id="clubName" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Username *</label>
+                    <input type="text" id="clubUsername" class="form-control" placeholder="ex: flame_club" required>
+                </div>
+                <div class="form-group">
+                    <label>Mot de passe *</label>
+                    <input type="password" id="clubPassword" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>URL du logo</label>
+                    <input type="url" id="clubLogo" class="form-control" placeholder="https://...">
+                </div>
+                <button type="submit" class="btn btn-success">💾 Créer le club</button>
+            </form>
+            <div id="addClubMessage" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- Photo Upload Modal -->
+    <div id="photoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📷 Ajouter une Photo</h2>
+                <button class="modal-close" onclick="closeModal('photoModal')">&times;</button>
+            </div>
+            <div style="text-align: center;">
+                <img id="photoPreview" class="photo-preview hidden" alt="Preview">
+                <div class="file-upload">
+                    <input type="file" id="memberPhoto" accept="image/*" onchange="previewPhoto()">
+                    <label for="memberPhoto" class="file-upload-label">
+                        <span>📷</span>
+                        <span>Choisir une photo</span>
+                    </label>
+                </div>
+                <button class="btn btn-success" onclick="uploadPhoto()" style="margin-top: 15px;">💾 Enregistrer</button>
+            </div>
+            <div id="photoMessage" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- Attendance History Modal -->
+    <div id="historyModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>📋 Historique des Présences</h2>
+                <button class="modal-close" onclick="closeModal('historyModal')">&times;</button>
+            </div>
+            <div id="historyContent"></div>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURATION SUPABASE
+        // ============================================
+        const SUPABASE_URL = 'https://gmoyoflorwaltuanfswn.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdtb3lvZmxvcndhbHR1YW5mc3duIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxNTc0OTIsImV4cCI6MjA3NzczMzQ5Mn0.Yr0SFLvcPNbvRqNSjzwFdTZkrIz3Z6WZxcIyx8gwjZA';
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        //fffff
+
+        // ============================================
+        // STATE MANAGEMENT
+        // ============================================
+        let currentUser = null;
+        let currentClub = null;
+        let selectedMemberForPhoto = null;
+        let html5QrCode = null;
+
+        // ============================================
+        // INITIALIZATION
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            checkLogin();
+            setupEventListeners();
+            setupTheme();
+            
+            // Set default month to current month
+            const now = new Date();
+            const currentMonth = now.toISOString().slice(0, 7);
+            document.getElementById('attendanceMonth').value = currentMonth;
+        });
+
+        function setupEventListeners() {
+            // Login
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            
+            // Logout
+            document.getElementById('logoutBtn').addEventListener('click', logout);
+            
+            // Theme toggle
+            document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+            
+            // Add club
+            document.getElementById('addClubBtn')?.addEventListener('click', () => openModal('addClubModal'));
+            document.getElementById('addClubForm').addEventListener('submit', handleAddClub);
+            
+            // Add member
+            document.getElementById('addMemberForm').addEventListener('submit', handleAddMember);
+            
+            // Preferences
+            document.getElementById('preferencesForm').addEventListener('submit', handleUpdatePreferences);
+            
+            // Scanner
+            document.getElementById('startScanBtn').addEventListener('click', startScanner);
+            document.getElementById('stopScanBtn').addEventListener('click', stopScanner);
+        }
+
+        function setupTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+        }
+
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const themeToggle = document.getElementById('themeToggle');
+            themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+
+        // ============================================
+        // AUTHENTICATION
+        // ============================================
+        async function handleLogin(e) {
+            e.preventDefault();
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                showMessage('loginMessage', 'Connexion en cours...', 'info');
+
+                const { data: club, error } = await supabase
+                    .from('clubs')
+                    .select('*')
+                    .eq('username', username)
+                    .eq('password', password)
+                    .single();
+
+                if (error || !club) {
+                    showMessage('loginMessage', 'Identifiants incorrects', 'danger');
+                    return;
+                }
+
+                currentUser = username;
+                currentClub = club;
+                
+                sessionStorage.setItem('currentUser', username);
+                sessionStorage.setItem('currentClub', JSON.stringify(club));
+
+                showMainApp();
+            } catch (error) {
+                console.error('Login error:', error);
+                showMessage('loginMessage', 'Erreur de connexion', 'danger');
+            }
+        }
+
+        function checkLogin() {
+            const savedUser = sessionStorage.getItem('currentUser');
+            const savedClub = sessionStorage.getItem('currentClub');
+
+            if (savedUser && savedClub) {
+                currentUser = savedUser;
+                currentClub = JSON.parse(savedClub);
+                showMainApp();
+            }
+        }
+
+        function showMainApp() {
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            
+            document.getElementById('userDisplay').textContent = currentUser;
+            document.getElementById('clubNameDisplay').textContent = currentClub.name;
+
+            setupNavigation();
+            loadDashboard();
+        }
+
+        function logout() {
+            sessionStorage.clear();
+            currentUser = null;
+            currentClub = null;
+            document.getElementById('loginPage').classList.remove('hidden');
+            document.getElementById('mainApp').classList.add('hidden');
+        }
+
+        // ============================================
+        // NAVIGATION
+        // ============================================
+        function setupNavigation() {
+            const navTabs = document.getElementById('navTabs');
+            const isAdmin = currentUser === 'admin';
+
+            const tabs = [
+                { id: 'dashboard', label: '🏠 Tableau de bord', section: 'dashboardSection' },
+                ...(isAdmin ? [{ id: 'manageClubs', label: '🏢 Gestion Clubs', section: 'manageClubsSection' }] : []),
+                ...(!isAdmin ? [{ id: 'preferences', label: '⚙️ Préférences', section: 'preferencesSection' }] : []),
+                { id: 'addMember', label: '➕ Ajouter Adhérent', section: 'addMemberSection' },
+                { id: 'membersList', label: '👥 Liste Adhérents', section: 'membersListSection' },
+                { id: 'importExport', label: '📁 Import/Export', section: 'importExportSection' },
+                { id: 'scanner', label: '📱 Scanner', section: 'scannerSection' },
+                { id: 'validation', label: '✅ Validation', section: 'validationSection' },
+                { id: 'attendance', label: '📋 Présences', section: 'attendanceListSection' },
+                { id: 'cards', label: '🎫 Cartes', section: 'cardsSection' }
+            ];
+
+            navTabs.innerHTML = tabs.map(tab => 
+                `<button class="nav-tab" data-section="${tab.section}">${tab.label}</button>`
+            ).join('');
+
+            // Set first tab as active
+            navTabs.querySelector('.nav-tab').classList.add('active');
+
+            // Add click handlers
+            navTabs.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.addEventListener('click', function() {
+                    navTabs.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+                    document.getElementById(this.dataset.section).classList.add('active');
+
+                    // Load section-specific data
+                    const section = this.dataset.section;
+                    if (section === 'manageClubsSection') loadClubs();
+                    if (section === 'membersListSection') loadMembers();
+                    if (section === 'preferencesSection') loadPreferences();
+                    if (section === 'addMemberSection') loadClubsForMember();
+                });
+            });
+        }
+
+        // ============================================
+        // DASHBOARD
+        // ============================================
+        async function loadDashboard() {
+            try {
+                // Count members
+                const memberQuery = supabase.from('members').select('id', { count: 'exact' });
+                if (currentUser !== 'admin') {
+                    memberQuery.eq('club_id', currentClub.id);
+                }
+                const { count: memberCount } = await memberQuery;
+                document.getElementById('totalMembers').textContent = memberCount || 0;
+
+                // Count attendance this month
+                const currentMonth = new Date().toISOString().slice(0, 7);
+                const attendanceQuery = supabase.from('attendance').select('id', { count: 'exact' }).eq('month', currentMonth);
+                if (currentUser !== 'admin') {
+                    attendanceQuery.eq('club_id', currentClub.id);
+                }
+                const { count: attendanceCount } = await attendanceQuery;
+                document.getElementById('totalAttendance').textContent = attendanceCount || 0;
+
+                // Count clubs (admin only)
+                if (currentUser === 'admin') {
+                    const { count: clubCount } = await supabase.from('clubs').select('id', { count: 'exact' });
+                    document.getElementById('totalClubs').textContent = clubCount || 0;
+                } else {
+                    document.getElementById('totalClubs').textContent = '1';
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        // ============================================
+        // CLUBS MANAGEMENT (Admin only)
+        // ============================================
+        async function loadClubs() {
+            try {
+                const { data: clubs, error } = await supabase
+                    .from('clubs')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                const clubsList = document.getElementById('clubsList');
+                clubsList.innerHTML = clubs.map(club => `
+                    <tr>
+                        <td>${club.name}</td>
+                        <td><strong>${club.username}</strong></td>
+                        <td>${club.logo ? `<img src="${club.logo}" style="width: 40px; height: 40px; border-radius: 50%;">` : 'N/A'}</td>
+                        <td>${new Date(club.created_at).toLocaleDateString('fr-FR')}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" onclick="deleteClub('${club.id}')">🗑️ Supprimer</button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading clubs:', error);
+            }
+        }
+
+        async function handleAddClub(e) {
+            e.preventDefault();
+            const name = document.getElementById('clubName').value.trim();
+            const username = document.getElementById('clubUsername').value.trim();
+            const password = document.getElementById('clubPassword').value;
+            const logo = document.getElementById('clubLogo').value.trim();
+
+            try {
+                const { data, error } = await supabase
+                    .from('clubs')
+                    .insert([{ name, username, password, logo }])
+                    .select();
+
+                if (error) throw error;
+
+                showMessage('addClubMessage', 'Club créé avec succès!', 'success');
+                document.getElementById('addClubForm').reset();
+                setTimeout(() => {
+                    closeModal('addClubModal');
+                    loadClubs();
+                }, 1500);
+            } catch (error) {
+                console.error('Error adding club:', error);
+                showMessage('addClubMessage', 'Erreur: ' + error.message, 'danger');
+            }
+        }
+
+        async function deleteClub(clubId) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce club ?')) return;
+
+            try {
+                const { error } = await supabase
+                    .from('clubs')
+                    .delete()
+                    .eq('id', clubId);
+
+                if (error) throw error;
+
+                loadClubs();
+            } catch (error) {
+                console.error('Error deleting club:', error);
+                alert('Erreur lors de la suppression');
+            }
+        }
+
+        // ============================================
+        // PREFERENCES (Club only)
+        // ============================================
+        async function loadPreferences() {
+            document.getElementById('prefClubName').value = currentClub.name;
+            document.getElementById('prefUsername').value = currentClub.username;
+            document.getElementById('prefLogo').value = currentClub.logo || '';
+        }
+
+        async function handleUpdatePreferences(e) {
+            e.preventDefault();
+            const name = document.getElementById('prefClubName').value.trim();
+            const username = document.getElementById('prefUsername').value.trim();
+            const password = document.getElementById('prefPassword').value;
+            const passwordConfirm = document.getElementById('prefPasswordConfirm').value;
+            const logo = document.getElementById('prefLogo').value.trim();
+
+            if (password && password !== passwordConfirm) {
+                showMessage('prefMessage', 'Les mots de passe ne correspondent pas', 'danger');
+                return;
+            }
+
+            try {
+                const updateData = { name, username, logo };
+                if (password) {
+                    updateData.password = password;
+                }
+
+                const { data, error } = await supabase
+                    .from('clubs')
+                    .update(updateData)
+                    .eq('id', currentClub.id)
+                    .select();
+
+                if (error) throw error;
+
+                currentClub = data[0];
+                sessionStorage.setItem('currentClub', JSON.stringify(currentClub));
+                document.getElementById('clubNameDisplay').textContent = currentClub.name;
+
+                showMessage('prefMessage', 'Préférences mises à jour avec succès!', 'success');
+                document.getElementById('prefPassword').value = '';
+                document.getElementById('prefPasswordConfirm').value = '';
+            } catch (error) {
+                console.error('Error updating preferences:', error);
+                showMessage('prefMessage', 'Erreur: ' + error.message, 'danger');
+            }
+        }
+
+        // ============================================
+        // MEMBERS MANAGEMENT
+        // ============================================
+        async function loadClubsForMember() {
+            if (currentUser === 'admin') {
+                const { data: clubs } = await supabase.from('clubs').select('id, name').order('name');
+                const select = document.getElementById('memberClub');
+                select.innerHTML = '<option value="">Sélectionner un club</option>' + 
+                    clubs.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+                select.parentElement.style.display = 'block';
+            } else {
+                document.getElementById('memberClub').parentElement.style.display = 'none';
+            }
+        }
+
+        async function handleAddMember(e) {
+            e.preventDefault();
+            
+            const clubId = currentUser === 'admin' ? document.getElementById('memberClub').value : currentClub.id;
+            if (!clubId) {
+                showMessage('addMemberMessage', 'Veuillez sélectionner un club', 'danger');
+                return;
+            }
+
+            const memberData = {
+                id: document.getElementById('memberId').value.trim(),
+                club_id: clubId,
+                last_name: document.getElementById('memberLastName').value.trim(),
+                first_name: document.getElementById('memberFirstName').value.trim(),
+                dob: document.getElementById('memberDob').value,
+                blood_type: document.getElementById('memberBloodType').value,
+                subscription: document.getElementById('memberSubscription').value,
+                start_date: document.getElementById('memberStartDate').value
+            };
+
+            try {
+                const { error } = await supabase.from('members').insert([memberData]);
+                if (error) throw error;
+
+                showMessage('addMemberMessage', 'Adhérent ajouté avec succès!', 'success');
+                document.getElementById('addMemberForm').reset();
+                loadDashboard();
+            } catch (error) {
+                console.error('Error adding member:', error);
+                showMessage('addMemberMessage', 'Erreur: ' + error.message, 'danger');
+            }
+        }
+
+        async function loadMembers() {
+            try {
+                const query = supabase.from('members').select('*').order('created_at', { ascending: false });
+                if (currentUser !== 'admin') {
+                    query.eq('club_id', currentClub.id);
+                }
+                const { data: members, error } = await query;
+                if (error) throw error;
+
+                const grid = document.getElementById('membersGrid');
+                grid.innerHTML = members.map(member => `
+                    <div class="member-card">
+                        ${member.photo_url ? 
+                            `<img src="${member.photo_url}" class="member-photo" alt="${member.first_name}">` : 
+                            `<div class="member-photo" style="display: flex; align-items: center; justify-content: center; background: var(--bg-tertiary); font-size: 3rem;">👤</div>`
+                        }
+                        <div class="member-info">
+                            <h3>${member.last_name} ${member.first_name}</h3>
+                            <div class="member-details">
+                                <div><strong>ID:</strong> ${member.id}</div>
+                                <div><strong>Date naissance:</strong> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
+                                <div><strong>Groupe sanguin:</strong> ${member.blood_type || 'N/A'}</div>
+                                <div><strong>Abonnement:</strong> <span class="badge badge-success">${member.subscription}</span></div>
+                            </div>
+                            <div style="margin-top: 15px; display: flex; gap: 10px;">
+                                <button class="btn btn-info btn-sm" onclick="openPhotoModal('${member.id}')">📷 Photo</button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteMember('${member.id}')">🗑️</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading members:', error);
+            }
+        }
+
+        async function deleteMember(memberId) {
+            if (!confirm('Supprimer cet adhérent ?')) return;
+            try {
+                const { error } = await supabase.from('members').delete().eq('id', memberId);
+                if (error) throw error;
+                loadMembers();
+                loadDashboard();
+            } catch (error) {
+                console.error('Error deleting member:', error);
+            }
+        }
+
+        // ============================================
+        // PHOTO MANAGEMENT
+        // ============================================
+        function openPhotoModal(memberId) {
+            selectedMemberForPhoto = memberId;
+            document.getElementById('photoPreview').classList.add('hidden');
+            document.getElementById('memberPhoto').value = '';
+            openModal('photoModal');
+        }
+
+        function previewPhoto() {
+            const file = document.getElementById('memberPhoto').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const preview = document.getElementById('photoPreview');
+                    preview.src = e.target.result;
+                    preview.classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function uploadPhoto() {
+            const file = document.getElementById('memberPhoto').files[0];
+            if (!file) {
+                showMessage('photoMessage', 'Veuillez sélectionner une photo', 'danger');
+                return;
+            }
+
+            try {
+                showMessage('photoMessage', 'Upload en cours...', 'info');
+
+                const fileName = `${selectedMemberForPhoto}_${Date.now()}.${file.name.split('.').pop()}`;
+                const { data, error } = await supabase.storage
+                    .from('member-photos')
+                    .upload(fileName, file);
+
+                if (error) throw error;
+
+                const { data: urlData } = supabase.storage
+                    .from('member-photos')
+                    .getPublicUrl(fileName);
+
+                const { error: updateError } = await supabase
+                    .from('members')
+                    .update({ photo_url: urlData.publicUrl })
+                    .eq('id', selectedMemberForPhoto);
+
+                if (updateError) throw updateError;
+
+                showMessage('photoMessage', 'Photo ajoutée avec succès!', 'success');
+                setTimeout(() => {
+                    closeModal('photoModal');
+                    loadMembers();
+                }, 1500);
+            } catch (error) {
+                console.error('Error uploading photo:', error);
+                showMessage('photoMessage', 'Erreur: ' + error.message, 'danger');
+            }
+        }
+
+        // ============================================
+        // EXCEL IMPORT/EXPORT
+        // ============================================
+        function downloadTemplate() {
+            const template = [
+                ['ID', 'Club_ID', 'Nom', 'Prénom', 'Date_Naissance', 'Groupe_Sanguin', 'Abonnement', 'Date_Début'],
+                ['KYO001', currentClub.id, 'BENALI', 'Ahmed', '1990-05-15', 'A+', 'monthly', '2024-01-01']
+            ];
+
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.aoa_to_sheet(template);
+            XLSX.utils.book_append_sheet(wb, ws, 'Template');
+            XLSX.writeFile(wb, 'template_adherents.xlsx');
+        }
+
+        async function importExcel() {
+            const file = document.getElementById('excelFile').files[0];
+            if (!file) {
+                showMessage('importMessage', 'Sélectionnez un fichier Excel', 'danger');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const rows = XLSX.utils.sheet_to_json(sheet);
+
+                    showMessage('importMessage', `Import de ${rows.length} adhérents...`, 'info');
+
+                    const members = rows.map(row => ({
+                        id: row.ID,
+                        club_id: row.Club_ID || currentClub.id,
+                        last_name: row.Nom,
+                        first_name: row.Prénom,
+                        dob: row.Date_Naissance,
+                        blood_type: row.Groupe_Sanguin,
+                        subscription: row.Abonnement,
+                        start_date: row.Date_Début
+                    }));
+
+                    const { error } = await supabase.from('members').insert(members);
+                    if (error) throw error;
+
+                    showMessage('importMessage', 'Import réussi!', 'success');
+                    loadDashboard();
+                    loadMembers();
+                } catch (error) {
+                    console.error('Import error:', error);
+                    showMessage('importMessage', 'Erreur: ' + error.message, 'danger');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        async function exportMembers() {
+            try {
+                const query = supabase.from('members').select('*');
+                if (currentUser !== 'admin') query.eq('club_id', currentClub.id);
+                const { data: members } = await query;
+
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(members);
+                XLSX.utils.book_append_sheet(wb, ws, 'Adherents');
+                XLSX.writeFile(wb, 'adherents.xlsx');
+            } catch (error) {
+                console.error('Export error:', error);
+            }
+        }
+
+        async function exportAttendance() {
+            try {
+                const query = supabase.from('attendance').select('*');
+                if (currentUser !== 'admin') query.eq('club_id', currentClub.id);
+                const { data: attendance } = await query;
+
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.json_to_sheet(attendance);
+                XLSX.utils.book_append_sheet(wb, ws, 'Presences');
+                XLSX.writeFile(wb, 'presences.xlsx');
+            } catch (error) {
+                console.error('Export error:', error);
+            }
+        }
+
+        // ============================================
+        // ATTENDANCE VALIDATION
+        // ============================================
+        async function validateAttendance() {
+            const memberId = document.getElementById('validateMemberId').value.trim();
+            if (!memberId) {
+                showMessage('validationMessage', 'Entrez un ID adhérent', 'danger');
+                return;
+            }
+
+            try {
+                // Check if member exists
+                const { data: member, error: memberError } = await supabase
+                    .from('members')
+                    .select('*')
+                    .eq('id', memberId)
+                    .single();
+
+                if (memberError || !member) {
+                    showMessage('validationMessage', 'Adhérent introuvable', 'danger');
+                    return;
+                }
+
+                // Check if already validated today
+                const today = new Date().toISOString().split('T')[0];
+                const { data: existing } = await supabase
+                    .from('attendance')
+                    .select('*')
+                    .eq('member_id', memberId)
+                    .eq('attendance_date', today)
+                    .single();
+
+                if (existing) {
+                    showMessage('validationMessage', '⚠️ Cet adhérent a déjà validé sa présence aujourd\'hui', 'warning');
+                    return;
+                }
+
+                // Validate attendance
+                const now = new Date();
+                const { error } = await supabase.from('attendance').insert([{
+                    member_id: memberId,
+                    club_id: member.club_id,
+                    attendance_date: today,
+                    attendance_time: now.toTimeString().split(' ')[0],
+                    month: now.toISOString().slice(0, 7)
+                }]);
+
+                if (error) throw error;
+
+                showMessage('validationMessage', `✅ Présence validée pour ${member.first_name} ${member.last_name}`, 'success');
+                document.getElementById('validateMemberId').value = '';
+                loadDashboard();
+            } catch (error) {
+                console.error('Validation error:', error);
+                showMessage('validationMessage', 'Erreur: ' + error.message, 'danger');
+            }
+        }
+
+        // ============================================
+        // QR CODE SCANNER
+        // ============================================
+        function startScanner() {
+            html5QrCode = new Html5Qrcode("reader");
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: 250 },
+                onScanSuccess,
+                onScanError
+            ).then(() => {
+                document.getElementById('startScanBtn').classList.add('hidden');
+                document.getElementById('stopScanBtn').classList.remove('hidden');
+            }).catch(err => {
+                console.error('Scanner error:', err);
+                showMessage('scanResult', 'Erreur du scanner: ' + err, 'danger');
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    document.getElementById('startScanBtn').classList.remove('hidden');
+                    document.getElementById('stopScanBtn').classList.add('hidden');
+                });
+            }
+        }
+
+        async function onScanSuccess(decodedText) {
+            document.getElementById('validateMemberId').value = decodedText;
+            await validateAttendance();
+            stopScanner();
+        }
+
+        function onScanError(error) {
+            // Silent errors during scanning
+        }
+
+        // ============================================
+        // ATTENDANCE LIST
+        // ============================================
+        async function loadMonthlyAttendance() {
+            const month = document.getElementById('attendanceMonth').value;
+            if (!month) return;
+
+            try {
+                const query = supabase
+                    .from('attendance')
+                    .select('member_id, month')
+                    .eq('month', month);
+
+                if (currentUser !== 'admin') {
+                    query.eq('club_id', currentClub.id);
+                }
+
+                const { data: attendances } = await query;
+
+                // Group by member
+                const memberStats = {};
+                attendances.forEach(att => {
+                    if (!memberStats[att.member_id]) {
+                        memberStats[att.member_id] = 0;
+                    }
+                    memberStats[att.member_id]++;
+                });
+
+                // Get member details
+                const memberIds = Object.keys(memberStats);
+                const { data: members } = await supabase
+                    .from('members')
+                    .select('*')
+                    .in('id', memberIds);
+
+                const list = document.getElementById('attendanceList');
+                list.innerHTML = members.map(member => {
+                    const count = memberStats[member.id];
+                    const badgeClass = count >= 8 ? 'badge-success' : count >= 6 ? 'badge-warning' : 'badge-danger';
+                    return `
+                        <tr>
+                            <td>${member.id}</td>
+                            <td>${member.last_name}</td>
+                            <td>${member.first_name}</td>
+                            <td>${month}</td>
+                            <td><span class="badge ${badgeClass}">${count} / 8</span></td>
+                            <td>
+                                <button class="btn btn-info btn-sm" onclick="showHistory('${member.id}', '${month}')">📋 Historique</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading attendance:', error);
+            }
+        }
+
+        async function showHistory(memberId, month) {
+            try {
+                const { data: attendances } = await supabase
+                    .from('attendance')
+                    .select('*')
+                    .eq('member_id', memberId)
+                    .eq('month', month)
+                    .order('attendance_date', { ascending: false });
+
+                const content = document.getElementById('historyContent');
+                content.innerHTML = `
+                    <h3>Séances présentes</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Heure</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${attendances.map(att => `
+                                <tr>
+                                    <td>${new Date(att.attendance_date).toLocaleDateString('fr-FR')}</td>
+                                    <td>${att.attendance_time}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `;
+                openModal('historyModal');
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+
+        // ============================================
+        // CARD GENERATION
+        // ============================================
+        async function loadMembersForCards() {
+            try {
+                const query = supabase.from('members').select('*');
+                if (currentUser !== 'admin') {
+                    query.eq('club_id', currentClub.id);
+                }
+                const { data: members } = await query;
+
+                const grid = document.getElementById('cardsGrid');
+                grid.innerHTML = `
+                    <div style="grid-column: 1/-1;">
+                        <button class="btn btn-success" onclick="generateSelectedCards()">🎫 Générer les cartes sélectionnées</button>
+                    </div>
+                    ${members.map(member => `
+                        <div>
+                            <label style="display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--bg-secondary); border-radius: 10px; cursor: pointer;">
+                                <input type="checkbox" value="${member.id}" name="cardMember">
+                                <div>
+                                    <div><strong>${member.last_name} ${member.first_name}</strong></div>
+                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">${member.id}</div>
+                                </div>
+                            </label>
+                        </div>
+                    `).join('')}
+                `;
+            } catch (error) {
+                console.error('Error loading members for cards:', error);
+            }
+        }
+
+        async function generateSelectedCards() {
+            const selected = Array.from(document.querySelectorAll('input[name="cardMember"]:checked')).map(cb => cb.value);
+            if (selected.length === 0) {
+                alert('Sélectionnez au moins un adhérent');
+                return;
+            }
+
+            const { data: members } = await supabase.from('members').select('*').in('id', selected);
+            const background = document.getElementById('cardBackground').value;
+            const preview = document.getElementById('cardsPreview');
+
+            preview.innerHTML = '<h3>Cartes générées</h3>';
+
+            for (const member of members) {
+                const card = await generateCard(member, background);
+                preview.appendChild(card);
+            }
+        }
+
+        async function generateCard(member, background) {
+            const cardDiv = document.createElement('div');
+            cardDiv.style.cssText = `
+                width: 350px;
+                height: 220px;
+                background: ${background === 'red' ? 'linear-gradient(135deg, #c8102e, #8b0000)' : 
+                            background === 'black' ? '#1a1a1a' : 
+                            'linear-gradient(135deg, #c8102e, #1a1a1a)'};
+                color: white;
+                border-radius: 15px;
+                padding: 20px;
+                margin: 10px;
+                display: inline-block;
+                position: relative;
+                box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+            `;
+
+            // Generate QR code
+            const qrDiv = document.createElement('div');
+            qrDiv.style.cssText = 'position: absolute; top: 20px; right: 20px; background: white; padding: 5px; border-radius: 5px;';
+            new QRCode(qrDiv, {
+                text: member.id,
+                width: 60,
+                height: 60
+            });
+
+            cardDiv.innerHTML = `
+                <div style="display: flex; gap: 15px;">
+                    ${member.photo_url ? 
+                        `<img src="${member.photo_url}" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid white;">` : 
+                        `<div style="width: 80px; height: 80px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 2rem; border: 3px solid white;">👤</div>`
+                    }
+                    <div>
+                        <h3 style="margin: 0; font-size: 1.2rem;">${member.first_name} ${member.last_name}</h3>
+                        <p style="margin: 5px 0; opacity: 0.9;">ID: ${member.id}</p>
+                        <p style="margin: 5px 0; opacity: 0.9;">Abonnement: ${member.subscription}</p>
+                    </div>
+                </div>
+                <div style="position: absolute; bottom: 20px; left: 20px;">
+                    <p style="margin: 0; font-size: 0.85rem; opacity: 0.8;">${currentClub.name}</p>
+                    <p style="margin: 0; font-size: 0.75rem; opacity: 0.7;">Groupe: ${member.blood_type || 'N/A'}</p>
+                </div>
+            `;
+
+            cardDiv.appendChild(qrDiv);
+
+            // Export button
+            const exportBtn = document.createElement('button');
+            exportBtn.textContent = '💾 Télécharger PNG';
+            exportBtn.className = 'btn btn-info btn-sm';
+            exportBtn.style.marginTop = '10px';
+            exportBtn.onclick = () => exportCardAsPNG(cardDiv, member.id);
+
+            const container = document.createElement('div');
+            container.appendChild(cardDiv);
+            container.appendChild(exportBtn);
+
+            return container;
+        }
+
+        async function exportCardAsPNG(cardElement, memberId) {
+            const canvas = await html2canvas(cardElement);
+            const link = document.createElement('a');
+            link.download = `carte_${memberId}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        function showMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                element.innerHTML = '';
+            }, 5000);
+        }
+
+        function openModal(modalId) {
+            document.getElementById(modalId).classList.add('active');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+    </script>
+</body>
+</html>
