@@ -1940,7 +1940,7 @@
         }
 
         async function generateCard(member, backgroundUrl) {
-  const cardDiv = document.createElement('div');
+  const cardDiv = document.createElement("div");
   cardDiv.style.cssText = `
     width: 350px;
     height: 450px;
@@ -1960,73 +1960,71 @@
     box-shadow: 0 8px 16px rgba(0,0,0,0.3);
   `;
 
-  // Photo du membre (affiché même à l'export)
+  // === PHOTO DU MEMBRE ===
+  let photo; // Déclaration avant tout usage
+
   if (member.photo_url) {
-    // Crée l'élément image
-    photo = document.createElement('img');
-    photo.crossOrigin = "anonymous"; // au cas où CORS soit actif plus tard
+    photo = document.createElement("img");
+    photo.crossOrigin = "anonymous";
+    photo.alt = member.first_name;
 
     try {
-        // Télécharger et convertir l'image Supabase en base64
-        const blob = await fetch(member.photo_url).then(r => r.blob());
-        const reader = new FileReader();
-        await new Promise((resolve) => {
-            reader.onloadend = () => {
-                photo.src = reader.result; // assigner le base64 à l'image
-                resolve();
-            };
-            reader.readAsDataURL(blob);
-        });
+      const blob = await fetch(member.photo_url).then((r) => r.blob());
+      const reader = new FileReader();
+      await new Promise((resolve) => {
+        reader.onloadend = () => {
+          photo.src = reader.result; // assignation base64
+          resolve();
+        };
+        reader.readAsDataURL(blob);
+      });
     } catch (err) {
-        console.error("Erreur lors du chargement de la photo:", err);
+      console.error("Erreur chargement photo:", err);
     }
-let photo;
-    // style de l'image
-    photo.alt = member.first_name;
+
     photo.style.cssText = `
-        width: 150px;
-        height: 150px;
-        object-fit: cover;
-        border-radius: 50%;
-        margin-bottom: 15px;
-        border: 3px solid white;
+      width: 150px;
+      height: 150px;
+      object-fit: cover;
+      border-radius: 50%;
+      margin-bottom: 15px;
+      border: 3px solid white;
     `;
-} else {
-    // ton code existant pour afficher l’icône par défaut
-    photo = document.createElement('div');
+  } else {
+    // Icône par défaut si pas de photo
+    photo = document.createElement("div");
     photo.style.cssText = `
-        width: 150px;
-        height: 150px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        margin-bottom: 15px;
-        border: 3px solid white;
-        background: #eee;
+      width: 150px;
+      height: 150px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      margin-bottom: 15px;
+      border: 3px solid white;
+      background: #eee;
     `;
     photo.innerHTML = `
-        <svg width="80" height="80" viewBox="0 0 80 80" fill="#bbb" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="40" cy="32" r="18" fill="#bbb"/>
-            <ellipse cx="40" cy="62" rx="24" ry="14" fill="#bbb"/>
-        </svg>
+      <svg width="80" height="80" viewBox="0 0 80 80" fill="#bbb" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="40" cy="32" r="18" fill="#bbb"/>
+        <ellipse cx="40" cy="62" rx="24" ry="14" fill="#bbb"/>
+      </svg>
     `;
-}
+  }
 
   cardDiv.appendChild(photo);
 
-  // Informations adhérent
-  const infoDiv = document.createElement('div');
+  // === INFORMATIONS ===
+  const infoDiv = document.createElement("div");
   infoDiv.style.cssText = `
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 4px;
-    font-size: 0.9rem; /* Reduced font size */
-    font-weight: normal; /* Normal text weight */
+    font-size: 0.9rem;
     margin-bottom: 15px;
-    color: #555; /* Slightly darker gray */
-    font-family: 'Arial', sans-serif; /* Good readable font */
+    color: #555;
+    font-family: 'Arial', sans-serif;
   `;
   infoDiv.innerHTML = `
     <div><strong>ID:</strong> ${member.id}</div>
@@ -2037,8 +2035,8 @@ let photo;
   `;
   cardDiv.appendChild(infoDiv);
 
-  // QR code centré en bas
-  const qrDiv = document.createElement('div');
+  // === QR CODE ===
+  const qrDiv = document.createElement("div");
   qrDiv.style.cssText = `
     background: white;
     padding: 8px;
@@ -2048,28 +2046,24 @@ let photo;
     left: 50%;
     transform: translateX(-50%);
   `;
-  // Correction : QRCode dans un wrapper à chaque fois, sinon pb à l'export
-  const qrWrapper = document.createElement('div');
-  qrWrapper.style.width = '80px';
-  qrWrapper.style.height = '80px';
+  const qrWrapper = document.createElement("div");
+  qrWrapper.style.width = "80px";
+  qrWrapper.style.height = "80px";
   qrDiv.appendChild(qrWrapper);
   new QRCode(qrWrapper, { text: member.id, width: 80, height: 80 });
   cardDiv.appendChild(qrDiv);
 
-  // Bouton export PNG
-  const exportBtn = document.createElement('button');
-  exportBtn.textContent = '💾 Télécharger PNG';
-  exportBtn.className = 'btn btn-info btn-sm';
-  exportBtn.style.marginTop = '10px';
-  exportBtn.onclick = () => exportCardAsPNG(cardDiv, member.id);
+  // === BOUTON EXPORT PNG ===
+  const exportBtn = document.createElement("button");
+  exportBtn.textContent = "💾 Télécharger PNG";
+  exportBtn.className = "btn btn-info btn-sm";
+  exportBtn.style.marginTop = "10px";
+  exportBtn.onclick = () => exportCardAsPNG(cardDiv, member);
+  cardDiv.appendChild(exportBtn);
 
-  // Conteneur final
-  const container = document.createElement('div');
-  container.appendChild(cardDiv);
-  container.appendChild(exportBtn);
-
-  return container;
+  return cardDiv;
 }
+
 
 
         async function exportCardAsPNG(cardElement, memberId) {
