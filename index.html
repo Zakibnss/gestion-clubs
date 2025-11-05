@@ -1885,26 +1885,34 @@
                 return;
             }
 
+            // Get uploaded background image file
+            const backgroundInput = document.getElementById('cardBackgroundImage');
+            if (!backgroundInput || backgroundInput.files.length === 0) {
+                alert('Veuillez importer une image de fond pour la carte');
+                return;
+            }
+            const backgroundFile = backgroundInput.files[0];
+            const backgroundUrl = URL.createObjectURL(backgroundFile);
+
             const { data: members } = await supabase.from('members').select('*').in('id', selected);
-            const background = document.getElementById('cardBackground').value;
             const preview = document.getElementById('cardsPreview');
 
             preview.innerHTML = '<h3>Cartes générées</h3>';
 
             for (const member of members) {
-                const card = await generateCard(member, background);
+                const card = await generateCard(member, backgroundUrl);
                 preview.appendChild(card);
             }
         }
 
-        async function generateCard(member, background) {
+        async function generateCard(member, backgroundUrl) {
             const cardDiv = document.createElement('div');
             cardDiv.style.cssText = `
                 width: 350px;
                 height: 220px;
-                background: ${background === 'red' ? 'linear-gradient(135deg, #c8102e, #8b0000)' : 
-                            background === 'black' ? '#1a1a1a' : 
-                            'linear-gradient(135deg, #c8102e, #1a1a1a)'};
+                background-image: url('${backgroundUrl}');
+                background-size: cover;
+                background-position: center;
                 color: white;
                 border-radius: 15px;
                 padding: 20px;
