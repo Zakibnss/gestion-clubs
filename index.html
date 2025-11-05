@@ -1970,17 +1970,18 @@ infoDiv.style.cssText = `
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    font-size: 0.95rem;
+    font-size: 1.1rem; /* Increased font size */
+    font-weight: bold; /* Made text bold */
     margin-bottom: 25px;
     color: #333; /* Black clair */
     font-family: 'Arial', sans-serif; /* Good readable font */
 `;
 infoDiv.innerHTML = `
-    <div><strong>ID:</strong> ${member.id}</div>
-    <div><strong>Nom:</strong> ${member.last_name}</div>
-    <div><strong>Prénom:</strong> ${member.first_name}</div>
-    <div><strong>Date de naissance:</strong> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
-    <div><strong>Groupe sanguin:</strong> ${member.blood_type || 'N/A'}</div>
+    <div><strong style="font-weight: 900;">ID:</strong> ${member.id}</div>
+    <div><strong style="font-weight: 900;">Nom:</strong> ${member.last_name}</div>
+    <div><strong style="font-weight: 900;">Prénom:</strong> ${member.first_name}</div>
+    <div><strong style="font-weight: 900;">Date de naissance:</strong> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
+    <div><strong style="font-weight: 900;">Groupe sanguin:</strong> ${member.blood_type || 'N/A'}</div>
 `;
 cardDiv.appendChild(infoDiv);
 
