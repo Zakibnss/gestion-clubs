@@ -904,19 +904,7 @@
                                 Téléchargez le template, remplissez-le et importez-le.
                             </p>
                             <button class="btn btn-info" onclick="downloadTemplate()">📄 Télécharger Template Excel</button>
-                            <script>
-                                function downloadTemplate() {
-                                    // Provide one example row (empty) after header to ensure aoa_to_sheet sees an array of arrays
-                                    const template = [
-                                        ["ID", "Nom", "Prénom", "DateNaissance", "GroupeSanguin", "NuméroTéléphone", "Abonnement", "DateDébut"],
-                                        ["", "", "", "", "", "", "", ""]
-                                    ];
-                                    const wb = XLSX.utils.book_new();
-                                    const ws = XLSX.utils.aoa_to_sheet(template);
-                                    XLSX.utils.book_append_sheet(wb, ws, 'Template');
-                                    XLSX.writeFile(wb, 'template_adherents.xlsx');
-                                }
-                            </script>
+            
                             <div class="file-upload" style="margin-top: 15px;">
                                 <input type="file" id="excelFile" accept=".xlsx,.xls">
                                 <label for="excelFile" class="file-upload-label">
@@ -1590,13 +1578,23 @@
         // EXCEL IMPORT/EXPORT
         // ============================================
         function downloadTemplate() {
-            const template = ["ID", "Nom", "Prénom", "DateNaissance", "GroupeSanguin", "NuméroTéléphone", "Abonnement", "DateDébut"];
+  // Chaque sous-tableau = une ligne du fichier Excel
+  const template = [
+    ["ID", "Nom", "Prénom", "DateNaissance", "GroupeSanguin", "NuméroTéléphone", "Abonnement", "DateDébut"],
+    ["", "", "", "", "", "", "", ""]
+  ];
 
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.aoa_to_sheet(template);
-            XLSX.utils.book_append_sheet(wb, ws, 'Template');
-            XLSX.writeFile(wb, 'template_adherents.xlsx');
-        }
+  // Créer le classeur et la feuille
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(template);
+
+  // Ajouter la feuille au classeur
+  XLSX.utils.book_append_sheet(wb, ws, "Template");
+
+  // Sauvegarder le fichier
+  XLSX.writeFile(wb, "template_adherents.xlsx");
+}
+
 
         async function importExcel() {
             const file = document.getElementById('excelFile').files[0];
@@ -1963,24 +1961,40 @@
   `;
 
   // Photo du membre (affiché même à l'export)
-  let photo;
   if (member.photo_url) {
-      // Use normal <img> if member has a photo
-      photo = document.createElement('img');
-      photo.src = member.photo_url;
-      photo.alt = member.first_name;
-      photo.style.cssText = `
+    // Crée l'élément image
+    photo = document.createElement('img');
+    photo.crossOrigin = "anonymous"; // au cas où CORS soit actif plus tard
+
+    try {
+        // Télécharger et convertir l'image Supabase en base64
+        const blob = await fetch(member.photo_url).then(r => r.blob());
+        const reader = new FileReader();
+        await new Promise((resolve) => {
+            reader.onloadend = () => {
+                photo.src = reader.result; // assigner le base64 à l'image
+                resolve();
+            };
+            reader.readAsDataURL(blob);
+        });
+    } catch (err) {
+        console.error("Erreur lors du chargement de la photo:", err);
+    }
+let photo;
+    // style de l'image
+    photo.alt = member.first_name;
+    photo.style.cssText = `
         width: 150px;
         height: 150px;
         object-fit: cover;
         border-radius: 50%;
         margin-bottom: 15px;
         border: 3px solid white;
-      `;
-  } else {
-      // Utilisons un DIV stylisé avec icône SVG pour être toujours exportable par html2canvas
-      photo = document.createElement('div');
-      photo.style.cssText = `
+    `;
+} else {
+    // ton code existant pour afficher l’icône par défaut
+    photo = document.createElement('div');
+    photo.style.cssText = `
         width: 150px;
         height: 150px;
         display: flex;
@@ -1990,15 +2004,15 @@
         margin-bottom: 15px;
         border: 3px solid white;
         background: #eee;
-      `;
-      // Ajout d'une icône SVG utilisateur au centre
-      photo.innerHTML = `
+    `;
+    photo.innerHTML = `
         <svg width="80" height="80" viewBox="0 0 80 80" fill="#bbb" xmlns="http://www.w3.org/2000/svg">
-          <circle cx="40" cy="32" r="18" fill="#bbb"/>
-          <ellipse cx="40" cy="62" rx="24" ry="14" fill="#bbb"/>
+            <circle cx="40" cy="32" r="18" fill="#bbb"/>
+            <ellipse cx="40" cy="62" rx="24" ry="14" fill="#bbb"/>
         </svg>
-      `;
-  }
+    `;
+}
+
   cardDiv.appendChild(photo);
 
   // Informations adhérent
