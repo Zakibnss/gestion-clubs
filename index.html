@@ -526,7 +526,123 @@
             cursor: pointer;
             color: var(--text-secondary);
         }
+/* Styles pour le filtre */
+.filter-container {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: var(--bg-primary);
+    border-radius: 12px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+}
 
+.filter-label {
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    white-space: nowrap;
+}
+
+.filter-select {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    min-width: 150px;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.1);
+}
+
+.filter-select:hover {
+    border-color: var(--primary-color);
+}
+
+/* Styles pour les options du select */
+.filter-select option {
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    padding: 8px;
+}
+
+/* Badge de compteur */
+.filter-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 5px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .filter-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    
+    .filter-label {
+        text-align: center;
+    }
+    
+    .filter-select {
+        min-width: auto;
+        width: 100%;
+    }
+}
+
+/* Animation pour le changement de filtre */
+.filter-select {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Style pour l'état actif du filtre */
+.filter-select.active {
+    border-color: var(--primary-color);
+    background: rgba(200, 16, 46, 0.05);
+}
+
+/* Icône dans le select */
+.filter-select-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.filter-select-wrapper::after {
+    content: "▼";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    pointer-events: none;
+    font-size: 0.8rem;
+}
         /* QR Code Display */
         .qr-display {
             text-align: center;
@@ -886,14 +1002,24 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">👥 Liste des Adhérents</h2>
-                        <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
-                            <label for="filterStatus" style="font-weight: bold;">Filtrer par statut :</label>
-                            <select id="filterStatus" class="form-select" style="width: 200px;">
-                              <option value="all">Tous</option>
-                              <option value="active">Actif</option>
-                              <option value="expired">Expiré</option>
-                            </select>
-                          </div>
+                        <div class="filter-container">
+                            <div class="filter-select-wrapper" style="flex: 1;">
+                                <label class="filter-label">
+                                    📊 Filtrer par statut :
+                                </label>
+                                <select id="filterStatus" class="filter-select">
+                                    <option value="all">📋 Tous les adhérents</option>
+                                    <option value="active">✅ Actifs uniquement</option>
+                                    <option value="expired">❌ Expirés uniquement</option>
+                                </select>
+                            </div>
+                            <div class="filter-stats">
+                                <span class="filter-badge" id="memberCount">0</span>
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);">
+                                    adhérent(s)
+                                </span>
+                            </div>
+                        </div>
                           
                         <button class="btn btn-primary" onclick="loadMembers()">🔄 Actualiser</button>
                     </div>
@@ -1536,77 +1662,482 @@
       
 
         async function loadMembers() {
-  try {
-    const query = supabase.from('members').select('*').order('created_at', { ascending: false });
-    if (currentUser !== 'admin') query.eq('club_id', currentClub.id);
+    try {
+        showLoading('membersGrid', 'Chargement des adhérents...');
 
-    const { data: members, error } = await query;
-    if (error) throw error;
+        // Construire la requête de base
+        let query = supabase.from('members').select('*').order('created_at', { ascending: false });
+        
+        // Appliquer le filtre par club seulement si l'utilisateur n'est pas admin ET si le club existe
+        if (currentUser !== 'admin') {
+            if (currentClub && currentClub.id) {
+                query = query.eq('club_id', currentClub.id);
+            } else {
+                showMessage('membersGrid', '❌ Erreur: Club non trouvé. Veuillez vous reconnecter.', 'danger');
+                return;
+            }
+        }
 
-    const filter = document.getElementById('filterStatus').value;
+        const { data: members, error } = await query;
+        
+        if (error) {
+            throw new Error(`Erreur de base de données: ${error.message}`);
+        }
 
-    const filteredMembers = members.filter(member => {
-      const start = new Date(member.start_date);
-      const end = new Date(start);
-      switch (member.subscription) {
-        case "monthly": end.setMonth(end.getMonth() + 1); break;
-        case "quarterly": end.setMonth(end.getMonth() + 3); break;
-        case "biannual": end.setMonth(end.getMonth() + 6); break;
-        case "annual": end.setFullYear(end.getFullYear() + 1); break;
-      }
-      const isActive = new Date() <= end;
-      return (
-        filter === "all" ||
-        (filter === "active" && isActive) ||
-        (filter === "expired" && !isActive)
-      );
-    });
+        const filter = document.getElementById('filterStatus').value;
+        let filteredMembers = [];
 
-    const grid = document.getElementById('membersGrid');
-    grid.innerHTML = filteredMembers.map(member => {
-      const start = new Date(member.start_date);
-      const end = new Date(start);
-      switch (member.subscription) {
-        case "monthly": end.setMonth(end.getMonth() + 1); break;
-        case "quarterly": end.setMonth(end.getMonth() + 3); break;
-        case "biannual": end.setMonth(end.getMonth() + 6); break;
-        case "annual": end.setFullYear(end.getFullYear() + 1); break;
-      }
-      const endDateStr = end.toLocaleDateString('fr-FR');
-      const isActive = new Date() <= end;
-      const badgeClass = isActive ? 'badge-success' : 'badge-danger';
+        if (members && members.length > 0) {
+            filteredMembers = members.filter(member => {
+                try {
+                    const start = new Date(member.start_date);
+                    const end = new Date(start);
+                    
+                    switch (member.subscription) {
+                        case "monthly": 
+                            end.setMonth(end.getMonth() + 1); 
+                            break;
+                        case "quarterly": 
+                            end.setMonth(end.getMonth() + 3); 
+                            break;
+                        case "biannual": 
+                            end.setMonth(end.getMonth() + 6); 
+                            break;
+                        case "annual": 
+                            end.setFullYear(end.getFullYear() + 1); 
+                            break;
+                        default:
+                            end.setMonth(end.getMonth() + 1); // Valeur par défaut
+                    }
+                    
+                    const isActive = new Date() <= end;
+                    
+                    switch (filter) {
+                        case "active":
+                            return isActive;
+                        case "expired":
+                            return !isActive;
+                        case "all":
+                        default:
+                            return true;
+                    }
+                } catch (dateError) {
+                    console.error('Erreur de date pour le membre:', member.id, dateError);
+                    return filter === "all"; // Inclure dans "tous" si erreur de date
+                }
+            });
+        }
 
-      return `
-        <div class="member-card">
-          ${member.photo_url
-            ? `<img src="${member.photo_url}" class="member-photo" alt="${member.first_name}"
-                 style="display:block;margin:0 auto 15px;width:230px;height:230px;border-radius:50%;object-fit:cover;">`
-            : `<div class="member-photo" style="display:block;margin:0 auto 15px;width:230px;height:230px;border-radius:50%;background:#eee;"></div>`
-          }
-          <div class="member-info">
-            <h3>${member.last_name} ${member.first_name}</h3>
-            <div class="member-details">
-              <div><strong>ID:</strong> ${member.id}</div>
-              <div><strong>Date naissance:</strong> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
-              <div><strong>Groupe sanguin:</strong> ${member.blood_type || 'N/A'}</div>
-              <div><strong>Fin d'abonnement:</strong> <span class="badge ${badgeClass}">${endDateStr}</span></div>
-            </div>
-            <div style="margin-top:15px;display:flex;gap:10px;">
-              <button class="btn btn-warning btn-sm" onclick="openEditModal('${member.id}')">✏️ Modifier</button>
-              <button class="btn btn-info btn-sm" onclick="openPhotoModal('${member.id}')">📷 Photo</button>
-              <button class="btn btn-danger btn-sm" onclick="deleteMember('${member.id}')">🗑️</button>
-            </div>
-          </div>
-        </div>
-      `;
-    }).join('');
+        // Mettre à jour le compteur
+        updateMemberCount(filteredMembers.length);
+        
+        // Afficher les résultats
+        displayMembersGrid(filteredMembers);
 
-  } catch (error) {
-    console.error('Error loading members:', error);
-  }
+    } catch (error) {
+        console.error('Error loading members:', error);
+        showMessage('membersGrid', `❌ Erreur lors du chargement: ${error.message}`, 'danger');
+    }
 }
 
-// 🔁 Recharger la liste quand on change le filtre
+// Fonction pour afficher le loading
+function showLoading(elementId, message = 'Chargement...') {
+    const element = document.getElementById(elementId);
+    element.innerHTML = `
+        <div style="grid-column: 1/-1; text-align: center; padding: 40px;">
+            <div class="spinner"></div>
+            <p style="margin-top: 15px; color: var(--text-secondary);">${message}</p>
+        </div>
+    `;
+}
+
+// Fonction pour mettre à jour le compteur
+function updateMemberCount(count) {
+    const memberCount = document.getElementById('memberCount');
+    const filterStatus = document.getElementById('filterStatus');
+    const currentFilter = filterStatus ? filterStatus.value : 'all';
+    
+    if (memberCount) {
+        memberCount.textContent = count;
+        
+        // Mettre à jour le tooltip avec plus d'informations
+        memberCount.title = `${count} adhérent(s) ${getFilterText(currentFilter)}`;
+    }
+}
+
+// Fonction utilitaire pour le texte du filtre
+function getFilterText(filter) {
+    switch (filter) {
+        case 'active': return 'actifs';
+        case 'expired': return 'expirés';
+        default: return 'au total';
+    }
+}
+
+// Fonction pour afficher la grille des membres
+function displayMembersGrid(members) {
+    const grid = document.getElementById('membersGrid');
+    
+    if (!members || members.length === 0) {
+        const filter = document.getElementById('filterStatus').value;
+        const filterText = getFilterText(filter);
+        
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; color: var(--text-secondary);">
+                <div style="font-size: 4rem; margin-bottom: 20px; opacity: 0.5;">👥</div>
+                <h3 style="margin-bottom: 15px; color: var(--text-primary);">Aucun adhérent ${filterText}</h3>
+                <p style="margin-bottom: 25px; max-width: 400px; margin-left: auto; margin-right: auto;">
+                    ${getEmptyStateMessage(filter)}
+                </p>
+                ${getEmptyStateAction(filter)}
+            </div>
+        `;
+        return;
+    }
+
+    // Afficher les membres
+    grid.innerHTML = members.map(member => {
+        const { status, endDate, badgeClass } = calculateMemberStatus(member);
+        const hasPhoto = member.photo_url && member.photo_url.trim() !== '';
+        
+        return `
+            <div class="member-card" data-member-id="${member.id}" data-status="${status}">
+                <div class="member-photo-container">
+                    ${hasPhoto ? 
+                        `<img src="${member.photo_url}" class="member-photo" alt="${member.first_name}" 
+                              onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                              loading="lazy">` : 
+                        ''
+                    }
+                    <div class="member-photo-placeholder" style="${hasPhoto ? 'display: none;' : ''}">
+                        <div class="placeholder-icon">👤</div>
+                    </div>
+                    ${status === 'expired' ? 
+                        '<div class="expired-badge">❌ Expiré</div>' : 
+                        '<div class="active-badge">✅ Actif</div>'
+                    }
+                </div>
+                
+                <div class="member-info">
+                    <h3 class="member-name">${escapeHtml(member.last_name)} ${escapeHtml(member.first_name)}</h3>
+                    
+                    <div class="member-details">
+                        <div class="detail-item">
+                            <span class="detail-label">🆔 ID:</span>
+                            <span class="detail-value">${escapeHtml(member.id)}</span>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <span class="detail-label">🎂 Naissance:</span>
+                            <span class="detail-value">${formatDate(member.dob)}</span>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <span class="detail-label">🩸 Groupe sanguin:</span>
+                            <span class="detail-value">${member.blood_type ? escapeHtml(member.blood_type) : 'N/A'}</span>
+                        </div>
+                        
+                        <div class="detail-item">
+                            <span class="detail-label">📅 Fin abonnement:</span>
+                            <span class="detail-value badge ${badgeClass}">${endDate}</span>
+                        </div>
+                        
+                        ${member.phone_number ? `
+                            <div class="detail-item">
+                                <span class="detail-label">📞 Téléphone:</span>
+                                <span class="detail-value">${escapeHtml(member.phone_number)}</span>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="detail-item">
+                            <span class="detail-label">🔄 Abonnement:</span>
+                            <span class="detail-value">${getSubscriptionText(member.subscription)}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="member-actions">
+                        <button class="btn btn-warning btn-sm" onclick="openEditModal('${member.id}')" title="Modifier les informations">
+                            ✏️ Modifier
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="openPhotoModal('${member.id}')" title="Changer la photo">
+                            📷 Photo
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteMember('${member.id}')" title="Supprimer l'adhérent">
+                            🗑️ Supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    // Ajouter les styles si nécessaire
+    addMemberCardStyles();
+}
+
+// Fonction pour calculer le statut d'un membre
+function calculateMemberStatus(member) {
+    try {
+        const start = new Date(member.start_date);
+        const end = new Date(start);
+        
+        switch (member.subscription) {
+            case "monthly": end.setMonth(end.getMonth() + 1); break;
+            case "quarterly": end.setMonth(end.getMonth() + 3); break;
+            case "biannual": end.setMonth(end.getMonth() + 6); break;
+            case "annual": end.setFullYear(end.getFullYear() + 1); break;
+            default: end.setMonth(end.getMonth() + 1);
+        }
+        
+        const endDate = end.toLocaleDateString('fr-FR');
+        const isActive = new Date() <= end;
+        const status = isActive ? 'active' : 'expired';
+        const badgeClass = isActive ? 'badge-success' : 'badge-danger';
+        
+        return { status, endDate, badgeClass, isActive };
+    } catch (error) {
+        console.error('Erreur calcul statut:', error);
+        return { status: 'unknown', endDate: 'N/A', badgeClass: 'badge-warning', isActive: false };
+    }
+}
+
+// Fonction pour obtenir le texte de l'abonnement
+function getSubscriptionText(subscription) {
+    const subscriptions = {
+        'monthly': 'Mensuel',
+        'quarterly': 'Trimestriel',
+        'biannual': 'Semestriel',
+        'annual': 'Annuel'
+    };
+    return subscriptions[subscription] || subscription;
+}
+
+// Fonction pour formater la date
+function formatDate(dateString) {
+    try {
+        return new Date(dateString).toLocaleDateString('fr-FR');
+    } catch {
+        return dateString;
+    }
+}
+
+// Fonction d'échappement HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Message pour les états vides
+function getEmptyStateMessage(filter) {
+    switch (filter) {
+        case 'active':
+            return 'Aucun adhérent avec un abonnement actif trouvé.';
+        case 'expired':
+            return 'Aucun adhérent avec un abonnement expiré trouvé.';
+        default:
+            return 'Aucun adhérent trouvé dans votre club. Commencez par ajouter vos premiers adhérents.';
+    }
+}
+
+// Actions pour les états vides
+function getEmptyStateAction(filter) {
+    const baseActions = `
+        <button class="btn btn-primary" onclick="switchToTab('addMemberSection')" style="margin: 5px;">
+            ➕ Ajouter un adhérent
+        </button>
+    `;
+    
+    if (filter !== 'all') {
+        return baseActions + `
+            <button class="btn btn-secondary" onclick="document.getElementById('filterStatus').value='all'; loadMembers();" style="margin: 5px;">
+                📋 Voir tous les adhérents
+            </button>
+        `;
+    }
+    
+    return baseActions;
+}
+
+// Fonction pour changer d'onglet
+function switchToTab(sectionId) {
+    const tab = document.querySelector(`[data-section="${sectionId}"]`);
+    if (tab) {
+        tab.click();
+    }
+}
+
+// Ajouter les styles CSS pour les cartes membres
+function addMemberCardStyles() {
+    if (document.getElementById('member-card-styles')) return;
+    
+    const styles = `
+        <style id="member-card-styles">
+            .member-card {
+                background: var(--bg-primary);
+                border-radius: 16px;
+                padding: 20px;
+                box-shadow: var(--shadow-sm);
+                transition: var(--transition);
+                border: 1px solid var(--border-color);
+                position: relative;
+                overflow: hidden;
+            }
+            
+            .member-card:hover {
+                transform: translateY(-5px);
+                box-shadow: var(--shadow-md);
+                border-color: var(--primary-color);
+            }
+            
+            .member-card[data-status="expired"] {
+                border-left: 4px solid var(--danger-color);
+            }
+            
+            .member-card[data-status="active"] {
+                border-left: 4px solid var(--success-color);
+            }
+            
+            .member-photo-container {
+                position: relative;
+                margin: 0 auto 20px;
+                width: 230px;
+                height: 230px;
+            }
+            
+            .member-photo {
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                object-fit: cover;
+                border: 4px solid var(--bg-secondary);
+                display: block;
+            }
+            
+            .member-photo-placeholder {
+                width: 100%;
+                height: 100%;
+                border-radius: 50%;
+                background: var(--bg-tertiary);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border: 4px solid var(--bg-secondary);
+            }
+            
+            .placeholder-icon {
+                font-size: 4rem;
+                opacity: 0.5;
+            }
+            
+            .expired-badge, .active-badge {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                padding: 4px 8px;
+                border-radius: 12px;
+                font-size: 0.75rem;
+                font-weight: 600;
+            }
+            
+            .expired-badge {
+                background: var(--danger-color);
+                color: white;
+            }
+            
+            .active-badge {
+                background: var(--success-color);
+                color: white;
+            }
+            
+            .member-name {
+                color: var(--primary-color);
+                margin-bottom: 15px;
+                font-size: 1.3rem;
+                text-align: center;
+            }
+            
+            .member-details {
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                margin-bottom: 20px;
+            }
+            
+            .detail-item {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            
+            .detail-label {
+                font-weight: 600;
+                color: var(--text-primary);
+                white-space: nowrap;
+            }
+            
+            .detail-value {
+                color: var(--text-secondary);
+                text-align: right;
+                flex: 1;
+            }
+            
+            .member-actions {
+                display: flex;
+                gap: 8px;
+                justify-content: center;
+                flex-wrap: wrap;
+            }
+            
+            @media (max-width: 768px) {
+                .member-photo-container {
+                    width: 180px;
+                    height: 180px;
+                }
+                
+                .detail-item {
+                    flex-direction: column;
+                    gap: 2px;
+                }
+                
+                .detail-value {
+                    text-align: left;
+                }
+                
+                .member-actions {
+                    flex-direction: column;
+                }
+                
+                .member-actions .btn {
+                    width: 100%;
+                }
+            }
+        </style>
+    `;
+    
+    document.head.insertAdjacentHTML('beforeend', styles);
+}
+
+// Événement pour le changement de filtre
+document.getElementById('filterStatus').addEventListener('change', function() {
+    // Ajouter une animation visuelle
+    this.style.transform = 'scale(1.05)';
+    setTimeout(() => {
+        this.style.transform = 'scale(1)';
+    }, 200);
+    
+    loadMembers();
+});
+
+// Initialisation
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser le compteur
+    const memberCount = document.getElementById('memberCount');
+    if (memberCount) {
+        memberCount.textContent = '0';
+    }
+});
 document.getElementById('filterStatus').addEventListener('change', loadMembers);
 function checkExpiredMembers(members) {
   const now = new Date();
@@ -2141,38 +2672,134 @@ async function validateAttendanceAfterRenew(memberId) {
         // CARD GENERATION
         // ============================================
         async function loadMembersForCards() {
-            try {
-                const query = supabase.from('members').select('*');
-                if (currentUser !== 'admin') {
-                    query.eq('club_id', currentClub.id);
-                }
-                const { data: members } = await query;
-
-                const grid = document.getElementById('cardsGrid');
-                grid.innerHTML = `
-                    <div style="grid-column: 1/-1;">
-                        <button class="btn btn-success" onclick="generateSelectedCards()">🎫 Générer les cartes sélectionnées</button>
-                    </div>
-                    ${members.map(member => `
-                        <div>
-                            <label style="display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--bg-secondary); border-radius: 10px; cursor: pointer;">
-                                <input type="checkbox" value="${member.id}" name="cardMember">
-                                <div>
-                                    <div><strong>${member.last_name} ${member.first_name}</strong></div>
-                                    <div style="font-size: 0.85rem; color: var(--text-secondary);">${member.id}</div>
-                                </div>
-                            </label>
-                        </div>
-                        <div style="margin-top: 15px; display: flex; gap: 10px;">
- 
-</div>
-
-                    `).join('')}
-                `;
-            } catch (error) {
-                console.error('Error loading members for cards:', error);
+    try {
+        // Construire la requête de base
+        let query = supabase.from('members').select('*');
+        
+        // Appliquer le filtre par club seulement si l'utilisateur n'est pas admin ET si le club existe
+        if (currentUser !== 'admin') {
+            if (currentClub && currentClub.id) {
+                query = query.eq('club_id', currentClub.id);
+            } else {
+                showMessage('cardsGrid', 'Erreur: Club non trouvé', 'danger');
+                return;
             }
         }
+        
+        // Exécuter la requête
+        const { data: members, error } = await query;
+
+        if (error) throw error;
+
+        // Vérifier si des membres ont été trouvés
+        if (!members || members.length === 0) {
+            const grid = document.getElementById('cardsGrid');
+            grid.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <h3>📋 Aucun adhérent trouvé</h3>
+                    <p>Ajoutez des adhérents dans la section "➕ Ajouter Adhérent" pour générer des cartes.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Afficher la liste des membres avec cases à cocher
+        const grid = document.getElementById('cardsGrid');
+        grid.innerHTML = `
+            <div style="grid-column: 1/-1; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h3>Sélectionnez les adhérents pour générer les cartes</h3>
+                    <div>
+                        <button class="btn btn-info btn-sm" onclick="selectAllMembers()">✓ Tout sélectionner</button>
+                        <button class="btn btn-secondary btn-sm" onclick="deselectAllMembers()">✗ Tout désélectionner</button>
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="generateSelectedCards()" style="margin-top: 10px;">
+                    🎫 Générer les cartes sélectionnées (${members.length} adhérent(s) disponible(s))
+                </button>
+            </div>
+            ${members.map(member => `
+                <div class="member-selection-card">
+                    <label style="display: flex; align-items: center; gap: 12px; padding: 15px; background: var(--bg-secondary); border-radius: 12px; cursor: pointer; transition: var(--transition); border: 2px solid var(--border-color);">
+                        <input type="checkbox" value="${member.id}" name="cardMember" class="member-checkbox">
+                        <div style="flex: 1;">
+                            <div style="font-weight: 600; color: var(--text-primary);">${member.last_name} ${member.first_name}</div>
+                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+                                <div>ID: ${member.id}</div>
+                                <div>Date naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
+                                ${member.blood_type ? `<div>Groupe sanguin: ${member.blood_type}</div>` : ''}
+                            </div>
+                        </div>
+                        ${member.photo_url ? 
+                            `<img src="${member.photo_url}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 2px solid var(--primary-color);">` : 
+                            `<div style="width: 50px; height: 50px; border-radius: 8px; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; color: var(--text-secondary);">📷</div>`
+                        }
+                    </label>
+                </div>
+            `).join('')}
+            
+            <div style="grid-column: 1/-1; margin-top: 20px;">
+                <div class="alert alert-info">
+                    <strong>📝 Instructions :</strong><br>
+                    1. Sélectionnez les adhérents pour lesquels vous souhaitez générer des cartes<br>
+                    2. Uploader une image d'arrière-plan si nécessaire<br>
+                    3. Cliquez sur "Générer les cartes sélectionnées"<br>
+                    4. Téléchargez chaque carte individuellement avec le bouton "💾 Télécharger PNG"
+                </div>
+            </div>
+        `;
+
+        // Ajouter le style pour l'effet hover
+        const style = document.createElement('style');
+        style.textContent = `
+            .member-selection-card label:hover {
+                background: var(--bg-tertiary) !important;
+                border-color: var(--primary-color) !important;
+                transform: translateY(-2px);
+            }
+            .member-checkbox:checked + div {
+                background: rgba(200, 16, 46, 0.1);
+            }
+        `;
+        document.head.appendChild(style);
+
+    } catch (error) {
+        console.error('Error loading members for cards:', error);
+        showMessage('cardsGrid', 'Erreur lors du chargement des membres: ' + error.message, 'danger');
+    }
+}
+
+// Fonctions utilitaires pour la sélection
+function selectAllMembers() {
+    const checkboxes = document.querySelectorAll('.member-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+    });
+    updateGenerateButton();
+}
+
+function deselectAllMembers() {
+    const checkboxes = document.querySelectorAll('.member-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateGenerateButton();
+}
+
+function updateGenerateButton() {
+    const selectedCount = document.querySelectorAll('.member-checkbox:checked').length;
+    const button = document.querySelector('.btn-success');
+    if (button) {
+        button.textContent = `🎫 Générer les cartes sélectionnées (${selectedCount} adhérent(s) sélectionné(s))`;
+    }
+}
+
+// Ajouter les écouteurs d'événements pour mettre à jour le compteur
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('member-checkbox')) {
+        updateGenerateButton();
+    }
+});
       
 
 
