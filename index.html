@@ -1890,84 +1890,78 @@
             }
         }
 
-        async function generateSelectedCards() {
-            try {
-                // Get selected member IDs
-                const checkboxes = document.querySelectorAll('input[name="cardMember"]:checked');
-                if (checkboxes.length === 0) {
-                    alert('Veuillez sélectionner au moins un adhérent');
-                    return;
-                }
+       async function generateSelectedCards() {
+  try {
+    const checkboxes = document.querySelectorAll('input[name="cardMember"]:checked');
+    if (checkboxes.length === 0) {
+      alert('Veuillez sélectionner au moins un adhérent');
+      return;
+    }
 
-                const selectedMemberIds = Array.from(checkboxes).map(cb => cb.value);
+    const selectedMemberIds = Array.from(checkboxes).map(cb => cb.value);
 
-                // Get background image
-                const backgroundFile = document.getElementById('cardBackgroundImage').files[0];
-                if (!backgroundFile) {
-                    alert('Veuillez sélectionner une image d\'arrière-plan');
-                    return;
-                }
+    const backgroundFile = document.getElementById('cardBackgroundImage').files[0];
+    if (!backgroundFile) {
+      alert('Veuillez sélectionner une image d\'arrière-plan');
+      return;
+    }
 
-                // Convert background image to data URL
-                const backgroundUrl = await new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => resolve(e.target.result);
-                    reader.onerror = reject;
-                    reader.readAsDataURL(backgroundFile);
-                });
+    const backgroundUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = e => resolve(e.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(backgroundFile);
+    });
 
-                // Fetch member data
-                const { data: members, error } = await supabase
-                    .from('members')
-                    .select('*')
-                    .in('id', selectedMemberIds);
+    const { data: members, error } = await supabase
+      .from('members')
+      .select('*')
+      .in('id', selectedMemberIds);
 
-                if (error) throw error;
+    if (error) throw error;
 
-                // Generate cards
-                const previewDiv = document.getElementById('cardsPreview');
-                previewDiv.innerHTML = '<h3>Cartes générées:</h3><div style="display: flex; flex-wrap: wrap; gap: 20px;"></div>';
-                const cardsContainer = previewDiv.querySelector('div');
+    const previewDiv = document.getElementById('cardsPreview');
+    previewDiv.innerHTML = '<h3>Cartes générées :</h3><div style="display: flex; flex-wrap: wrap; gap: 25px;"></div>';
+    const cardsContainer = previewDiv.querySelector('div');
 
-                for (const member of members) {
-                    const cardContainer = await generateCard(member, backgroundUrl);
-                    cardsContainer.appendChild(cardContainer);
-                }
-            } catch (error) {
-                console.error('Error generating cards:', error);
-                alert('Erreur lors de la génération des cartes: ' + error.message);
-            }
-        }
+    for (const member of members) {
+      const cardContainer = await generateCard(member, backgroundUrl);
+      cardsContainer.appendChild(cardContainer);
+    }
+  } catch (error) {
+    console.error('Erreur génération cartes :', error);
+    alert('Erreur lors de la génération des cartes : ' + error.message);
+  }
+}
 
 async function generateCard(member, backgroundUrl) {
-  // === CONTENEUR PRINCIPAL ===
   const wrapper = document.createElement("div");
   wrapper.style.cssText = `
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
   `;
 
-  // === CARTE ===
+  // === DIMENSIONS DE LA CARTE (350x450px ≈ carte ID verticale standard) ===
   const cardDiv = document.createElement("div");
   cardDiv.style.cssText = `
-    width: 638px;  /* ≈ 8.1 cm */
-    height: 1011px; /* ≈ 12.8 cm */
+    width: 350px;
+    height: 450px;
     background-image: url('${backgroundUrl}');
     background-size: cover;
     background-position: center;
-    color: white;
+    color: #000;
     border-radius: 15px;
-    padding: 25px 20px;
+    padding: 15px 10px;
     margin: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: flex-start;
+    justify-content: space-between;
     text-align: center;
     position: relative;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
     overflow: hidden;
   `;
 
@@ -1977,11 +1971,10 @@ async function generateCard(member, backgroundUrl) {
     photo = document.createElement("img");
     photo.crossOrigin = "anonymous";
     photo.alt = member.first_name;
-
     try {
-      const blob = await fetch(member.photo_url).then((r) => r.blob());
+      const blob = await fetch(member.photo_url).then(r => r.blob());
       const reader = new FileReader();
-      await new Promise((resolve) => {
+      await new Promise(resolve => {
         reader.onloadend = () => {
           photo.src = reader.result;
           resolve();
@@ -1991,37 +1984,31 @@ async function generateCard(member, backgroundUrl) {
     } catch (err) {
       console.error("Erreur chargement photo:", err);
     }
-
     photo.style.cssText = `
-      width: 170px;
-      height: 170px;
+      width: 130px;
+      height: 130px;
       object-fit: cover;
-      object-position: top center;
       border-radius: 50%;
-      margin-top: 25px;
-      margin-bottom: 18px;
       border: 4px solid white;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      background: #fff;
+      margin-top: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
     `;
   } else {
-    // === PHOTO PAR DÉFAUT ===
     photo = document.createElement("div");
     photo.style.cssText = `
-      width: 170px;
-      height: 170px;
+      width: 130px;
+      height: 130px;
       display: flex;
       align-items: center;
       justify-content: center;
       border-radius: 50%;
-      margin-top: 25px;
-      margin-bottom: 18px;
       border: 4px solid white;
+      margin-top: 15px;
       background: #eee;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     `;
     photo.innerHTML = `
-      <svg width="90" height="90" viewBox="0 0 90 90" fill="#bbb" xmlns="http://www.w3.org/2000/svg">
+      <svg width="70" height="70" viewBox="0 0 90 90" fill="#bbb" xmlns="http://www.w3.org/2000/svg">
         <circle cx="45" cy="36" r="20" fill="#bbb"/>
         <ellipse cx="45" cy="70" rx="27" ry="16" fill="#bbb"/>
       </svg>
@@ -2035,24 +2022,21 @@ async function generateCard(member, backgroundUrl) {
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    gap: 8px;
+    gap: 6px;
     font-size: 1rem;
     margin-top: 5px;
-    margin-bottom: 25px;
-    color: #111;
+    color: #000;
     font-family: 'Poppins', 'Arial', sans-serif;
     font-weight: 700;
-    text-align: center;
-    line-height: 1.4;
+    line-height: 1.3;
   `;
 
   const fullName = `${member.last_name.toUpperCase()} ${member.first_name}`;
   infoDiv.innerHTML = `
-    <div>ID: ${member.id}</div>
+    <div><b>ID :</b> ${member.id}</div>
     <div style="font-size: 1.15rem;">${fullName}</div>
-    <div>Date de naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
-    <div>Groupe sanguin: ${member.blood_type || 'N/A'}</div>
+    <div><b>Date de naissance :</b> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
+    <div><b>Groupe sanguin :</b> ${member.blood_type || 'N/A'}</div>
   `;
   cardDiv.appendChild(infoDiv);
 
@@ -2062,17 +2046,14 @@ async function generateCard(member, backgroundUrl) {
     background: white;
     padding: 8px;
     border-radius: 10px;
-    position: absolute;
-    bottom: 25px;
-    left: 50%;
-    transform: translateX(-50%);
     box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+    margin-bottom: 10px;
   `;
   const qrWrapper = document.createElement("div");
-  qrWrapper.style.width = "85px";
-  qrWrapper.style.height = "85px";
+  qrWrapper.style.width = "110px";
+  qrWrapper.style.height = "110px";
   qrDiv.appendChild(qrWrapper);
-  new QRCode(qrWrapper, { text: member.id, width: 85, height: 85 });
+  new QRCode(qrWrapper, { text: member.id, width: 110, height: 110 });
   cardDiv.appendChild(qrDiv);
 
   // === BOUTON DE TÉLÉCHARGEMENT ===
@@ -2082,13 +2063,11 @@ async function generateCard(member, backgroundUrl) {
   exportBtn.style.marginTop = "10px";
   exportBtn.onclick = () => exportCardAsPNG(cardDiv, member);
 
-  // === AJOUT À LA PAGE ===
   wrapper.appendChild(cardDiv);
   wrapper.appendChild(exportBtn);
-  document.body.appendChild(wrapper);
-
   return wrapper;
 }
+
 
 
 
