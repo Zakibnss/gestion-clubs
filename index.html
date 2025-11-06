@@ -1523,6 +1523,21 @@
                 showMessage('addMemberMessage', 'Erreur: ' + error.message, 'danger');
             }
         }
+        function computeEndDate(member) {
+  const start = new Date(member.start_date);
+  const end = new Date(start);
+  switch (member.subscription) {
+    case "monthly": end.setMonth(end.getMonth() + 1); break;
+    case "quarterly": end.setMonth(end.getMonth() + 3); break;
+    case "biannual": end.setMonth(end.getMonth() + 6); break;
+    case "annual": end.setFullYear(end.getFullYear() + 1); break;
+  }
+  return end;
+}
+const endDate = computeEndDate(member).toLocaleDateString('fr-FR');
+const now = new Date();
+const isActive = now <= computeEndDate(member);
+const badgeClass = isActive ? "badge-success" : "badge-danger";
 
         async function loadMembers() {
             try {
@@ -1546,7 +1561,8 @@
                                 <div><strong>ID:</strong> ${member.id}</div>
                                 <div><strong>Date naissance:</strong> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
                                 <div><strong>Groupe sanguin:</strong> ${member.blood_type || 'N/A'}</div>
-                                <div><strong>Fin d'Abonnement:</strong> <span class="badge badge-success">${member.endDate}</span></div>
+                                <div><strong>Fin d'Abonnement:</strong> <span class="badge ${badgeClass}">${endDate}</span></div>
+
                             </div>
                             <div style="margin-top: 15px; display: flex; gap: 10px;">
                                  <button class="btn btn-warning btn-sm" onclick="openEditModal('${member.id}')">✏️ Modifier</button>
@@ -2164,10 +2180,10 @@ async function generateCard(member, backgroundUrl) {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin: 15px;
+    gap: 10px;
   `;
 
-  // === CARD BASE ===
+  // === DIMENSIONS DE LA CARTE (350x450px ≈ carte ID verticale standard) ===
   const cardDiv = document.createElement("div");
   cardDiv.style.cssText = `
     width: 638px;
@@ -2175,102 +2191,120 @@ async function generateCard(member, backgroundUrl) {
     background-image: url('${backgroundUrl}');
     background-size: cover;
     background-position: center;
-    border-radius: 20px;
+    color: #000;
+    border-radius: 15px;
+    padding: 15px 10px;
+    margin: 10px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-    overflow: hidden;
+    text-align: center;
     position: relative;
-    color: #111;
-    font-family: 'Poppins', sans-serif;
-  `;
-
-  // === PHOTO SECTION ===
-  const photoContainer = document.createElement("div");
-  photoContainer.style.cssText = `
-    margin-top: 40px;
-    width: 260px;
-    height: 320px;
-    border-radius: 12px;
-    overflow: hidden;
-    border: 4px solid white;
     box-shadow: 0 6px 12px rgba(0,0,0,0.3);
-    background: #f5f5f5;
+    overflow: hidden;
   `;
 
-  const photo = document.createElement("img");
-  photo.crossOrigin = "anonymous";
-  photo.alt = member.first_name;
-  try {
-    const blob = await fetch(member.photo_url).then(r => r.blob());
-    const reader = new FileReader();
-    await new Promise(resolve => {
-      reader.onloadend = () => {
-        photo.src = reader.result;
-        resolve();
-      };
-      reader.readAsDataURL(blob);
-    });
-  } catch (err) {
-    console.error("Erreur chargement photo:", err);
-    photo.src = "default_photo.png";
+  // === PHOTO ===
+  let photo;
+  if (member.photo_url) {
+    photo = document.createElement("img");
+    photo.crossOrigin = "anonymous";
+    photo.alt = member.first_name;
+    try {
+      const blob = await fetch(member.photo_url).then(r => r.blob());
+      const reader = new FileReader();
+      await new Promise(resolve => {
+        reader.onloadend = () => {
+          photo.src = reader.result;
+          resolve();
+        };
+        reader.readAsDataURL(blob);
+      });
+    } catch (err) {
+      console.error("Erreur chargement photo:", err);
+    }
+    photo.style.cssText = `
+      width: 130px;
+      height: 130px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 4px solid white;
+      margin-top: 15px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
+    `;
+  } else {
+    photo = document.createElement("div");
+    photo.style.cssText = `
+      width: 130px;
+      height: 130px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      border: 4px solid white;
+      margin-top: 15px;
+      background: #eee;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    `;
+    photo.innerHTML = `
+      <svg width="70" height="70" viewBox="0 0 90 90" fill="#bbb" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="45" cy="36" r="20" fill="#bbb"/>
+        <ellipse cx="45" cy="70" rx="27" ry="16" fill="#bbb"/>
+      </svg>
+    `;
   }
+  cardDiv.appendChild(photo);
 
-  photo.style.cssText = `
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  `;
-  photoContainer.appendChild(photo);
-  cardDiv.appendChild(photoContainer);
-
-  // === INFO SECTION ===
+  // === INFOS ===
   const infoDiv = document.createElement("div");
   infoDiv.style.cssText = `
-    width: 90%;
-    background: rgba(255,255,255,0.85);
-    border-radius: 12px;
-    padding: 25px 20px;
-    text-align: center;
-    margin-top: 20px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    font-size: 1rem;
+    margin-top: 5px;
+    color: #000;
+    font-family: 'Poppins', 'Arial', sans-serif;
+    font-weight: 700;
+    line-height: 1.3;
   `;
 
   const fullName = `${member.last_name.toUpperCase()} ${member.first_name}`;
   infoDiv.innerHTML = `
-    <div style="font-size: 1.8rem; font-weight: 700; color: #c8102e; margin-bottom: 8px;">${fullName}</div>
-    <div style="font-size: 1.1rem; margin-bottom: 4px;"><b>ID :</b> ${member.id}</div>
-    <div style="font-size: 1.05rem; margin-bottom: 4px;"><b>Date de naissance :</b> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
-    <div style="font-size: 1.05rem;"><b>Groupe sanguin :</b> ${member.blood_type || 'N/A'}</div>
+    <div><b>ID :</b> ${member.id}</div>
+    <div style="font-size: 1.15rem;">${fullName}</div>
+    <div><b>Date de naissance :</b> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
+    <div><b>Groupe sanguin :</b> ${member.blood_type || 'N/A'}</div>
   `;
   cardDiv.appendChild(infoDiv);
 
-  // === QR CODE SECTION ===
-  const qrSection = document.createElement("div");
-  qrSection.style.cssText = `
-    width: 180px;
-    height: 180px;
+  // === QR CODE ===
+  const qrDiv = document.createElement("div");
+  qrDiv.style.cssText = `
     background: white;
-    padding: 12px;
-    border-radius: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: 35px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    padding: 8px;
+    border-radius: 10px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.25);
+    margin-bottom: 10px;
   `;
   const qrWrapper = document.createElement("div");
-  qrWrapper.style.width = "150px";
-  qrWrapper.style.height = "150px";
-  qrSection.appendChild(qrWrapper);
+  qrWrapper.style.width = "80px";
+  qrWrapper.style.height = "80px";
+  qrDiv.appendChild(qrWrapper);
+  const qrText = 
+  `ID: ${member.id}\n` +
+  `Nom complet: ${member.last_name.toUpperCase()} ${member.first_name}\n` +
+  `Date de naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}\n` +
+  `Fin d'abonnement: ${endDate.toLocaleDateString('fr-FR')}\n` +
+  `Statut: ${status}`;
+  new QRCode(qrDiv, { text: qrText });
 
-  const memberLink = `${window.location.origin}/member.html?id=${member.id}`;
-  new QRCode(qrWrapper, { text: memberLink, width: 150, height: 150 });
-  cardDiv.appendChild(qrSection);
 
-  // === EXPORT BUTTON ===
+  cardDiv.appendChild(qrDiv);
+
+  // === BOUTON DE TÉLÉCHARGEMENT ===
   const exportBtn = document.createElement("button");
   exportBtn.textContent = "💾 Télécharger PNG";
   exportBtn.className = "btn btn-info btn-sm";
@@ -2279,10 +2313,8 @@ async function generateCard(member, backgroundUrl) {
 
   wrapper.appendChild(cardDiv);
   wrapper.appendChild(exportBtn);
-
   return wrapper;
 }
-
 
 
 
