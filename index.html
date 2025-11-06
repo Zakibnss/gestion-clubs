@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kyokushin Manager Pro</title>
+    <link rel="icon" type="image/png" href="logo_site.png">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
@@ -1523,21 +1524,7 @@
                 showMessage('addMemberMessage', 'Erreur: ' + error.message, 'danger');
             }
         }
-        function computeEndDate(member) {
-  const start = new Date(member.start_date);
-  const end = new Date(start);
-  switch (member.subscription) {
-    case "monthly": end.setMonth(end.getMonth() + 1); break;
-    case "quarterly": end.setMonth(end.getMonth() + 3); break;
-    case "biannual": end.setMonth(end.getMonth() + 6); break;
-    case "annual": end.setFullYear(end.getFullYear() + 1); break;
-  }
-  return end;
-}
-const endDate = computeEndDate(member).toLocaleDateString('fr-FR');
-const now = new Date();
-const isActive = now <= computeEndDate(member);
-const badgeClass = isActive ? "badge-success" : "badge-danger";
+      
 
         async function loadMembers() {
             try {
@@ -2116,18 +2103,7 @@ async function validateAttendanceAfterRenew(memberId) {
                 console.error('Error loading members for cards:', error);
             }
         }
-        function computeEndDate(member) {
-  const start = new Date(member.start_date);
-  const end = new Date(start);
-  switch (member.subscription) {
-    case 'monthly': end.setMonth(end.getMonth() + 1); break;
-    case 'quarterly': end.setMonth(end.getMonth() + 3); break;
-    case 'biannual': end.setMonth(end.getMonth() + 6); break;
-    case 'annual': end.setFullYear(end.getFullYear() + 1); break;
-  }
-  return end;
-}
-const status = new Date() <= endDate ? '✅ Actif' : '❌ Expiré';
+      
 
 
        async function generateSelectedCards() {
@@ -2293,14 +2269,32 @@ async function generateCard(member, backgroundUrl) {
   qrWrapper.style.width = "80px";
   qrWrapper.style.height = "80px";
   qrDiv.appendChild(qrWrapper);
-  const qrText = 
-  `ID: ${member.id}\n` +
-  `Nom complet: ${member.last_name.toUpperCase()} ${member.first_name}\n` +
-  `Date de naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}\n` +
-  `Fin d'abonnement: ${endDate.toLocaleDateString('fr-FR')}\n` +
-  `Statut: ${status}`;
-  new QRCode(qrDiv, { text: qrText });
+  function computeEndDate(member) {
+    const start = new Date(member.start_date);
+    const end = new Date(start);
+    switch (member.subscription) {
+      case "monthly": end.setMonth(end.getMonth() + 1); break;
+      case "quarterly": end.setMonth(end.getMonth() + 3); break;
+      case "biannual": end.setMonth(end.getMonth() + 6); break;
+      case "annual": end.setFullYear(end.getFullYear() + 1); break;
+    }
+    return end;
+  }
 
+  const endDateObj = computeEndDate(member);
+  const endDate = endDateObj.toLocaleDateString('fr-FR');
+  const isActive = new Date() <= endDateObj;
+  const status = isActive ? "Actif" : "Expiré";
+
+  // === then you can use endDate/status below ===
+  const qrText =
+    `ID: ${member.id}\n` +
+    `Nom complet: ${member.last_name.toUpperCase()} ${member.first_name}\n` +
+    `Date de naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}\n` +
+    `Fin d'abonnement: ${endDate}\n` +
+    `Statut: ${status}`;
+
+  new QRCode(qrDiv, { text: qrText });
 
   cardDiv.appendChild(qrDiv);
 
