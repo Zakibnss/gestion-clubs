@@ -3272,104 +3272,271 @@ async function validateAttendanceAfterRenew(memberId) {
         // ============================================
         // QR CODE SCANNER
         // ============================================
-        function startScanner() {
-    // Vérifier si le scanner est déjà en cours d'exécution
+        // Fonction pour vérifier si le scanner est supporté
+function isScannerSupported() {
+    return !!(navigator.mediaDevices && 
+              navigator.mediaDevices.getUserMedia && 
+              window.Html5Qrcode);
+}
+
+// Fonction pour initialiser le scanner au chargement de la page
+function initScanner() {
+    if (!isScannerSupported()) {
+        showMessage('scanResult', 
+            '❌ Votre navigateur ne supporte pas le scanner QR Code. ' +
+            'Essayez avec Chrome, Firefox ou Edge sur mobile.', 
+            'danger'
+        );
+        document.getElementById('startScanBtn').disabled = true;
+        return;
+    }
+    
+    console.log('Scanner QR Code supporté');
+}
+
+// Appeler cette fonction au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    initScanner();
+});
+async function startScanner() {
+    console.log('🔧 Démarrage du scanner...');
+    
+    // Vérifier si le scanner est déjà en cours
     if (html5QrCode && html5QrCode.isScanning) {
         showMessage('scanResult', '⚠️ Le scanner est déjà en cours d\'exécution', 'warning');
         return;
     }
 
-    // Vérifier les permissions de la caméra
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        showMessage('scanResult', '❌ Votre navigateur ne supporte pas l\'accès à la caméra', 'danger');
+    // Vérifier le support du navigateur
+    if (!isScannerSupported()) {
+        showMessage('scanResult', 
+            '❌ Votre navigateur ne supporte pas le scanner QR Code', 
+            'danger'
+        );
         return;
     }
 
-    // Demander l'autorisation d'accès à la caméra
-    navigator.mediaDevices.getUserMedia({ video: true })
-        .then(() => {
-            // Autorisation accordée, initialiser le scanner
-            if (!html5QrCode) {
-                html5QrCode = new Html5Qrcode("reader");
-            }
+    try {
+        // Afficher un message de démarrage
+        showMessage('scanResult', '🔧 Initialisation du scanner...', 'info');
+        
+        // Créer une nouvelle instance du scanner
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("reader");
+        }
 
-            // Configuration du scanner
-            const scannerConfig = {
-                fps: 10,
-                qrbox: { 
-                    width: 250, 
-                    height: 250 
-                },
-                aspectRatio: 1.0,
-                focusMode: "continuous",
-                supportedScanTypes: [
-                    Html5QrcodeScanType.SCAN_TYPE_QR_CODE,
-                    Html5QrcodeScanType.SCAN_TYPE_BARCODE
-                ]
-            };
+        // Essayer d'abord la caméra arrière (environment)
+        let cameraId = null;
+        
+        // Obtenir la liste des caméras disponibles
+        const cameras = await Html5Qrcode.getCameras();
+        console.log('📷 Caméras disponibles:', cameras);
+        
+        if (cameras && cameras.length > 0) {
+            // Préférer la caméra arrière
+            const rearCamera = cameras.find(cam => 
+                cam.label.toLowerCase().includes('back') || 
+                cam.label.toLowerCase().includes('arrière') ||
+                cam.label.toLowerCase().includes('environment')
+            );
+            
+            // Sinon utiliser la première caméra disponible
+            cameraId = rearCamera ? rearCamera.id : cameras[0].id;
+            console.log('🎯 Caméra sélectionnée:', cameraId);
+        }
 
-            // Démarrer le scanner
-            html5QrCode.start(
-                { 
-                    facingMode: "environment" 
-                },
-                scannerConfig,
-                onScanSuccess,
+        // Configuration du scanner
+        const config = {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+            aspectRatio: 1.0,
+            focusMode: "continuous"
+        };
+
+        // Démarrer avec la caméra spécifique ou en mode automatique
+        let startPromise;
+        if (cameraId) {
+            startPromise = html5QrCode.start(
+                cameraId, 
+                config, 
+                onScanSuccess, 
                 onScanError
-            ).then(() => {
-                // Succès du démarrage
-                document.getElementById('startScanBtn').classList.add('hidden');
-                document.getElementById('stopScanBtn').classList.remove('hidden');
-                
-                showMessage('scanResult', 
-                    '📱 Scanner démarré avec succès!<br>Scannez le QR Code d\'un adhérent', 
-                    'success'
-                );
-                
-                console.log('Scanner démarré avec succès');
-                
-            }).catch(err => {
-                // Erreur lors du démarrage
-                console.error('Erreur démarrage scanner:', err);
-                
-                let errorMessage = '❌ Erreur du scanner: ';
-                
-                if (err.includes('No MultiFormat Readers')) {
-                    errorMessage += 'Aucun lecteur QR code disponible';
-                } else if (err.includes('Could not start video stream')) {
-                    errorMessage += 'Impossible d\'accéder à la caméra';
-                } else if (err.includes('Permission denied')) {
-                    errorMessage += 'Permission caméra refusée';
-                } else {
-                    errorMessage += err;
-                }
-                
-                showMessage('scanResult', errorMessage, 'danger');
-                
-                // Réinitialiser l'état des boutons
-                document.getElementById('startScanBtn').classList.remove('hidden');
-                document.getElementById('stopScanBtn').classList.add('hidden');
-            });
+            );
+        } else {
+            startPromise = html5QrCode.start(
+                { facingMode: "environment" },
+                config, 
+                onScanSuccess, 
+                onScanError
+            );
+        }
 
-        })
-        .catch(err => {
-            // Erreur de permission
-            console.error('Erreur permission caméra:', err);
+        await startPromise;
+
+        // Succès du démarrage
+        console.log('✅ Scanner démarré avec succès');
+        document.getElementById('startScanBtn').classList.add('hidden');
+        document.getElementById('stopScanBtn').classList.remove('hidden');
+        
+        showMessage('scanResult', 
+            '📱 Scanner activé!<br>Scannez le QR Code d\'un adhérent', 
+            'success'
+        );
+
+        // Ajouter une classe pour l'animation
+        document.getElementById('reader').classList.add('scanning-active');
+
+    } catch (error) {
+        console.error('❌ Erreur démarrage scanner:', error);
+        
+        let errorMessage = '❌ ';
+        let errorType = 'danger';
+        
+        // Gestion spécifique des erreurs
+        if (error.name === 'NotReadableError' || error.message.includes('NotReadableError') || error.message.includes('couldn\'t start video source')) {
+            errorMessage += 'Caméra déjà utilisée par une autre application.<br><br>';
+            errorMessage += '🔧 <strong>Solutions:</strong><br>';
+            errorMessage += '• Fermez les autres applications utilisant la caméra<br>';
+            errorMessage += '• Redémarrez votre navigateur<br>';
+            errorMessage += '• Essayez avec la caméra avant<br>';
+            errorMessage += '• Vérifiez les permissions caméra';
             
-            let permissionMessage = '❌ Accès caméra refusé. ';
+            // Proposer d'essayer la caméra avant
+            setTimeout(() => {
+                if (confirm('La caméra arrière ne fonctionne pas. Voulez-vous essayer avec la caméra avant ?')) {
+                    startWithUserCamera();
+                }
+            }, 1000);
             
-            if (err.name === 'NotAllowedError') {
-                permissionMessage += 'Veuillez autoriser l\'accès à la caméra dans les paramètres de votre navigateur.';
-            } else if (err.name === 'NotFoundError') {
-                permissionMessage += 'Aucune caméra disponible.';
-            } else if (err.name === 'NotSupportedError') {
-                permissionMessage += 'Votre navigateur ne supporte pas l\'accès à la caméra.';
-            } else {
-                permissionMessage += err.message;
+        } else if (error.name === 'NotAllowedError' || error.message.includes('Permission denied')) {
+            errorMessage += 'Permission caméra refusée.<br>Veuillez autoriser l\'accès à la caméra dans les paramètres de votre navigateur.';
+        } else if (error.name === 'NotFoundError' || error.message.includes('No camera found')) {
+            errorMessage += 'Aucune caméra détectée sur cet appareil.';
+        } else if (error.message.includes('No MultiFormat Readers')) {
+            errorMessage += 'Lecteur QR Code non supporté. Essayez avec Chrome ou Firefox.';
+        } else {
+            errorMessage += 'Erreur inattendue: ' + (error.message || error);
+        }
+        
+        showMessage('scanResult', errorMessage, errorType);
+        
+        // Réinitialiser l'état
+        document.getElementById('startScanBtn').classList.remove('hidden');
+        document.getElementById('stopScanBtn').classList.add('hidden');
+        
+        // Nettoyer
+        if (html5QrCode) {
+            try {
+                await html5QrCode.clear();
+            } catch (clearError) {
+                console.log('Nettoyage scanner:', clearError);
+            }
+        }
+    }
+}
+
+// Fonction pour essayer avec la caméra avant
+async function startWithUserCamera() {
+    try {
+        showMessage('scanResult', '🔄 Essai avec la caméra avant...', 'info');
+        
+        if (html5QrCode && html5QrCode.isScanning) {
+            await html5QrCode.stop();
+        }
+        
+        // Réinitialiser l'instance
+        html5QrCode = new Html5Qrcode("reader");
+        
+        // Démarrer avec caméra avant
+        await html5QrCode.start(
+            { facingMode: "user" }, // Caméra avant
+            { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            },
+            onScanSuccess,
+            onScanError
+        );
+        
+        document.getElementById('startScanBtn').classList.add('hidden');
+        document.getElementById('stopScanBtn').classList.remove('hidden');
+        showMessage('scanResult', '📱 Scanner activé (caméra avant)', 'success');
+        
+    } catch (error) {
+        console.error('Erreur caméra avant:', error);
+        showMessage('scanResult', 
+            '❌ Impossible de démarrer avec la caméra avant.<br>Veuillez vérifier les permissions et réessayer.', 
+            'danger'
+        );
+    }
+}
+
+// Fonction pour vérifier le support
+function isScannerSupported() {
+    const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    const hasHtml5Qrcode = typeof Html5Qrcode !== 'undefined';
+    
+    console.log('Support caméra:', hasGetUserMedia);
+    console.log('Support Html5Qrcode:', hasHtml5Qrcode);
+    
+    return hasGetUserMedia && hasHtml5Qrcode;
+}
+
+// Fonction d'arrêt améliorée
+async function stopScanner() {
+    if (html5QrCode) {
+        try {
+            if (html5QrCode.isScanning) {
+                await html5QrCode.stop();
+                console.log('Scanner arrêté avec succès');
             }
             
-            showMessage('scanResult', permissionMessage, 'danger');
-        });
+            await html5QrCode.clear();
+            
+        } catch (error) {
+            console.error('Erreur lors de l\'arrêt:', error);
+        } finally {
+            html5QrCode = null;
+        }
+    }
+    
+    document.getElementById('startScanBtn').classList.remove('hidden');
+    document.getElementById('stopScanBtn').classList.add('hidden');
+    document.getElementById('reader').classList.remove('scanning-active');
+    
+    showMessage('scanResult', '⏹️ Scanner arrêté', 'info');
+}
+
+// Fonction pour réinitialiser complètement le scanner
+function resetScanner() {
+    if (html5QrCode) {
+        html5QrCode.clear().catch(() => {});
+        html5QrCode = null;
+    }
+    
+    const readerElement = document.getElementById('reader');
+    readerElement.innerHTML = '';
+    readerElement.classList.remove('scanning-active');
+    
+    document.getElementById('startScanBtn').classList.remove('hidden');
+    document.getElementById('stopScanBtn').classList.add('hidden');
+}
+
+// Ajouter un bouton de réinitialisation dans votre HTML ou créer dynamiquement
+function addScannerResetButton() {
+    if (!document.getElementById('resetScannerBtn')) {
+        const resetBtn = document.createElement('button');
+        resetBtn.id = 'resetScannerBtn';
+        resetBtn.className = 'btn btn-warning btn-sm';
+        resetBtn.textContent = '🔄 Réinitialiser Scanner';
+        resetBtn.onclick = resetScanner;
+        resetBtn.style.marginTop = '10px';
+        
+        const scannerSection = document.getElementById('scannerSection');
+        const card = scannerSection.querySelector('.card');
+        card.appendChild(resetBtn);
+    }
 }
 
 function stopScanner() {
@@ -3878,7 +4045,7 @@ async function generateSelectedCards() {
         text-align: center;
     `;
     dobDiv.innerHTML = `
-        <div style="font-size: 22px; color: blak">
+        <div style="font-size: 22px; color: black">
             <span style="font-weight: 600; color: black">Date de naissance: </span>
             ${new Date(member.dob).toLocaleDateString('fr-FR')}
         </div>
@@ -3891,7 +4058,7 @@ async function generateSelectedCards() {
     `;
     bloodDiv.innerHTML = `
         <div style="font-size: 22px; color: black">
-            <span style="font-weight: 600; color: var(--text-secondary);">Groupe sanguin: </span>
+            <span style="font-weight: 600; color: black">Groupe sanguin: </span>
             ${member.blood_type || 'N/A'}
         </div>
     `;
