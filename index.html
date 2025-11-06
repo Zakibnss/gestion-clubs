@@ -828,7 +828,49 @@
                 padding: 20px;
             }
         }
+        #reader {
+    width: 100%;
+    max-width: 500px;
+    border: 3px solid var(--primary-color);
+    border-radius: 15px;
+    margin: 0 auto 20px auto;
+    overflow: hidden;
+    box-shadow: var(--shadow-md);
+}
 
+#reader video {
+    border-radius: 12px;
+}
+
+#scanResult {
+    min-height: 80px;
+    padding: 15px;
+    border-radius: 10px;
+    margin: 20px 0;
+    text-align: center;
+    font-weight: 600;
+    background: var(--bg-primary);
+    border: 2px solid var(--border-color);
+}
+
+.scanner-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 15px;
+    flex-wrap: wrap;
+}
+
+/* Animation pendant le scan */
+@keyframes scanning {
+    0% { border-color: var(--primary-color); }
+    50% { border-color: var(--accent-color); }
+    100% { border-color: var(--primary-color); }
+}
+
+.scanning-active {
+    animation: scanning 2s infinite;
+}
         .hidden {
             display: none !important;
         }
@@ -1513,6 +1555,9 @@
             <button class="btn btn-secondary" onclick="markAllAsRead()">📭 Tout marquer comme lu</button>
             <button class="btn btn-danger" onclick="clearAllNotifications()">🗑️ Tout effacer</button>
         </div>
+    </div>
+    <div id="cameraPermission" class="alert alert-info hidden">
+        📱 Veuillez autoriser l'accès à la caméra pour utiliser le scanner
     </div>
 </div>
     <script>
@@ -3053,90 +3098,122 @@ async function handleEditMember(e) {
 // SUBSCRIPTION CHECK HELPER
 // ============================================
 function isSubscriptionActive(member) {
-  const startDate = new Date(member.start_date);
-  const now = new Date();
-  const endDate = new Date(startDate);
+    try {
+        if (!member.start_date) return false;
+        
+        const startDate = new Date(member.start_date);
+        if (isNaN(startDate.getTime())) return false;
+        
+        const now = new Date();
+        const endDate = new Date(startDate);
 
-  switch (member.subscription) {
-    case 'monthly':
-      endDate.setMonth(endDate.getMonth() + 1);
-      break;
-    case 'quarterly':
-      endDate.setMonth(endDate.getMonth() + 3);
-      break;
-    case 'biannual':
-      endDate.setMonth(endDate.getMonth() + 6);
-      break;
-    case 'annual':
-      endDate.setFullYear(endDate.getFullYear() + 1);
-      break;
-  }
+        switch (member.subscription) {
+            case 'monthly':
+                endDate.setMonth(endDate.getMonth() + 1);
+                break;
+            case 'quarterly':
+                endDate.setMonth(endDate.getMonth() + 3);
+                break;
+            case 'biannual':
+                endDate.setMonth(endDate.getMonth() + 6);
+                break;
+            case 'annual':
+                endDate.setFullYear(endDate.getFullYear() + 1);
+                break;
+            default:
+                return false; // Type d'abonnement inconnu
+        }
 
-  return now <= endDate;
+        return now <= endDate;
+    } catch (error) {
+        console.error('Erreur vérification abonnement:', error);
+        return false;
+    }
 }
 
         // ============================================
         // ATTENDANCE VALIDATION
         // ============================================
         async function validateAttendance() {
-            const memberId = document.getElementById('validateMemberId').value.trim();
-            if (!memberId) {
-                showMessage('validationMessage', 'Entrez un ID adhérent', 'danger');
-                return;
-            }
-// 🧾 Vérification de l'abonnement
-if (!isSubscriptionActive(member)) {
-  showSubscriptionAlert(member);
-  return;
-}
+    const memberId = document.getElementById('validateMemberId').value.trim();
+    if (!memberId) {
+        showMessage('validationMessage', '❌ Entrez un ID adhérent', 'danger');
+        return false;
+    }
 
-            try {
-                // Check if member exists
-                const { data: member, error: memberError } = await supabase
-                    .from('members')
-                    .select('*')
-                    .eq('id', memberId)
-                    .single();
+    try {
+        // Vérifier si le membre existe
+        const { data: member, error: memberError } = await supabase
+            .from('members')
+            .select('*')
+            .eq('id', memberId)
+            .single();
 
-                if (memberError || !member) {
-                    showMessage('validationMessage', 'Adhérent introuvable', 'danger');
-                    return;
-                }
-
-                // Check if already validated today
-                const today = new Date().toISOString().split('T')[0];
-                const { data: existing } = await supabase
-                    .from('attendance')
-                    .select('*')
-                    .eq('member_id', memberId)
-                    .eq('attendance_date', today)
-                    .single();
-
-                if (existing) {
-                    showMessage('validationMessage', '⚠️ Cet adhérent a déjà validé sa présence aujourd\'hui', 'warning');
-                    return;
-                }
-
-                // Validate attendance
-                const now = new Date();
-                const { error } = await supabase.from('attendance').insert([{
-                    member_id: memberId,
-                    club_id: member.club_id,
-                    attendance_date: today,
-                    attendance_time: now.toTimeString().split(' ')[0],
-                    month: now.toISOString().slice(0, 7)
-                }]);
-
-                if (error) throw error;
-
-                showMessage('validationMessage', `✅ Présence validée pour ${member.first_name} ${member.last_name}`, 'success');
-                document.getElementById('validateMemberId').value = '';
-                loadDashboard();
-            } catch (error) {
-                console.error('Validation error:', error);
-                showMessage('validationMessage', 'Erreur: ' + error.message, 'danger');
-            }
+        if (memberError || !member) {
+            showMessage('validationMessage', '❌ Adhérent introuvable', 'danger');
+            return false;
         }
+
+        // Vérifier si l'abonnement est actif
+        if (!isSubscriptionActive(member)) {
+            showSubscriptionAlert(member);
+            return false;
+        }
+
+        // Vérifier si déjà validé aujourd'hui
+        const today = new Date().toISOString().split('T')[0];
+        const { data: existing, error: existingError } = await supabase
+            .from('attendance')
+            .select('*')
+            .eq('member_id', memberId)
+            .eq('attendance_date', today)
+            .maybeSingle(); // Utiliser maybeSingle au lieu de single
+
+        if (existingError && existingError.code !== 'PGRST116') {
+            throw existingError;
+        }
+
+        if (existing) {
+            showMessage('validationMessage', `⚠️ ${member.first_name} ${member.last_name} a déjà validé aujourd'hui`, 'warning');
+            return false;
+        }
+
+        // Enregistrer la présence
+        const now = new Date();
+        const { error: insertError } = await supabase.from('attendance').insert([{
+            member_id: memberId,
+            club_id: member.club_id,
+            attendance_date: today,
+            attendance_time: now.toTimeString().split(' ')[0],
+            month: now.toISOString().slice(0, 7)
+        }]);
+
+        if (insertError) throw insertError;
+
+        // Afficher le succès
+        const successMessage = `✅ Présence validée pour ${member.first_name} ${member.last_name}`;
+        showMessage('validationMessage', successMessage, 'success');
+        showMessage('scanResult', successMessage, 'success');
+        
+        // Notifier
+        notifyAttendance(member);
+        
+        // Réinitialiser le champ
+        document.getElementById('validateMemberId').value = '';
+        
+        // Mettre à jour le dashboard
+        loadDashboard();
+        
+        return true;
+        
+    } catch (error) {
+        console.error('Validation error:', error);
+        const errorMessage = '❌ Erreur: ' + (error.message || 'Erreur inconnue');
+        showMessage('validationMessage', errorMessage, 'danger');
+        showMessage('scanResult', errorMessage, 'danger');
+        return false;
+    }
+}
 // ============================================
 // SUBSCRIPTION ALERT HANDLING
 // ============================================
@@ -3196,35 +3273,171 @@ async function validateAttendanceAfterRenew(memberId) {
         // QR CODE SCANNER
         // ============================================
         function startScanner() {
-            html5QrCode = new Html5Qrcode("reader");
+    // Vérifier si le scanner est déjà en cours d'exécution
+    if (html5QrCode && html5QrCode.isScanning) {
+        showMessage('scanResult', '⚠️ Le scanner est déjà en cours d\'exécution', 'warning');
+        return;
+    }
+
+    // Vérifier les permissions de la caméra
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        showMessage('scanResult', '❌ Votre navigateur ne supporte pas l\'accès à la caméra', 'danger');
+        return;
+    }
+
+    // Demander l'autorisation d'accès à la caméra
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(() => {
+            // Autorisation accordée, initialiser le scanner
+            if (!html5QrCode) {
+                html5QrCode = new Html5Qrcode("reader");
+            }
+
+            // Configuration du scanner
+            const scannerConfig = {
+                fps: 10,
+                qrbox: { 
+                    width: 250, 
+                    height: 250 
+                },
+                aspectRatio: 1.0,
+                focusMode: "continuous",
+                supportedScanTypes: [
+                    Html5QrcodeScanType.SCAN_TYPE_QR_CODE,
+                    Html5QrcodeScanType.SCAN_TYPE_BARCODE
+                ]
+            };
+
+            // Démarrer le scanner
             html5QrCode.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: 250 },
+                { 
+                    facingMode: "environment" 
+                },
+                scannerConfig,
                 onScanSuccess,
                 onScanError
             ).then(() => {
+                // Succès du démarrage
                 document.getElementById('startScanBtn').classList.add('hidden');
                 document.getElementById('stopScanBtn').classList.remove('hidden');
+                
+                showMessage('scanResult', 
+                    '📱 Scanner démarré avec succès!<br>Scannez le QR Code d\'un adhérent', 
+                    'success'
+                );
+                
+                console.log('Scanner démarré avec succès');
+                
             }).catch(err => {
-                console.error('Scanner error:', err);
-                showMessage('scanResult', 'Erreur du scanner: ' + err, 'danger');
+                // Erreur lors du démarrage
+                console.error('Erreur démarrage scanner:', err);
+                
+                let errorMessage = '❌ Erreur du scanner: ';
+                
+                if (err.includes('No MultiFormat Readers')) {
+                    errorMessage += 'Aucun lecteur QR code disponible';
+                } else if (err.includes('Could not start video stream')) {
+                    errorMessage += 'Impossible d\'accéder à la caméra';
+                } else if (err.includes('Permission denied')) {
+                    errorMessage += 'Permission caméra refusée';
+                } else {
+                    errorMessage += err;
+                }
+                
+                showMessage('scanResult', errorMessage, 'danger');
+                
+                // Réinitialiser l'état des boutons
+                document.getElementById('startScanBtn').classList.remove('hidden');
+                document.getElementById('stopScanBtn').classList.add('hidden');
             });
-        }
 
-        function stopScanner() {
-            if (html5QrCode) {
-                html5QrCode.stop().then(() => {
-                    document.getElementById('startScanBtn').classList.remove('hidden');
-                    document.getElementById('stopScanBtn').classList.add('hidden');
-                });
+        })
+        .catch(err => {
+            // Erreur de permission
+            console.error('Erreur permission caméra:', err);
+            
+            let permissionMessage = '❌ Accès caméra refusé. ';
+            
+            if (err.name === 'NotAllowedError') {
+                permissionMessage += 'Veuillez autoriser l\'accès à la caméra dans les paramètres de votre navigateur.';
+            } else if (err.name === 'NotFoundError') {
+                permissionMessage += 'Aucune caméra disponible.';
+            } else if (err.name === 'NotSupportedError') {
+                permissionMessage += 'Votre navigateur ne supporte pas l\'accès à la caméra.';
+            } else {
+                permissionMessage += err.message;
             }
-        }
+            
+            showMessage('scanResult', permissionMessage, 'danger');
+        });
+}
 
-        async function onScanSuccess(decodedText) {
-            document.getElementById('validateMemberId').value = decodedText;
-            await validateAttendance();
-            stopScanner();
+function stopScanner() {
+    if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => {
+            document.getElementById('startScanBtn').classList.remove('hidden');
+            document.getElementById('stopScanBtn').classList.add('hidden');
+            showMessage('scanResult', '⏹️ Scanner arrêté', 'info');
+        }).catch(err => {
+            console.error('Error stopping scanner:', err);
+        });
+    }
+}
+
+async function onScanSuccess(decodedText) {
+    try {
+        console.log('QR Code scanné:', decodedText);
+        
+        // Afficher le résultat du scan
+        showMessage('scanResult', `🔍 Code scanné: ${decodedText}`, 'info');
+        
+        // Mettre à jour l'input manuel
+        document.getElementById('validateMemberId').value = decodedText;
+        
+        // Valider la présence
+        const success = await validateAttendance();
+        
+        if (success) {
+            // Arrêter le scanner après un scan réussi
+            setTimeout(() => {
+                stopScanner();
+            }, 2000); // Laisser 2 secondes pour voir le message de succès
         }
+        
+    } catch (error) {
+        console.error('Erreur lors du scan:', error);
+        showMessage('scanResult', '❌ Erreur lors de la validation: ' + error.message, 'danger');
+    }
+}
+
+function onScanError(error) {
+    // Erreurs silencieuses pendant le scan - pas besoin d'afficher chaque erreur
+    // Seulement les erreurs critiques
+    if (error && !error.includes('NotFoundException')) {
+        console.log('Erreur scan (normal):', error);
+    }
+}
+
+function stopScanner() {
+    if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => {
+            console.log('Scanner arrêté avec succès');
+            
+            document.getElementById('startScanBtn').classList.remove('hidden');
+            document.getElementById('stopScanBtn').classList.add('hidden');
+            
+            showMessage('scanResult', '⏹️ Scanner arrêté', 'info');
+            
+        }).catch(err => {
+            console.error('Erreur arrêt scanner:', err);
+            showMessage('scanResult', '❌ Erreur lors de l\'arrêt du scanner', 'danger');
+        });
+    } else {
+        document.getElementById('startScanBtn').classList.remove('hidden');
+        document.getElementById('stopScanBtn').classList.add('hidden');
+        showMessage('scanResult', 'Scanner non actif', 'info');
+    }
+}
 
         function onScanError(error) {
             // Silent errors during scanning
@@ -3643,7 +3856,7 @@ async function generateSelectedCards() {
     `;
     const fullName = `${member.last_name.toUpperCase()} ${member.first_name}`;
     nameDiv.innerHTML = `
-        <div style="font-size: 36px; font-weight: 700; color: var(--text-primary); line-height: 1.2;">
+        <div style="font-size: 36px; font-weight: 700; color: black; line-height: 1.2;">
             ${fullName}
         </div>
     `;
@@ -3665,8 +3878,8 @@ async function generateSelectedCards() {
         text-align: center;
     `;
     dobDiv.innerHTML = `
-        <div style="font-size: 22px; color: var(--text-primary);">
-            <span style="font-weight: 600; color: var(--text-secondary);">Date de naissance: </span>
+        <div style="font-size: 22px; color: blak">
+            <span style="font-weight: 600; color: black">Date de naissance: </span>
             ${new Date(member.dob).toLocaleDateString('fr-FR')}
         </div>
     `;
@@ -3677,7 +3890,7 @@ async function generateSelectedCards() {
         text-align: center;
     `;
     bloodDiv.innerHTML = `
-        <div style="font-size: 22px; color: var(--text-primary);">
+        <div style="font-size: 22px; color: black">
             <span style="font-weight: 600; color: var(--text-secondary);">Groupe sanguin: </span>
             ${member.blood_type || 'N/A'}
         </div>
