@@ -2030,18 +2030,19 @@ infoDiv.style.cssText = `
   gap: 6px;
   font-size: 1rem;
   margin-bottom: 15px;
-  color: #333;
+  color: #222;
   font-family: 'Poppins', 'Arial', sans-serif;
+  font-weight: 700; /* tout en gras */
 `;
 
 const fullName = `${member.last_name.toUpperCase()} ${member.first_name}`;
 
 infoDiv.innerHTML = `
-  <div><strong>ID:</strong> ${member.id}</div>
-  <div style="font-weight: 700; font-size: 1.1rem;">${fullName}</div>
+  <div>ID: ${member.id}</div>
+  <div style="font-size: 1.1rem;">${fullName}</div>
   <div>Date de naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
   <div>Groupe sanguin: ${member.blood_type || 'N/A'}</div>
-`; 
+`;
   cardDiv.appendChild(infoDiv);
 
   // === QR CODE ===
