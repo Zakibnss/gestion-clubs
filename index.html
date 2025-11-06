@@ -1138,7 +1138,7 @@
                         <input type="file" id="cardBackgroundImage" class="form-control" accept="image/*">
                         <small class="form-text text-muted">Veuillez sélectionner une image à utiliser comme arrière-plan de la carte.</small>
                     </div>
-                    <button class="btn btn-primary" onclick="loadMembersForCards()">📋 Charger les adhérents</button>
+                    <button class="btn btn-primary" id="loadMembersForCardsBtn">📋 Charger les adhérents</button>
                 </div>
             </div>
         </div>
@@ -1316,11 +1316,12 @@
             
             // Preferences
             document.getElementById('preferencesForm').addEventListener('submit', handleUpdatePreferences);
-            
+            document.getElementById('loadMembersForCardsBtn')?.addEventListener('click', loadMembersForCards);
             // Scanner
             document.getElementById('startScanBtn').addEventListener('click', startScanner);
             document.getElementById('stopScanBtn').addEventListener('click', stopScanner);
-        }
+        
+}
 
         function setupTheme() {
             const savedTheme = localStorage.getItem('theme') || 'light';
