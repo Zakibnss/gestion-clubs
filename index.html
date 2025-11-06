@@ -1071,7 +1071,23 @@
             <div id="historyContent"></div>
         </div>
     </div>
-
+<!-- Subscription Expired Modal -->
+<div id="subscriptionAlertModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>⚠️ Abonnement expiré</h2>
+        <button class="modal-close" onclick="closeModal('subscriptionAlertModal')">&times;</button>
+      </div>
+      <p id="subscriptionAlertMessage">
+        Cet adhérent a un abonnement expiré. Voulez-vous le renouveler ?
+      </p>
+      <div style="display:flex; gap:10px; justify-content:center; margin-top:10px;">
+        <button class="btn btn-success" id="renewBtn">🔁 Renouveler</button>
+        <button class="btn btn-danger" id="ignoreBtn">❌ Ignorer</button>
+      </div>
+    </div>
+  </div>
+  
     <script>
         // ============================================
         // CONFIGURATION SUPABASE
@@ -1668,6 +1684,31 @@
                 console.error('Export error:', error);
             }
         }
+// ============================================
+// SUBSCRIPTION CHECK HELPER
+// ============================================
+function isSubscriptionActive(member) {
+  const startDate = new Date(member.start_date);
+  const now = new Date();
+  const endDate = new Date(startDate);
+
+  switch (member.subscription) {
+    case 'monthly':
+      endDate.setMonth(endDate.getMonth() + 1);
+      break;
+    case 'quarterly':
+      endDate.setMonth(endDate.getMonth() + 3);
+      break;
+    case 'biannual':
+      endDate.setMonth(endDate.getMonth() + 6);
+      break;
+    case 'annual':
+      endDate.setFullYear(endDate.getFullYear() + 1);
+      break;
+  }
+
+  return now <= endDate;
+}
 
         // ============================================
         // ATTENDANCE VALIDATION
@@ -1678,6 +1719,11 @@
                 showMessage('validationMessage', 'Entrez un ID adhérent', 'danger');
                 return;
             }
+// 🧾 Vérification de l'abonnement
+if (!isSubscriptionActive(member)) {
+  showSubscriptionAlert(member);
+  return;
+}
 
             try {
                 // Check if member exists
@@ -1726,6 +1772,60 @@
                 showMessage('validationMessage', 'Erreur: ' + error.message, 'danger');
             }
         }
+// ============================================
+// SUBSCRIPTION ALERT HANDLING
+// ============================================
+function showSubscriptionAlert(member) {
+  const modal = document.getElementById('subscriptionAlertModal');
+  modal.classList.add('active');
+
+  document.getElementById('renewBtn').onclick = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { error } = await supabase
+        .from('members')
+        .update({ start_date: today })
+        .eq('id', member.id);
+
+      if (error) throw error;
+
+      closeModal('subscriptionAlertModal');
+      showMessage('validationMessage', 'Abonnement renouvelé avec succès ✅', 'success');
+      await validateAttendanceAfterRenew(member.id);
+    } catch (err) {
+      showMessage('validationMessage', 'Erreur lors du renouvellement', 'danger');
+    }
+  };
+
+  document.getElementById('ignoreBtn').onclick = () => {
+    closeModal('subscriptionAlertModal');
+    showMessage('validationMessage', '⚠️ Abonnement expiré — validation annulée', 'warning');
+  };
+}
+
+async function validateAttendanceAfterRenew(memberId) {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    const { data: member } = await supabase.from('members').select('*').eq('id', memberId).single();
+
+    const { error } = await supabase.from('attendance').insert([{
+      member_id: memberId,
+      club_id: member.club_id,
+      attendance_date: today,
+      attendance_time: now.toTimeString().split(' ')[0],
+      month: now.toISOString().slice(0, 7)
+    }]);
+
+    if (error) throw error;
+
+    showMessage('validationMessage', `✅ Présence validée pour ${member.first_name} ${member.last_name}`, 'success');
+    document.getElementById('validateMemberId').value = '';
+    loadDashboard();
+  } catch (error) {
+    showMessage('validationMessage', 'Erreur: ' + error.message, 'danger');
+  }
+}
 
         // ============================================
         // QR CODE SCANNER
@@ -1946,8 +2046,8 @@ async function generateCard(member, backgroundUrl) {
   // === DIMENSIONS DE LA CARTE (350x450px ≈ carte ID verticale standard) ===
   const cardDiv = document.createElement("div");
   cardDiv.style.cssText = `
-    width: 638px;
-    height: 1011px;
+    width: 350px;
+    height: 450px;
     background-image: url('${backgroundUrl}');
     background-size: cover;
     background-position: center;
@@ -2050,8 +2150,8 @@ async function generateCard(member, backgroundUrl) {
     margin-bottom: 10px;
   `;
   const qrWrapper = document.createElement("div");
-  qrWrapper.style.width = "80px";
-  qrWrapper.style.height = "80px";
+  qrWrapper.style.width = "110px";
+  qrWrapper.style.height = "110px";
   qrDiv.appendChild(qrWrapper);
   new QRCode(qrWrapper, { text: member.id, width: 110, height: 110 });
   cardDiv.appendChild(qrDiv);
