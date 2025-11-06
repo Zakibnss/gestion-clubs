@@ -1060,7 +1060,48 @@
             <div id="photoMessage" style="margin-top: 15px;"></div>
         </div>
     </div>
-
+<!-- Edit Member Modal -->
+<div id="editMemberModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>✏️ Modifier Adhérent</h2>
+        <button class="modal-close" onclick="closeModal('editMemberModal')">&times;</button>
+      </div>
+      <form id="editMemberForm">
+        <input type="hidden" id="editMemberId">
+  
+        <div class="form-group">
+          <label>Nom</label>
+          <input type="text" id="editLastName" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Prénom</label>
+          <input type="text" id="editFirstName" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Date de naissance</label>
+          <input type="date" id="editDob" class="form-control" required>
+        </div>
+        <div class="form-group">
+          <label>Numéro téléphone</label>
+          <input type="text" id="editPhone" class="form-control">
+        </div>
+        <div class="form-group">
+          <label>Groupe sanguin</label>
+          <select id="editBloodType" class="form-control">
+            <option value="">Sélectionner</option>
+            <option value="A+">A+</option><option value="A-">A-</option>
+            <option value="B+">B+</option><option value="B-">B-</option>
+            <option value="AB+">AB+</option><option value="AB-">AB-</option>
+            <option value="O+">O+</option><option value="O-">O-</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-success">💾 Enregistrer</button>
+      </form>
+      <div id="editMemberMessage" style="margin-top: 15px;"></div>
+    </div>
+  </div>
+  
     <!-- Attendance History Modal -->
     <div id="historyModal" class="modal">
         <div class="modal-content">
@@ -1464,7 +1505,9 @@
                 dob: document.getElementById('memberDob').value,
                 blood_type: document.getElementById('memberBloodType').value,
                 subscription: document.getElementById('memberSubscription').value,
-                start_date: document.getElementById('memberStartDate').value
+                start_date: document.getElementById('memberStartDate').value,
+                phone_number: document.getElementById('memberPhone').value.trim()
+
             };
 
             try {
@@ -1494,7 +1537,7 @@
                     <div class="member-card">
                         ${member.photo_url ? 
                             `<img src="${member.photo_url}" class="member-photo" alt="${member.first_name}" style="display: block; margin: 0 auto 15px auto; width: 230px; height: 230px; border-radius: 50%; object-fit: cover; position: static;">` : 
-                            `<div class="member-photo" style="display: block; margin: 0 auto 15px auto; width: 230px; height: 230px; border-radius: 50%; object-fit: cover; position: static;">👤</div>`
+                            `<div class="member-photo" style="display: block; margin: 0 auto 15px auto; width: 230px; height: 230px; border-radius: 50%; object-fit: cover; position: static;"></div>`
                         }
                         <div class="member-info">
                             <h3>${member.last_name} ${member.first_name}</h3>
@@ -1537,6 +1580,64 @@
             document.getElementById('memberPhoto').value = '';
             openModal('photoModal');
         }
+// ============================================
+// MEMBER EDITING
+// ============================================
+function openEditModal(memberId) {
+  loadMemberForEdit(memberId);
+  openModal('editMemberModal');
+}
+
+async function loadMemberForEdit(memberId) {
+  try {
+    const { data: member, error } = await supabase
+      .from('members')
+      .select('*')
+      .eq('id', memberId)
+      .single();
+
+    if (error) throw error;
+
+    document.getElementById('editMemberId').value = member.id;
+    document.getElementById('editLastName').value = member.last_name;
+    document.getElementById('editFirstName').value = member.first_name;
+    document.getElementById('editDob').value = member.dob;
+    document.getElementById('editPhone').value = member.phone_number || '';
+    document.getElementById('editBloodType').value = member.blood_type || '';
+  } catch (err) {
+    console.error('Error loading member for edit:', err);
+    showMessage('editMemberMessage', 'Erreur lors du chargement des données', 'danger');
+  }
+}
+
+document.getElementById('editMemberForm').addEventListener('submit', handleEditMember);
+
+async function handleEditMember(e) {
+  e.preventDefault();
+  const id = document.getElementById('editMemberId').value;
+
+  const updatedData = {
+    last_name: document.getElementById('editLastName').value.trim(),
+    first_name: document.getElementById('editFirstName').value.trim(),
+    dob: document.getElementById('editDob').value,
+    blood_type: document.getElementById('editBloodType').value,
+    phone_number: document.getElementById('editPhone').value.trim()
+  };
+
+  try {
+    const { error } = await supabase.from('members').update(updatedData).eq('id', id);
+    if (error) throw error;
+
+    showMessage('editMemberMessage', '✅ Informations mises à jour avec succès', 'success');
+    setTimeout(() => {
+      closeModal('editMemberModal');
+      loadMembers();
+    }, 1500);
+  } catch (err) {
+    console.error('Error updating member:', err);
+    showMessage('editMemberMessage', 'Erreur: ' + err.message, 'danger');
+  }
+}
 
         function previewPhoto() {
             const file = document.getElementById('memberPhoto').files[0];
@@ -1638,7 +1739,7 @@
   bloodtype: row.GroupeSanguin,
   subscription: row.Abonnement,
   startdate: row.DateDébut,
-  phone: row.NuméroTéléphone // à ajouter
+  phone_number: row.NuméroTéléphone
 }));
 
                     const { error } = await supabase.from('members').insert(members);
@@ -1983,12 +2084,31 @@ async function validateAttendanceAfterRenew(memberId) {
                                 </div>
                             </label>
                         </div>
+                        <div style="margin-top: 15px; display: flex; gap: 10px;">
+  <button class="btn btn-info btn-sm" onclick="openPhotoModal('${member.id}')">📷 Photo</button>
+  <button class="btn btn-warning btn-sm" onclick="openEditModal('${member.id}')">✏️ Modifier</button>
+  <button class="btn btn-danger btn-sm" onclick="deleteMember('${member.id}')">🗑️</button>
+</div>
+
                     `).join('')}
                 `;
             } catch (error) {
                 console.error('Error loading members for cards:', error);
             }
         }
+        function computeEndDate(member) {
+  const start = new Date(member.start_date);
+  const end = new Date(start);
+  switch (member.subscription) {
+    case 'monthly': end.setMonth(end.getMonth() + 1); break;
+    case 'quarterly': end.setMonth(end.getMonth() + 3); break;
+    case 'biannual': end.setMonth(end.getMonth() + 6); break;
+    case 'annual': end.setFullYear(end.getFullYear() + 1); break;
+  }
+  return end;
+}
+const status = new Date() <= endDate ? '✅ Actif' : '❌ Expiré';
+
 
        async function generateSelectedCards() {
   try {
@@ -2153,7 +2273,9 @@ async function generateCard(member, backgroundUrl) {
   qrWrapper.style.width = "110px";
   qrWrapper.style.height = "110px";
   qrDiv.appendChild(qrWrapper);
-  new QRCode(qrWrapper, { text: member.id, width: 110, height: 110 });
+  const memberLink = `${window.location.origin}/member.html?id=${member.id}`;
+new QRCode(qrDiv, { text: memberLink });
+
   cardDiv.appendChild(qrDiv);
 
   // === BOUTON DE TÉLÉCHARGEMENT ===
