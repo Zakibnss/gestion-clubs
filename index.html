@@ -1946,8 +1946,8 @@ async function generateCard(member, backgroundUrl) {
   // === DIMENSIONS DE LA CARTE (350x450px ≈ carte ID verticale standard) ===
   const cardDiv = document.createElement("div");
   cardDiv.style.cssText = `
-    width: 350px;
-    height: 450px;
+    width: 638px;
+    height: 1011px;
     background-image: url('${backgroundUrl}');
     background-size: cover;
     background-position: center;
@@ -2050,8 +2050,8 @@ async function generateCard(member, backgroundUrl) {
     margin-bottom: 10px;
   `;
   const qrWrapper = document.createElement("div");
-  qrWrapper.style.width = "110px";
-  qrWrapper.style.height = "110px";
+  qrWrapper.style.width = "80px";
+  qrWrapper.style.height = "80px";
   qrDiv.appendChild(qrWrapper);
   new QRCode(qrWrapper, { text: member.id, width: 110, height: 110 });
   cardDiv.appendChild(qrDiv);
