@@ -620,7 +620,115 @@
         transform: translateY(0);
     }
 }
+/* Styles pour le bouton de notification */
+.notification-btn {
+    position: relative;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: var(--transition);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 
+.notification-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+}
+
+.notification-count {
+    background: var(--danger-color);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    animation: pulse 2s infinite;
+}
+
+/* Styles pour la liste des notifications */
+.notification-item {
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.notification-item:hover {
+    background: var(--bg-secondary);
+}
+
+.notification-item.unread {
+    background: rgba(23, 162, 184, 0.05);
+    border-left: 3px solid var(--info-color);
+}
+
+.notification-item.read {
+    opacity: 0.7;
+}
+
+.notification-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    font-size: 0.95rem;
+}
+
+.notification-message {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin-bottom: 5px;
+}
+
+.notification-time {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.notification-actions {
+    display: flex;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.notification-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--text-secondary);
+}
+
+.notification-empty .icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
 /* Style pour l'état actif du filtre */
 .filter-select.active {
     border-color: var(--primary-color);
@@ -788,6 +896,128 @@
             background: rgba(255, 193, 7, 0.2);
             color: var(--warning-color);
         }
+        /* ============================================ */
+/* NOTIFICATION STYLES */
+/* ============================================ */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    max-width: 400px;
+}
+
+.notification {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-left: 5px solid var(--danger-color);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transform: translateX(400px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-height: 0;
+    overflow: hidden;
+}
+
+.notification.show {
+    transform: translateX(0);
+    opacity: 1;
+    max-height: 200px;
+}
+
+.notification.hide {
+    transform: translateX(400px);
+    opacity: 0;
+    max-height: 0;
+    margin-bottom: 0;
+}
+
+.notification-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-title {
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.notification-message {
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-close:hover {
+    color: var(--text-primary);
+}
+
+.notification-warning {
+    border-left-color: var(--warning-color);
+}
+
+.notification-info {
+    border-left-color: var(--info-color);
+}
+
+.notification-success {
+    border-left-color: var(--success-color);
+}
+
+.notification-danger {
+    border-left-color: var(--danger-color);
+}
+
+.notification-badge {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: var(--danger-color);
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+    animation: pulse 2s infinite;
+    cursor: pointer;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
     </style>
 </head>
 <body>
@@ -829,6 +1059,10 @@
                 </div>
                 <div class="header-actions">
                     <button class="theme-toggle" id="themeToggle">🌙</button>
+                    <button class="notification-btn" id="notificationBtn">
+                        🔔 Notifications
+                        <span class="notification-count" id="notificationCount">0</span>
+                    </button>
                     <div class="user-info">
                         <span>👤</span>
                         <span id="userDisplay">Utilisateur</span>
@@ -1265,7 +1499,22 @@
       </div>
     </div>
   </div>
-  
+  <!-- Ajoutez ce modal après les autres modals -->
+<div id="notificationsModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2>🔔 Notifications</h2>
+            <button class="modal-close" onclick="closeModal('notificationsModal')">&times;</button>
+        </div>
+        <div class="notifications-list" id="notificationsList" style="max-height: 400px; overflow-y: auto;">
+            <!-- Les notifications seront chargées ici -->
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: space-between; margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+            <button class="btn btn-secondary" onclick="markAllAsRead()">📭 Tout marquer comme lu</button>
+            <button class="btn btn-danger" onclick="clearAllNotifications()">🗑️ Tout effacer</button>
+        </div>
+    </div>
+</div>
     <script>
         // ============================================
         // CONFIGURATION SUPABASE
@@ -1282,7 +1531,271 @@
         let currentClub = null;
         let selectedMemberForPhoto = null;
         let html5QrCode = null;
+        let notificationContainer = null;
 
+// ============================================
+// NOTIFICATION MANAGEMENT
+// ============================================
+
+let notifications = [];
+
+// Initialiser le système de notifications
+function initNotificationSystem() {
+    loadNotifications();
+    setupNotificationButton();
+}
+
+// Configurer le bouton de notification
+function setupNotificationButton() {
+    const notificationBtn = document.getElementById('notificationBtn');
+    notificationBtn.addEventListener('click', showNotificationsModal);
+}
+
+// Charger les notifications depuis le localStorage ou les créer
+function loadNotifications() {
+    const savedNotifications = localStorage.getItem('clubNotifications');
+    if (savedNotifications) {
+        notifications = JSON.parse(savedNotifications);
+    } else {
+        // Créer des notifications d'exemple si aucune n'existe
+        createSampleNotifications();
+    }
+    updateNotificationBadge();
+}
+function showNotification(title, message, type = 'info', duration = 5000) {
+    // Crée dynamiquement une notification visuelle dans la page
+    // type = 'success', 'danger', 'warning', 'info'...
+    const notificationContainer = document.createElement('div');
+    notificationContainer.className = `notification show notification-${type}`;
+    notificationContainer.innerHTML = `
+        <div class="notification-title">${title}</div>
+        <div class="notification-message">${message}</div>
+    `;
+    document.body.appendChild(notificationContainer);
+    setTimeout(() => {
+        notificationContainer.classList.remove('show');
+        notificationContainer.remove();
+    }, duration);
+}
+
+// Créer des notifications d'exemple
+function createSampleNotifications() {
+    const sampleNotifications = [
+        {
+            id: 'welcome',
+            type: 'info',
+            title: 'Bienvenue dans Kyokushin Manager Pro',
+            message: 'Votre système de gestion de club est maintenant opérationnel.',
+            timestamp: new Date().toISOString(),
+            read: false
+        },
+        {
+            id: 'setup',
+            type: 'info',
+            title: 'Configuration recommandée',
+            message: 'Completez la configuration de votre club dans les préférences.',
+            timestamp: new Date(Date.now() - 3600000).toISOString(), // 1 heure ago
+            read: true
+        }
+    ];
+    
+    notifications = sampleNotifications;
+    saveNotifications();
+}
+
+// Sauvegarder les notifications
+function saveNotifications() {
+    localStorage.setItem('clubNotifications', JSON.stringify(notifications));
+}
+
+// Mettre à jour le badge de notification
+function updateNotificationBadge() {
+    const unreadCount = notifications.filter(n => !n.read).length;
+    const badge = document.getElementById('notificationCount');
+    if (badge) {
+        badge.textContent = unreadCount;
+        badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+    }
+}
+
+// Afficher le modal des notifications
+function showNotificationsModal() {
+    loadNotifications(); // Recharger les notifications
+    displayNotificationsList();
+    openModal('notificationsModal');
+}
+
+// Afficher la liste des notifications
+function displayNotificationsList() {
+    const list = document.getElementById('notificationsList');
+    
+    if (notifications.length === 0) {
+        list.innerHTML = `
+            <div class="notification-empty">
+                <div class="icon">🔔</div>
+                <h3>Aucune notification</h3>
+                <p>Vous serez notifié des événements importants de votre club.</p>
+            </div>
+        `;
+        return;
+    }
+
+    // Trier les notifications par date (plus récentes en premier)
+    const sortedNotifications = [...notifications].sort((a, b) => 
+        new Date(b.timestamp) - new Date(a.timestamp)
+    );
+
+    list.innerHTML = sortedNotifications.map(notification => `
+        <div class="notification-item ${notification.read ? 'read' : 'unread'}" 
+             onclick="markAsRead('${notification.id}')">
+            <div class="notification-icon">
+                ${getNotificationTypeIcon(notification.type)}
+            </div>
+            <div class="notification-content">
+                <div class="notification-title">${notification.title}</div>
+                <div class="notification-message">${notification.message}</div>
+                <div class="notification-time">
+                    ${formatNotificationTime(notification.timestamp)}
+                </div>
+                ${!notification.read ? `
+                    <div class="notification-actions">
+                        <button class="btn btn-sm btn-info" onclick="event.stopPropagation(); markAsRead('${notification.id}')">
+                            ✓ Marquer comme lu
+                        </button>
+                    </div>
+                ` : ''}
+            </div>
+        </div>
+    `).join('');
+}
+
+// Obtenir l'icône selon le type de notification
+function getNotificationTypeIcon(type) {
+    const icons = {
+        'info': 'ℹ️',
+        'success': '✅',
+        'warning': '⚠️',
+        'danger': '❌',
+        'subscription': '💰',
+        'attendance': '📊',
+        'member': '👤'
+    };
+    return icons[type] || '🔔';
+}
+
+// Formater l'heure de la notification
+function formatNotificationTime(timestamp) {
+    const now = new Date();
+    const notificationTime = new Date(timestamp);
+    const diffMs = now - notificationTime;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'À l\'instant';
+    if (diffMins < 60) return `Il y a ${diffMins} min`;
+    if (diffHours < 24) return `Il y a ${diffHours} h`;
+    if (diffDays < 7) return `Il y a ${diffDays} j`;
+    
+    return notificationTime.toLocaleDateString('fr-FR');
+}
+
+// Marquer une notification comme lue
+function markAsRead(notificationId) {
+    const notification = notifications.find(n => n.id === notificationId);
+    if (notification && !notification.read) {
+        notification.read = true;
+        saveNotifications();
+        updateNotificationBadge();
+        displayNotificationsList(); // Rafraîchir l'affichage
+    }
+}
+
+// Marquer toutes les notifications comme lues
+function markAllAsRead() {
+    notifications.forEach(notification => {
+        notification.read = true;
+    });
+    saveNotifications();
+    updateNotificationBadge();
+    displayNotificationsList();
+}
+
+// Effacer toutes les notifications
+function clearAllNotifications() {
+    if (confirm('Êtes-vous sûr de vouloir effacer toutes les notifications ?')) {
+        notifications = [];
+        saveNotifications();
+        updateNotificationBadge();
+        displayNotificationsList();
+    }
+}
+
+// Ajouter une nouvelle notification
+function addNotification(type, title, message) {
+    // Vérifie si une notification strictement identique (type, titre, message, non lue) existe déjà
+    const exists = notifications.some(n =>
+        n.type === type &&
+        n.title === title &&
+        n.message === message &&
+        !n.read
+    );
+    if (exists) return;
+
+    const newNotification = {
+        id: "notif" + Date.now(),
+        type,
+        title,
+        message,
+        timestamp: new Date().toISOString(),
+        read: false
+    };
+    notifications.unshift(newNotification);
+    saveNotifications();
+    updateNotificationBadge();
+
+    // Affiche une notification toast si l'utilisateur est sur l'application
+    if (
+        document.getElementById('mainApp') &&
+        !document.getElementById('mainApp').classList.contains('hidden')
+    ) {
+        showNotification(title, message, type, 5000);
+    }
+}
+
+
+// Fonctions utilitaires pour différents types de notifications
+function notifySubscriptionExpired(member) {
+    addNotification(
+        'subscription',
+        '❌ Abonnement expiré',
+        `${member.first_name} ${member.last_name} - L'abonnement a expiré`
+    );
+}
+
+function notifySubscriptionExpiring(member, daysLeft) {
+    addNotification(
+        'warning',
+        '⚠️ Abonnement bientôt expiré',
+        `${member.first_name} ${member.last_name} - Expire dans ${daysLeft} jour(s)`
+    );
+}
+
+function notifyNewMember(member) {
+    addNotification(
+        'success',
+        '✅ Nouvel adhérent',
+        `${member.first_name} ${member.last_name} a été ajouté au club`
+    );
+}
+
+function notifyAttendance(member) {
+    addNotification(
+        'attendance',
+        '📊 Présence enregistrée',
+        `${member.first_name} ${member.last_name} a validé sa présence`
+    );
+}
         // ============================================
         // INITIALIZATION
         // ============================================
@@ -1388,6 +1901,7 @@
                 currentClub = JSON.parse(savedClub);
                 showMainApp();
             }
+            startSubscriptionMonitoring();
         }
 
         function showMainApp() {
@@ -1399,6 +1913,10 @@
 
             setupNavigation();
             loadDashboard();
+            // Vérifier les abonnements expirés après la connexion
+setTimeout(() => {
+    checkExpiredSubscriptions();
+}, 2000);
         }
 
         function logout() {
@@ -1408,7 +1926,98 @@
             document.getElementById('loginPage').classList.remove('hidden');
             document.getElementById('mainApp').classList.add('hidden');
         }
+// ============================================
+// NOTIFICATION SYSTEM
+// ============================================
 
+
+// ============================================
+// SUBSCRIPTION MONITORING
+// ============================================
+
+function computeEndDate(member) {
+    const start = new Date(member.start_date);
+    const end = new Date(start);
+    switch (member.subscription) {
+        case "monthly": end.setMonth(end.getMonth() + 1); break;
+        case "quarterly": end.setMonth(end.getMonth() + 3); break;
+        case "biannual": end.setMonth(end.getMonth() + 6); break;
+        case "annual": end.setFullYear(end.getFullYear() + 1); break;
+    }
+    return end;
+}
+
+async function checkExpiredSubscriptions() {
+    try {
+        let query = supabase.from('members').select('*');
+        
+        if (currentUser !== 'admin') {
+            if (currentClub && currentClub.id) {
+                query = query.eq('club_id', currentClub.id);
+            } else {
+                return;
+            }
+        }
+        
+        const { data: members, error } = await query;
+        
+        if (error) throw error;
+        
+        if (!members || members.length === 0) return;
+        
+        const now = new Date();
+        const expiredMembers = [];
+        const expiringSoonMembers = [];
+        
+        members.forEach(member => {
+            const endDate = computeEndDate(member);
+            const timeDiff = endDate.getTime() - now.getTime();
+            const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+            
+            if (daysDiff < 0) {
+                expiredMembers.push(member);
+            } else if (daysDiff <= 7) {
+                expiringSoonMembers.push(member);
+            }
+        });
+        
+        // NOTIFICATIONS POUR ABONNEMENTS EXPIRÉS
+        if (expiredMembers.length > 0) {
+            expiredMembers.forEach(member => {
+                addNotification(
+                    'danger',
+                    '❌ Abonnement expiré',
+                    `${member.first_name} ${member.last_name} - L'abonnement a expiré`
+                );
+            });
+        }
+        
+        // NOTIFICATIONS POUR ABONNEMENTS BIENTÔT EXPIRÉS
+        if (expiringSoonMembers.length > 0) {
+            expiringSoonMembers.forEach(member => {
+                const endDate = computeEndDate(member);
+                const daysLeft = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+                
+                addNotification(
+                    'warning',
+                    '⚠️ Abonnement bientôt expiré',
+                    `${member.first_name} ${member.last_name} - Expire dans ${daysLeft} jour(s)`
+                );
+            });
+        }
+        
+        updateNotificationBadge();
+        
+    } catch (error) {
+        console.error('Erreur vérification abonnements:', error);
+    }
+}
+
+
+function startSubscriptionMonitoring() {
+    checkExpiredSubscriptions();
+    setInterval(checkExpiredSubscriptions, 30 * 60 * 1000);
+}
         // ============================================
         // NAVIGATION
         // ============================================
@@ -2134,6 +2743,17 @@ document.getElementById('filterStatus').addEventListener('change', function() {
 
 // Initialisation
 document.addEventListener('DOMContentLoaded', function() {
+    checkLogin();
+    setupEventListeners();
+    setupTheme();
+    initNotificationSystem(); // ← AJOUTEZ CETTE LIGNE ICI
+    
+    // Set default month to current month
+    const now = new Date();
+    const currentMonth = now.toISOString().slice(0, 7);
+    document.getElementById('attendanceMonth').value = currentMonth;
+});
+document.addEventListener('DOMContentLoaded', function() {
     // Initialiser le compteur
     const memberCount = document.getElementById('memberCount');
     if (memberCount) {
@@ -2325,48 +2945,80 @@ async function handleEditMember(e) {
 }
 
 
-        async function importExcel() {
-            const file = document.getElementById('excelFile').files[0];
-            if (!file) {
-                showMessage('importMessage', 'Sélectionnez un fichier Excel', 'danger');
-                return;
-            }
+  async function importExcel() {
+    const file = document.getElementById('excelFile').files[0];
+    if (!file) {
+        showMessage('importMessage', 'Sélectionnez un fichier Excel', 'danger');
+        return;
+    }
 
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                    const rows = XLSX.utils.sheet_to_json(sheet);
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, { type: 'array' });
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            
+            // CORRECTION : Utiliser l'option raw: false pour obtenir les dates formatées
+            const rows = XLSX.utils.sheet_to_json(sheet, { raw: false });
 
-                    showMessage('importMessage', `Import de ${rows.length} adhérents...`, 'info');
+            showMessage('importMessage', `Import de ${rows.length} adhérents...`, 'info');
 
-                    const members = rows.map(row => ({
-  id: row.ID,
-  clubid: currentClub.id,
-  lastname: row.Nom,
-  firstname: row.Prénom,
-  dob: row.DateNaissance,
-  bloodtype: row.GroupeSanguin,
-  subscription: row.Abonnement,
-  startdate: row.DateDébut,
-  phone_number: row.NuméroTéléphone
-}));
+            const members = rows.map(row => {
+                // Fonction pour convertir les dates Excel
+                const convertExcelDate = (excelDate) => {
+                    if (!excelDate) return null;
+                    
+                    // Si c'est déjà une date valide
+                    if (typeof excelDate === 'string' && excelDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                        return excelDate;
+                    }
+                    
+                    // Si c'est un nombre (format Excel)
+                    if (!isNaN(excelDate)) {
+                        // Conversion depuis le format Excel (1er janvier 1900 = 1)
+                        const date = new Date((excelDate - 25569) * 86400 * 1000);
+                        return date.toISOString().split('T')[0];
+                    }
+                    
+                    // Si c'est une chaîne de date
+                    try {
+                        const date = new Date(excelDate);
+                        return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : null;
+                    } catch {
+                        return null;
+                    }
+                };
 
-                    const { error } = await supabase.from('members').insert(members);
-                    if (error) throw error;
+                return {
+                    id: row.ID,
+                    club_id: currentClub.id,
+                    last_name: row.Nom,
+                    first_name: row.Prénom,
+                    dob: convertExcelDate(row.DateNaissance),
+                    blood_type: row.GroupeSanguin,
+                    subscription: row.Abonnement,
+                    start_date: convertExcelDate(row.DateDébut),
+                    phone_number: row.NuméroTéléphone
+                };
+            });
 
-                    showMessage('importMessage', 'Import réussi!', 'success');
-                    loadDashboard();
-                    loadMembers();
-                } catch (error) {
-                    console.error('Import error:', error);
-                    showMessage('importMessage', 'Erreur: ' + error.message, 'danger');
-                }
-            };
-            reader.readAsArrayBuffer(file);
+            // Vérifier les données avant insertion
+            console.log('Membres à importer:', members);
+
+            const { error } = await supabase.from('members').insert(members);
+            if (error) throw error;
+
+            showMessage('importMessage', 'Import réussi!', 'success');
+            loadDashboard();
+            loadMembers();
+        } catch (error) {
+            console.error('Import error:', error);
+            showMessage('importMessage', 'Erreur: ' + error.message, 'danger');
         }
+    };
+    reader.readAsArrayBuffer(file);
+}
 
         async function exportMembers() {
             try {
@@ -2840,29 +3492,44 @@ async function generateSelectedCards() {
             alert('Veuillez sélectionner une image d\'arrière-plan');
             return;
         }
-    const backgroundUrl = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = e => resolve(e.target.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(backgroundFile);
-    });
 
-    const { data: members, error } = await supabase
-      .from('members')
-      .select('*')
-      .in('id', selectedMemberIds);
+        // Récupérer les IDs des membres sélectionnés
+        const selectedMemberIds = Array.from(checkboxes).map(checkbox => checkbox.value);
+        
+        const backgroundUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(backgroundFile);
+        });
 
-    if (error) throw error;
+        const { data: members, error } = await supabase
+            .from('members')
+            .select('*')
+            .in('id', selectedMemberIds);
 
-    const previewDiv = document.getElementById('cardsPreview');
-    previewDiv.innerHTML = '<h3>Cartes générées :</h3><div style="display: flex; flex-wrap: wrap; gap: 25px;"></div>';
-    const cardsContainer = previewDiv.querySelector('div');
+        if (error) throw error;
 
-    for (const member of members) {
-      const cardContainer = await generateCard(member, backgroundUrl);
-      cardsContainer.appendChild(cardContainer);
-    }
-} catch (error) {
+        const previewDiv = document.getElementById('cardsPreview');
+        previewDiv.innerHTML = `
+            <div style="grid-column: 1/-1; text-align: center; margin-bottom: 20px;">
+                <h3>🎫 Cartes générées (${members.length} adhérent(s))</h3>
+                <p style="color: var(--text-secondary);">Cliquez sur "Télécharger la carte" pour sauvegarder chaque carte en PNG</p>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 25px; justify-content: center;"></div>
+        `;
+        const cardsContainer = previewDiv.querySelector('div:last-child');
+
+        // Afficher un indicateur de chargement
+
+        for (const member of members) {
+            const cardContainer = await generateCard(member, backgroundUrl);
+            cardsContainer.appendChild(cardContainer);
+        }
+
+       
+
+    } catch (error) {
         console.error('Erreur génération cartes :', error);
         const previewDiv = document.getElementById('cardsPreview');
         previewDiv.innerHTML = `
@@ -2873,186 +3540,287 @@ async function generateSelectedCards() {
     }
 }
 
-async function generateCard(member, backgroundUrl) {
-  const wrapper = document.createElement("div");
-  wrapper.style.cssText = `
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-  `;
 
-  // Carte principale
-  const cardDiv = document.createElement("div");
-  cardDiv.style.cssText = `
-    width: 638px;
-    height: 1011px;
-    background-image: url('${backgroundUrl}');
-    background-size: cover;
-    background-position: center;
-    border-radius: 20px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.16);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    position: relative;
-    overflow: hidden;
-    padding: 0;
-    text-align: center;
-  `;
-
-  // Positionnement des éléments avec des positions absolues
-  // PHOTO en cercle - positionné en haut
-  const circlePhotoStyle = `
-    width: 150px;
-    height: 150px;
-    object-fit: cover;
-    border-radius: 50%;
-    border: 4px solid #fff;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    background: #fff;
-    position: absolute;
-    top: 180px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 10;
-  `;
-  
-  let photo;
-  if (member.photo_url) {
-    photo = document.createElement("img");
-    photo.crossOrigin = "anonymous";
-    photo.alt = member.first_name;
-    try {
-      const blob = await fetch(member.photo_url).then(r => r.blob());
-      const reader = new FileReader();
-      await new Promise(resolve => {
-        reader.onloadend = () => {
-          photo.src = reader.result;
-          resolve();
-        };
-        reader.readAsDataURL(blob);
-      });
-    } catch (err) {
-      console.error("Erreur chargement photo:", err);
-    }
-    photo.style.cssText = circlePhotoStyle;
-  } else {
-    photo = document.createElement("div");
-    photo.style.cssText = circlePhotoStyle + "display:flex;align-items:center;justify-content:center;";
-    photo.innerHTML = `
-      <svg width="80" height="80" viewBox="0 0 90 90" fill="#bbb" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="45" cy="36" r="20" fill="#bbb"/>
-        <ellipse cx="45" cy="70" rx="27" ry="16" fill="#bbb"/>
-      </svg>
+     async function generateCard(member, backgroundUrl) {
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        margin: 20px 0;
     `;
-  }
-  cardDiv.appendChild(photo);
 
-  // Bloc d'infos - positionné au centre
-  const infoDiv = document.createElement("div");
-  infoDiv.style.cssText = `
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    font-size: 1.2rem;
-    color: #222;
-    font-family: 'Poppins', 'Arial', sans-serif;
-    font-weight: 700;
-    line-height: 1.4;
-    position: absolute;
-    top: 380px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80%;
-    text-align: center;
-    background: rgba(255, 255, 255, 0.85);
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  `;
-  
-  const fullName = `${member.last_name.toUpperCase()} ${member.first_name}`;
-  infoDiv.innerHTML = `
-    <div style="font-size: 1.1rem;"><b>ID :</b> ${member.id}</div>
-    <div style="font-size: 1.5rem; margin: 5px 0;">${fullName}</div>
-    <div style="font-size: 1.1rem;"><b>Date de naissance :</b> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
-    <div style="font-size: 1.1rem;"><b>Groupe sanguin :</b> ${member.blood_type || 'N/A'}</div>
-  `;
-  cardDiv.appendChild(infoDiv);
+    // Carte principale avec l'image d'arrière-plan
+    const cardDiv = document.createElement("div");
+    cardDiv.style.cssText = `
+        width: 638px;
+        height: 1011px;
+        background: url('${backgroundUrl}') no-repeat center center;
+        background-size: cover;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+        border: 2px solid #e9ecef;
+        font-family: 'Segoe UI', Arial, sans-serif;
+    `;
 
-  // QR CODE - positionné en bas
-  const qrDiv = document.createElement("div");
-  qrDiv.style.cssText = `
-    background: white;
-    padding: 12px;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    position: absolute;
-    bottom: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-  `;
-  
-  const qrWrapper = document.createElement("div");
-  qrWrapper.style.width = "120px";
-  qrWrapper.style.height = "120px";
-  qrDiv.appendChild(qrWrapper);
+    // Overlay pour améliorer la lisibilité du texte sur l'image
+    const overlay = document.createElement("div");
+    overlay.style.cssText = `
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.85);
+        z-index: 1;
+    `;
+    cardDiv.appendChild(overlay);
 
-  function computeEndDate(member) {
-    const start = new Date(member.start_date);
-    const end = new Date(start);
-    switch (member.subscription) {
-      case "monthly": end.setMonth(end.getMonth() + 1); break;
-      case "quarterly": end.setMonth(end.getMonth() + 3); break;
-      case "biannual": end.setMonth(end.getMonth() + 6); break;
-      case "annual": end.setFullYear(end.getFullYear() + 1); break;
+    // Contenu principal (au-dessus de l'overlay)
+    const contentDiv = document.createElement("div");
+    contentDiv.style.cssText = `
+        position: relative;
+        z-index: 2;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    `;
+
+    
+
+    // Photo en cercle centrée
+    const photoContainer = document.createElement("div");
+    photoContainer.style.cssText = `
+        display: flex;
+        justify-content: center;
+        margin: 60px 0 40px 0;
+    `;
+
+    let photo;
+    if (member.photo_url) {
+        photo = document.createElement("img");
+        photo.crossOrigin = "anonymous";
+        photo.alt = member.first_name;
+        try {
+            const blob = await fetch(member.photo_url).then(r => r.blob());
+            const reader = new FileReader();
+            await new Promise(resolve => {
+                reader.onloadend = () => {
+                    photo.src = reader.result;
+                    resolve();
+                };
+                reader.readAsDataURL(blob);
+            });
+        } catch (err) {
+            console.error("Erreur chargement photo:", err);
+            photo = createPlaceholderPhoto();
+        }
+        photo.style.cssText = `
+            width: 220px;
+            height: 220px;
+            object-fit: cover;
+            border-radius: 50%;
+            border: 6px solid white;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        `;
+    } else {
+        photo = createPlaceholderPhoto();
     }
-    return end;
-  }
+    photoContainer.appendChild(photo);
+    contentDiv.appendChild(photoContainer);
 
-  const endDateObj = computeEndDate(member);
-  const endDate = endDateObj.toLocaleDateString('fr-FR');
-  const isActive = new Date() <= endDateObj;
-  const status = isActive ? "Actif" : "Expiré";
+    // Nom complet en gras
+    const nameDiv = document.createElement("div");
+    nameDiv.style.cssText = `
+        text-align: center;
+        margin-bottom: 40px;
+        padding: 0 40px;
+    `;
+    const fullName = `${member.last_name.toUpperCase()} ${member.first_name}`;
+    nameDiv.innerHTML = `
+        <div style="font-size: 36px; font-weight: 700; color: var(--text-primary); line-height: 1.2;">
+            ${fullName}
+        </div>
+    `;
+    contentDiv.appendChild(nameDiv);
 
-  const qrText =
+    // Informations détaillées
+    const infoContainer = document.createElement("div");
+    infoContainer.style.cssText = `
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+        padding: 0 60px;
+        margin-bottom: 50px;
+    `;
+
+    // Date de naissance
+    const dobDiv = document.createElement("div");
+    dobDiv.style.cssText = `
+        text-align: center;
+    `;
+    dobDiv.innerHTML = `
+        <div style="font-size: 22px; color: var(--text-primary);">
+            <span style="font-weight: 600; color: var(--text-secondary);">Date de naissance: </span>
+            ${new Date(member.dob).toLocaleDateString('fr-FR')}
+        </div>
+    `;
+
+    // Groupe sanguin
+    const bloodDiv = document.createElement("div");
+    bloodDiv.style.cssText = `
+        text-align: center;
+    `;
+    bloodDiv.innerHTML = `
+        <div style="font-size: 22px; color: var(--text-primary);">
+            <span style="font-weight: 600; color: var(--text-secondary);">Groupe sanguin: </span>
+            ${member.blood_type || 'N/A'}
+        </div>
+    `;
+
+    infoContainer.appendChild(dobDiv);
+    infoContainer.appendChild(bloodDiv);
+    contentDiv.appendChild(infoContainer);
+
+    // Calcul de la date de fin et statut
+    function computeEndDate(member) {
+        const start = new Date(member.start_date);
+        const end = new Date(start);
+        switch (member.subscription) {
+            case "monthly": end.setMonth(end.getMonth() + 1); break;
+            case "quarterly": end.setMonth(end.getMonth() + 3); break;
+            case "biannual": end.setMonth(end.getMonth() + 6); break;
+            case "annual": end.setFullYear(end.getFullYear() + 1); break;
+        }
+        return end;
+    }
+
+    const endDateObj = computeEndDate(member);
+    const endDate = endDateObj.toLocaleDateString('fr-FR'); // Déjà une string
+    const isActive = new Date() <= endDateObj;
+    const status = isActive ? "Actif" : "Expiré";
+
+    // QR Code centré en bas
+    const qrContainer = document.createElement("div");
+    qrContainer.style.cssText = `
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex: 1;
+        padding: 0 40px 60px 40px;
+    `;
+
+    const qrDiv = document.createElement("div");
+    qrDiv.style.cssText = `
+        background: white;
+        padding: 20px;
+        border-radius: 15px;
+        box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        border: 2px solid var(--border-color);
+    `;
+
+    // CORRECTION : Utiliser endDate directement (c'est déjà une string)
+    const qrText = 
     `ID: ${member.id}\n` +
     `Nom complet: ${member.last_name.toUpperCase()} ${member.first_name}\n` +
     `Date de naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}\n` +
-    `Fin d'abonnement: ${endDate}\n` +
+    `Fin d'abonnement: ${endDate}\n` + // ← CORRECTION ICI : utiliser endDate directement
     `Statut: ${status}`;
-  new QRCode(qrDiv, { 
-    text: qrText,
-    width: 120,
-    height: 120
-  });
 
-  cardDiv.appendChild(qrDiv);
+    new QRCode(qrDiv, { 
+        text: qrText,
+        width: 200,
+        height: 200,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
 
-  // Bouton de téléchargement
-  const exportBtn = document.createElement("button");
-  exportBtn.textContent = "💾 Télécharger PNG";
-  exportBtn.className = "btn btn-info btn-sm";
-  exportBtn.style.marginTop = "10px";
-  exportBtn.onclick = () => exportCardAsPNG(cardDiv, member);
+    qrContainer.appendChild(qrDiv);
+    contentDiv.appendChild(qrContainer);
 
-  wrapper.appendChild(cardDiv);
-  wrapper.appendChild(exportBtn);
-  return wrapper;
+    // Ajouter le contenu à la carte
+    cardDiv.appendChild(contentDiv);
+
+    // Bouton de téléchargement
+    const exportBtn = document.createElement("button");
+    exportBtn.textContent = "💾 Télécharger la carte";
+    exportBtn.className = "btn btn-primary";
+    exportBtn.style.marginTop = "15px";
+    exportBtn.style.padding = "12px 25px";
+    exportBtn.style.fontSize = "16px";
+    exportBtn.onclick = () => exportCardAsPNG(cardDiv, member.id);
+
+    wrapper.appendChild(cardDiv);
+    wrapper.appendChild(exportBtn);
+    return wrapper;
 }
 
-        async function exportCardAsPNG(cardElement, memberId) {
-            const canvas = await html2canvas(cardElement);
-            const link = document.createElement('a');
-            link.download = `carte_${memberId}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
-        }
+// Fonction helper pour créer une photo placeholder
+function createPlaceholderPhoto() {
+    const placeholder = document.createElement("div");
+    placeholder.style.cssText = `
+        width: 220px;
+        height: 220px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+        border: 6px solid white;
+        box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 70px;
+    `;
+    placeholder.innerHTML = `👤`;
+    return placeholder;
+}
+
+// Fonction pour exporter la carte en PNG
+async function exportCardAsPNG(cardElement, memberId) {
+    try {
+        const canvas = await html2canvas(cardElement, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff'
+        });
+        
+        const link = document.createElement('a');
+        link.download = `carte_${memberId}.png`;
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
+        
+    } catch (error) {
+        console.error('Erreur export PNG:', error);
+        alert('Erreur lors du téléchargement de la carte');
+    }
+}
+
+
+// Fonction pour exporter la carte en PNG
+async function exportCardAsPNG(cardElement, memberId) {
+    try {
+        const canvas = await html2canvas(cardElement, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff'
+        });
+        
+        const link = document.createElement('a');
+        link.download = `carte_${memberId}.png`;
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
+        
+    } catch (error) {
+        console.error('Erreur export PNG:', error);
+        alert('Erreur lors du téléchargement de la carte');
+    }
+}
 
         // ============================================
         // UTILITY FUNCTIONS
