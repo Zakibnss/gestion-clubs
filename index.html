@@ -886,6 +886,15 @@
                 <div class="card">
                     <div class="card-header">
                         <h2 class="card-title">👥 Liste des Adhérents</h2>
+                        <div style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
+                            <label for="filterStatus" style="font-weight: bold;">Filtrer par statut :</label>
+                            <select id="filterStatus" class="form-select" style="width: 200px;">
+                              <option value="all">Tous</option>
+                              <option value="active">Actif</option>
+                              <option value="expired">Expiré</option>
+                            </select>
+                          </div>
+                          
                         <button class="btn btn-primary" onclick="loadMembers()">🔄 Actualiser</button>
                     </div>
                     <div id="membersGrid" class="grid grid-3"></div>
@@ -1002,8 +1011,6 @@
                         <small class="form-text text-muted">Veuillez sélectionner une image à utiliser comme arrière-plan de la carte.</small>
                     </div>
                     <button class="btn btn-primary" onclick="loadMembersForCards()">📋 Charger les adhérents</button>
-                    <div id="cardsGrid" class="grid grid-3" style="margin-top: 20px;"></div>
-                    <div id="cardsPreview" style="margin-top: 20px;"></div>
                 </div>
             </div>
         </div>
@@ -1534,19 +1541,37 @@
     const { data: members, error } = await query;
     if (error) throw error;
 
-    const grid = document.getElementById('membersGrid');
-    grid.innerHTML = members.map(member => {
-      // ✅ Calcul de la date de fin
-      const startDate = new Date(member.start_date);
-      const endDate = new Date(startDate);
+    const filter = document.getElementById('filterStatus').value;
+
+    const filteredMembers = members.filter(member => {
+      const start = new Date(member.start_date);
+      const end = new Date(start);
       switch (member.subscription) {
-        case "monthly": endDate.setMonth(endDate.getMonth() + 1); break;
-        case "quarterly": endDate.setMonth(endDate.getMonth() + 3); break;
-        case "biannual": endDate.setMonth(endDate.getMonth() + 6); break;
-        case "annual": endDate.setFullYear(endDate.getFullYear() + 1); break;
+        case "monthly": end.setMonth(end.getMonth() + 1); break;
+        case "quarterly": end.setMonth(end.getMonth() + 3); break;
+        case "biannual": end.setMonth(end.getMonth() + 6); break;
+        case "annual": end.setFullYear(end.getFullYear() + 1); break;
       }
-      const endDateStr = endDate.toLocaleDateString('fr-FR');
-      const isActive = new Date() <= endDate;
+      const isActive = new Date() <= end;
+      return (
+        filter === "all" ||
+        (filter === "active" && isActive) ||
+        (filter === "expired" && !isActive)
+      );
+    });
+
+    const grid = document.getElementById('membersGrid');
+    grid.innerHTML = filteredMembers.map(member => {
+      const start = new Date(member.start_date);
+      const end = new Date(start);
+      switch (member.subscription) {
+        case "monthly": end.setMonth(end.getMonth() + 1); break;
+        case "quarterly": end.setMonth(end.getMonth() + 3); break;
+        case "biannual": end.setMonth(end.getMonth() + 6); break;
+        case "annual": end.setFullYear(end.getFullYear() + 1); break;
+      }
+      const endDateStr = end.toLocaleDateString('fr-FR');
+      const isActive = new Date() <= end;
       const badgeClass = isActive ? 'badge-success' : 'badge-danger';
 
       return `
@@ -1573,10 +1598,39 @@
         </div>
       `;
     }).join('');
+
   } catch (error) {
     console.error('Error loading members:', error);
   }
 }
+
+// 🔁 Recharger la liste quand on change le filtre
+document.getElementById('filterStatus').addEventListener('change', loadMembers);
+function checkExpiredMembers(members) {
+  const now = new Date();
+  const expiredToday = members.filter(member => {
+    const start = new Date(member.start_date);
+    const end = new Date(start);
+    switch (member.subscription) {
+      case "monthly": end.setMonth(end.getMonth() + 1); break;
+      case "quarterly": end.setMonth(end.getMonth() + 3); break;
+      case "biannual": end.setMonth(end.getMonth() + 6); break;
+      case "annual": end.setFullYear(end.getFullYear() + 1); break;
+    }
+    // Compare la date de fin à aujourd’hui
+    return end.toDateString() === now.toDateString();
+  });
+
+  if (expiredToday.length > 0) {
+    alert(`⚠️ ${expiredToday.length} adhérent(s) ont expiré aujourd’hui !`);
+  }
+}
+
+// Appelle cette fonction après avoir chargé les membres
+loadMembers().then(() => {
+  supabase.from('members').select('*').then(({ data }) => checkExpiredMembers(data));
+});
+
 
 
         async function deleteMember(memberId) {
@@ -2176,65 +2230,122 @@ async function generateCard(member, backgroundUrl) {
   // Carte principale
   const cardDiv = document.createElement("div");
   cardDiv.style.cssText = `
-    width: 638px; height: 1011px;
+    width: 638px;
+    height: 1011px;
     background-image: url('${backgroundUrl}');
-    background-size: cover; background-position: center;
-    border-radius: 20px; box-shadow: 0 6px 18px rgba(0,0,0,0.16);
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: flex-start; position: relative; overflow: hidden;
-    padding: 0; text-align: center;
+    background-size: cover;
+    background-position: center;
+    border-radius: 20px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.16);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+    padding: 0;
+    text-align: center;
   `;
 
-  // PHOTO en cercle simple + ombre
-  const photo = document.createElement("img");
-  photo.style.cssText = `
-    width: 120px; height: 120px; object-fit: cover;
-    border-radius: 50%; border: 3px solid #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.18);
-    margin-top: 40px; background: #fff;
+  // Positionnement des éléments avec des positions absolues
+  // PHOTO en cercle - positionné en haut
+  const circlePhotoStyle = `
+    width: 150px;
+    height: 150px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 4px solid #fff;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    background: #fff;
+    position: absolute;
+    top: 180px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
   `;
-  photo.alt = member.firstname;
-  if (member.photourl) {
+  
+  let photo;
+  if (member.photo_url) {
+    photo = document.createElement("img");
+    photo.crossOrigin = "anonymous";
+    photo.alt = member.first_name;
     try {
-      const blob = await fetch(member.photourl).then(r => r.blob());
+      const blob = await fetch(member.photo_url).then(r => r.blob());
       const reader = new FileReader();
       await new Promise(resolve => {
-        reader.onloadend = () => { photo.src = reader.result; resolve(); };
+        reader.onloadend = () => {
+          photo.src = reader.result;
+          resolve();
+        };
         reader.readAsDataURL(blob);
       });
-    } catch {
-      photo.src = ""; // placeholder
+    } catch (err) {
+      console.error("Erreur chargement photo:", err);
     }
+    photo.style.cssText = circlePhotoStyle;
   } else {
-    photo.src = ""; // placeholder ou icône svg
+    photo = document.createElement("div");
+    photo.style.cssText = circlePhotoStyle + "display:flex;align-items:center;justify-content:center;";
+    photo.innerHTML = `
+      <svg width="80" height="80" viewBox="0 0 90 90" fill="#bbb" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="45" cy="36" r="20" fill="#bbb"/>
+        <ellipse cx="45" cy="70" rx="27" ry="16" fill="#bbb"/>
+      </svg>
+    `;
   }
   cardDiv.appendChild(photo);
 
-  // Bloc d'infos
+  // Bloc d'infos - positionné au centre
   const infoDiv = document.createElement("div");
   infoDiv.style.cssText = `
-    display: flex; flex-direction: column; align-items: center;
-    gap: 12px; font-size: 1.15rem; margin-top: 18px; color: #222;
-    font-family: 'Poppins', Arial, sans-serif; font-weight: 600;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    font-size: 1.2rem;
+    color: #222;
+    font-family: 'Poppins', 'Arial', sans-serif;
+    font-weight: 700;
+    line-height: 1.4;
+    position: absolute;
+    top: 380px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.85);
+    padding: 20px;
+    border-radius: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
   `;
+  
   const fullName = `${member.last_name.toUpperCase()} ${member.first_name}`;
   infoDiv.innerHTML = `
-     <div><b>ID :</b> ${member.id}</div>
-    <div style="font-size:1.25rem;">${fullName}</div>
-    <div><b>Date de naissance :</b> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
-    <div><b>Groupe sanguin :</b> ${member.bloodtype}</div>
+    <div style="font-size: 1.1rem;"><b>ID :</b> ${member.id}</div>
+    <div style="font-size: 1.5rem; margin: 5px 0;">${fullName}</div>
+    <div style="font-size: 1.1rem;"><b>Date de naissance :</b> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
+    <div style="font-size: 1.1rem;"><b>Groupe sanguin :</b> ${member.blood_type || 'N/A'}</div>
   `;
   cardDiv.appendChild(infoDiv);
 
-  // QR CODE
+  // QR CODE - positionné en bas
   const qrDiv = document.createElement("div");
   qrDiv.style.cssText = `
-    background: #fff; padding: 12px; border-radius: 10px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.12);
-    margin-top: auto; margin-bottom: 38px; display: flex; align-items: center; justify-content: center;
+    background: white;
+    padding: 12px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    justify-content: center;
+    align-items: center;
   `;
+  
   const qrWrapper = document.createElement("div");
-  qrWrapper.style.width = "40px";
-  qrWrapper.style.height = "40px";
+  qrWrapper.style.width = "120px";
+  qrWrapper.style.height = "120px";
   qrDiv.appendChild(qrWrapper);
 
   function computeEndDate(member) {
@@ -2260,7 +2371,11 @@ async function generateCard(member, backgroundUrl) {
     `Date de naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}\n` +
     `Fin d'abonnement: ${endDate}\n` +
     `Statut: ${status}`;
-  new QRCode(qrDiv, { text: qrText });
+  new QRCode(qrDiv, { 
+    text: qrText,
+    width: 120,
+    height: 120
+  });
 
   cardDiv.appendChild(qrDiv);
 
