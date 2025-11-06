@@ -1061,15 +1061,15 @@
         </div>
     </div>
 <!-- Edit Member Modal -->
+<!-- Edit Member Modal -->
 <div id="editMemberModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2>✏️ Modifier Adhérent</h2>
+        <h2>Modifier les informations</h2>
         <button class="modal-close" onclick="closeModal('editMemberModal')">&times;</button>
       </div>
       <form id="editMemberForm">
         <input type="hidden" id="editMemberId">
-  
         <div class="form-group">
           <label>Nom</label>
           <input type="text" id="editLastName" class="form-control" required>
@@ -1098,9 +1098,10 @@
         </div>
         <button type="submit" class="btn btn-success">💾 Enregistrer</button>
       </form>
-      <div id="editMemberMessage" style="margin-top: 15px;"></div>
+      <div id="editMemberMessage" style="margin-top: 10px;"></div>
     </div>
   </div>
+  
   
     <!-- Attendance History Modal -->
     <div id="historyModal" class="modal">
@@ -1545,9 +1546,10 @@
                                 <div><strong>ID:</strong> ${member.id}</div>
                                 <div><strong>Date naissance:</strong> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
                                 <div><strong>Groupe sanguin:</strong> ${member.blood_type || 'N/A'}</div>
-                                <div><strong>Abonnement:</strong> <span class="badge badge-success">${member.subscription}</span></div>
+                                <div><strong>Fin d'Abonnement:</strong> <span class="badge badge-success">${member.endDate}</span></div>
                             </div>
                             <div style="margin-top: 15px; display: flex; gap: 10px;">
+                                 <button class="btn btn-warning btn-sm" onclick="openEditModal('${member.id}')">✏️ Modifier</button>
                                 <button class="btn btn-info btn-sm" onclick="openPhotoModal('${member.id}')">📷 Photo</button>
                                 <button class="btn btn-danger btn-sm" onclick="deleteMember('${member.id}')">🗑️</button>
                             </div>
@@ -1583,6 +1585,9 @@
 // ============================================
 // MEMBER EDITING
 // ============================================
+// ==========================
+// EDIT MEMBER INFO
+// ==========================
 function openEditModal(memberId) {
   loadMemberForEdit(memberId);
   openModal('editMemberModal');
@@ -1605,7 +1610,7 @@ async function loadMemberForEdit(memberId) {
     document.getElementById('editPhone').value = member.phone_number || '';
     document.getElementById('editBloodType').value = member.blood_type || '';
   } catch (err) {
-    console.error('Error loading member for edit:', err);
+    console.error('Erreur chargement:', err);
     showMessage('editMemberMessage', 'Erreur lors du chargement des données', 'danger');
   }
 }
@@ -1614,30 +1619,30 @@ document.getElementById('editMemberForm').addEventListener('submit', handleEditM
 
 async function handleEditMember(e) {
   e.preventDefault();
-  const id = document.getElementById('editMemberId').value;
 
-  const updatedData = {
+  const id = document.getElementById('editMemberId').value;
+  const updated = {
     last_name: document.getElementById('editLastName').value.trim(),
     first_name: document.getElementById('editFirstName').value.trim(),
     dob: document.getElementById('editDob').value,
-    blood_type: document.getElementById('editBloodType').value,
-    phone_number: document.getElementById('editPhone').value.trim()
+    phone_number: document.getElementById('editPhone').value.trim(),
+    blood_type: document.getElementById('editBloodType').value
   };
 
   try {
-    const { error } = await supabase.from('members').update(updatedData).eq('id', id);
+    const { error } = await supabase.from('members').update(updated).eq('id', id);
     if (error) throw error;
-
-    showMessage('editMemberMessage', '✅ Informations mises à jour avec succès', 'success');
+    showMessage('editMemberMessage', '✅ Infos modifiées avec succès', 'success');
     setTimeout(() => {
       closeModal('editMemberModal');
-      loadMembers();
-    }, 1500);
+      loadMembers(); // refresh list
+    }, 1200);
   } catch (err) {
-    console.error('Error updating member:', err);
+    console.error('Erreur update:', err);
     showMessage('editMemberMessage', 'Erreur: ' + err.message, 'danger');
   }
 }
+
 
         function previewPhoto() {
             const file = document.getElementById('memberPhoto').files[0];
@@ -2086,7 +2091,6 @@ async function validateAttendanceAfterRenew(memberId) {
                         </div>
                         <div style="margin-top: 15px; display: flex; gap: 10px;">
   <button class="btn btn-info btn-sm" onclick="openPhotoModal('${member.id}')">📷 Photo</button>
-  <button class="btn btn-warning btn-sm" onclick="openEditModal('${member.id}')">✏️ Modifier</button>
   <button class="btn btn-danger btn-sm" onclick="deleteMember('${member.id}')">🗑️</button>
 </div>
 
@@ -2160,125 +2164,113 @@ async function generateCard(member, backgroundUrl) {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    margin: 15px;
   `;
 
-  // === DIMENSIONS DE LA CARTE (350x450px ≈ carte ID verticale standard) ===
+  // === CARD BASE ===
   const cardDiv = document.createElement("div");
   cardDiv.style.cssText = `
-    width: 350px;
-    height: 450px;
+    width: 638px;
+    height: 1011px;
     background-image: url('${backgroundUrl}');
     background-size: cover;
     background-position: center;
-    color: #000;
-    border-radius: 15px;
-    padding: 15px 10px;
-    margin: 10px;
+    border-radius: 20px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    text-align: center;
-    position: relative;
-    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.4);
     overflow: hidden;
+    position: relative;
+    color: #111;
+    font-family: 'Poppins', sans-serif;
   `;
 
-  // === PHOTO ===
-  let photo;
-  if (member.photo_url) {
-    photo = document.createElement("img");
-    photo.crossOrigin = "anonymous";
-    photo.alt = member.first_name;
-    try {
-      const blob = await fetch(member.photo_url).then(r => r.blob());
-      const reader = new FileReader();
-      await new Promise(resolve => {
-        reader.onloadend = () => {
-          photo.src = reader.result;
-          resolve();
-        };
-        reader.readAsDataURL(blob);
-      });
-    } catch (err) {
-      console.error("Erreur chargement photo:", err);
-    }
-    photo.style.cssText = `
-      width: 130px;
-      height: 130px;
-      object-fit: cover;
-      border-radius: 50%;
-      border: 4px solid white;
-      margin-top: 15px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.4);
-    `;
-  } else {
-    photo = document.createElement("div");
-    photo.style.cssText = `
-      width: 130px;
-      height: 130px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 50%;
-      border: 4px solid white;
-      margin-top: 15px;
-      background: #eee;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    `;
-    photo.innerHTML = `
-      <svg width="70" height="70" viewBox="0 0 90 90" fill="#bbb" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="45" cy="36" r="20" fill="#bbb"/>
-        <ellipse cx="45" cy="70" rx="27" ry="16" fill="#bbb"/>
-      </svg>
-    `;
-  }
-  cardDiv.appendChild(photo);
+  // === PHOTO SECTION ===
+  const photoContainer = document.createElement("div");
+  photoContainer.style.cssText = `
+    margin-top: 40px;
+    width: 260px;
+    height: 320px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 4px solid white;
+    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    background: #f5f5f5;
+  `;
 
-  // === INFOS ===
+  const photo = document.createElement("img");
+  photo.crossOrigin = "anonymous";
+  photo.alt = member.first_name;
+  try {
+    const blob = await fetch(member.photo_url).then(r => r.blob());
+    const reader = new FileReader();
+    await new Promise(resolve => {
+      reader.onloadend = () => {
+        photo.src = reader.result;
+        resolve();
+      };
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    console.error("Erreur chargement photo:", err);
+    photo.src = "default_photo.png";
+  }
+
+  photo.style.cssText = `
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  `;
+  photoContainer.appendChild(photo);
+  cardDiv.appendChild(photoContainer);
+
+  // === INFO SECTION ===
   const infoDiv = document.createElement("div");
   infoDiv.style.cssText = `
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    font-size: 1rem;
-    margin-top: 5px;
-    color: #000;
-    font-family: 'Poppins', 'Arial', sans-serif;
-    font-weight: 700;
-    line-height: 1.3;
+    width: 90%;
+    background: rgba(255,255,255,0.85);
+    border-radius: 12px;
+    padding: 25px 20px;
+    text-align: center;
+    margin-top: 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
   `;
 
   const fullName = `${member.last_name.toUpperCase()} ${member.first_name}`;
   infoDiv.innerHTML = `
-    <div><b>ID :</b> ${member.id}</div>
-    <div style="font-size: 1.15rem;">${fullName}</div>
-    <div><b>Date de naissance :</b> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
-    <div><b>Groupe sanguin :</b> ${member.blood_type || 'N/A'}</div>
+    <div style="font-size: 1.8rem; font-weight: 700; color: #c8102e; margin-bottom: 8px;">${fullName}</div>
+    <div style="font-size: 1.1rem; margin-bottom: 4px;"><b>ID :</b> ${member.id}</div>
+    <div style="font-size: 1.05rem; margin-bottom: 4px;"><b>Date de naissance :</b> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
+    <div style="font-size: 1.05rem;"><b>Groupe sanguin :</b> ${member.blood_type || 'N/A'}</div>
   `;
   cardDiv.appendChild(infoDiv);
 
-  // === QR CODE ===
-  const qrDiv = document.createElement("div");
-  qrDiv.style.cssText = `
+  // === QR CODE SECTION ===
+  const qrSection = document.createElement("div");
+  qrSection.style.cssText = `
+    width: 180px;
+    height: 180px;
     background: white;
-    padding: 8px;
-    border-radius: 10px;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.25);
-    margin-bottom: 10px;
+    padding: 12px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 35px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
   `;
   const qrWrapper = document.createElement("div");
-  qrWrapper.style.width = "110px";
-  qrWrapper.style.height = "110px";
-  qrDiv.appendChild(qrWrapper);
+  qrWrapper.style.width = "150px";
+  qrWrapper.style.height = "150px";
+  qrSection.appendChild(qrWrapper);
+
   const memberLink = `${window.location.origin}/member.html?id=${member.id}`;
-new QRCode(qrDiv, { text: memberLink });
+  new QRCode(qrWrapper, { text: memberLink, width: 150, height: 150 });
+  cardDiv.appendChild(qrSection);
 
-  cardDiv.appendChild(qrDiv);
-
-  // === BOUTON DE TÉLÉCHARGEMENT ===
+  // === EXPORT BUTTON ===
   const exportBtn = document.createElement("button");
   exportBtn.textContent = "💾 Télécharger PNG";
   exportBtn.className = "btn btn-info btn-sm";
@@ -2287,8 +2279,10 @@ new QRCode(qrDiv, { text: memberLink });
 
   wrapper.appendChild(cardDiv);
   wrapper.appendChild(exportBtn);
+
   return wrapper;
 }
+
 
 
 
