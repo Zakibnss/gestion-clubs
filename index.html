@@ -3121,7 +3121,7 @@ function isSubscriptionActive(member) {
                 endDate.setFullYear(endDate.getFullYear() + 1);
                 break;
             default:
-                return false; // Type d'abonnement inconnu
+                return false;
         }
 
         return now <= endDate;
@@ -3162,19 +3162,18 @@ function isSubscriptionActive(member) {
 
         // Vérifier si déjà validé aujourd'hui
         const today = new Date().toISOString().split('T')[0];
-        const { data: existing, error: existingError } = await supabase
+        const { data: existing } = await supabase
             .from('attendance')
             .select('*')
             .eq('member_id', memberId)
             .eq('attendance_date', today)
-            .maybeSingle(); // Utiliser maybeSingle au lieu de single
-
-        if (existingError && existingError.code !== 'PGRST116') {
-            throw existingError;
-        }
+            .maybeSingle();
 
         if (existing) {
-            showMessage('validationMessage', `⚠️ ${member.first_name} ${member.last_name} a déjà validé aujourd'hui`, 'warning');
+            showMessage('validationMessage', 
+                `⚠️ ${member.first_name} ${member.last_name} a déjà validé aujourd'hui à ${existing.attendance_time}`, 
+                'warning'
+            );
             return false;
         }
 
@@ -3190,10 +3189,9 @@ function isSubscriptionActive(member) {
 
         if (insertError) throw insertError;
 
-        // Afficher le succès
+        // Succès
         const successMessage = `✅ Présence validée pour ${member.first_name} ${member.last_name}`;
         showMessage('validationMessage', successMessage, 'success');
-        showMessage('scanResult', successMessage, 'success');
         
         // Notifier
         notifyAttendance(member);
@@ -3208,11 +3206,49 @@ function isSubscriptionActive(member) {
         
     } catch (error) {
         console.error('Validation error:', error);
-        const errorMessage = '❌ Erreur: ' + (error.message || 'Erreur inconnue');
-        showMessage('validationMessage', errorMessage, 'danger');
-        showMessage('scanResult', errorMessage, 'danger');
+        showMessage('validationMessage', '❌ Erreur: ' + error.message, 'danger');
         return false;
     }
+}
+function playSuccessSound() {
+    try {
+        // Créer un son de succès simple
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1);
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.3);
+        
+    } catch (error) {
+        console.log('Audio non supporté');
+    }
+}
+function showScanMessage(message, type) {
+    const scanResult = document.getElementById('scanResult');
+    scanResult.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+    
+    if (type === 'success') {
+        scanResult.classList.add('scan-success');
+        setTimeout(() => {
+            scanResult.classList.remove('scan-success');
+        }, 500);
+    }
+    
+    // Garder le message plus longtemps pour le scan
+    const duration = type === 'success' ? 5000 : 7000;
+    setTimeout(() => {
+        scanResult.innerHTML = '';
+    }, duration);
 }
 // ============================================
 // SUBSCRIPTION ALERT HANDLING
@@ -3434,7 +3470,95 @@ async function startScanner() {
         }
     }
 }
+async function validateAttendanceFromScan(memberId) {
+    try {
+        console.log('🎯 Validation présence pour:', memberId);
+        
+        if (!memberId) {
+            showMessage('scanResult', '❌ ID adhérent vide', 'danger');
+            return false;
+        }
 
+        // Vérifier si le membre existe
+        const { data: member, error: memberError } = await supabase
+            .from('members')
+            .select('*')
+            .eq('id', memberId)
+            .single();
+
+        if (memberError || !member) {
+            showMessage('scanResult', `❌ Adhérent "${memberId}" introuvable`, 'danger');
+            return false;
+        }
+
+        // Vérifier si l'abonnement est actif
+        if (!isSubscriptionActive(member)) {
+            showMessage('scanResult', 
+                `❌ Abonnement expiré pour ${member.first_name} ${member.last_name}`, 
+                'warning'
+            );
+            // Proposer le renouvellement
+            showSubscriptionAlert(member);
+            return false;
+        }
+
+        // Vérifier si déjà validé aujourd'hui
+        const today = new Date().toISOString().split('T')[0];
+        const { data: existing } = await supabase
+            .from('attendance')
+            .select('*')
+            .eq('member_id', memberId)
+            .eq('attendance_date', today)
+            .maybeSingle();
+
+        if (existing) {
+            showMessage('scanResult', 
+                `⚠️ ${member.first_name} ${member.last_name} a déjà validé aujourd'hui à ${existing.attendance_time}`, 
+                'warning'
+            );
+            return false;
+        }
+
+        // Enregistrer la présence
+        const now = new Date();
+        const { error: insertError } = await supabase.from('attendance').insert([{
+            member_id: memberId,
+            club_id: member.club_id,
+            attendance_date: today,
+            attendance_time: now.toTimeString().split(' ')[0],
+            month: now.toISOString().slice(0, 7)
+        }]);
+
+        if (insertError) throw insertError;
+
+        // SUCCÈS - Afficher un message clair
+        const successMessage = `✅ Présence validée pour ${member.first_name} ${member.last_name} à ${now.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}`;
+        
+        showMessage('scanResult', successMessage, 'success');
+        showMessage('validationMessage', successMessage, 'success');
+        
+        // Notifier
+        notifyAttendance(member);
+        
+        // Jouer un son de succès (optionnel)
+        playSuccessSound();
+        
+        // Mettre à jour le dashboard
+        loadDashboard();
+        
+        // Arrêter le scanner après 2 secondes pour voir le message
+        setTimeout(() => {
+            stopScanner();
+        }, 2000);
+        
+        return true;
+        
+    } catch (error) {
+        console.error('❌ Erreur validation scan:', error);
+        showMessage('scanResult', '❌ Erreur: ' + (error.message || 'Erreur inconnue'), 'danger');
+        return false;
+    }
+}
 // Fonction pour essayer avec la caméra avant
 async function startWithUserCamera() {
     try {
@@ -3553,26 +3677,19 @@ function stopScanner() {
 
 async function onScanSuccess(decodedText) {
     try {
-        console.log('QR Code scanné:', decodedText);
+        console.log('✅ QR Code scanné:', decodedText);
         
-        // Afficher le résultat du scan
+        // Afficher temporairement le résultat du scan
         showMessage('scanResult', `🔍 Code scanné: ${decodedText}`, 'info');
         
         // Mettre à jour l'input manuel
         document.getElementById('validateMemberId').value = decodedText;
         
-        // Valider la présence
-        const success = await validateAttendance();
-        
-        if (success) {
-            // Arrêter le scanner après un scan réussi
-            setTimeout(() => {
-                stopScanner();
-            }, 2000); // Laisser 2 secondes pour voir le message de succès
-        }
+        // Valider IMMÉDIATEMENT la présence
+        await validateAttendanceFromScan(decodedText);
         
     } catch (error) {
-        console.error('Erreur lors du scan:', error);
+        console.error('❌ Erreur lors du scan:', error);
         showMessage('scanResult', '❌ Erreur lors de la validation: ' + error.message, 'danger');
     }
 }
