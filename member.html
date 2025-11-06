@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Informations Adhérent</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+    .card {
+      background: white;
+      padding: 30px 40px;
+      border-radius: 15px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      text-align: center;
+      width: 360px;
+    }
+    h2 {
+      color: #c8102e;
+      margin-bottom: 20px;
+    }
+    .info {
+      font-size: 1rem;
+      color: #333;
+      text-align: left;
+      line-height: 1.6;
+    }
+    .status {
+      margin-top: 15px;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+    .active { color: #28a745; }
+    .expired { color: #dc3545; }
+  </style>
+</head>
+<body>
+  <div class="card" id="memberCard">Chargement...</div>
+
+  <script>
+    const SUPABASE_URL = 'https://gmoyoflorwaltuanfswn.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdtb3lvZmxvcndhbHR1YW5mc3duIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxNTc0OTIsImV4cCI6MjA3NzczMzQ5Mn0.Yr0SFLvcPNbvRqNSjzwFdTZkrIz3Z6WZxcIyx8gwjZA';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    function computeEndDate(member) {
+      const start = new Date(member.start_date);
+      const end = new Date(start);
+      switch (member.subscription) {
+        case 'monthly': end.setMonth(end.getMonth() + 1); break;
+        case 'quarterly': end.setMonth(end.getMonth() + 3); break;
+        case 'biannual': end.setMonth(end.getMonth() + 6); break;
+        case 'annual': end.setFullYear(end.getFullYear() + 1); break;
+      }
+      return end;
+    }
+
+    async function loadMember() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      if (!id) {
+        document.getElementById('memberCard').textContent = 'Aucun ID fourni.';
+        return;
+      }
+
+      const { data: member, error } = await supabase
+        .from('members')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error || !member) {
+        document.getElementById('memberCard').textContent = 'Adhérent introuvable.';
+        return;
+      }
+
+      const endDate = computeEndDate(member);
+      const status = new Date() <= endDate ? 
+        '<span class="status active">✅ Actif</span>' : 
+        '<span class="status expired">❌ Expiré</span>';
+
+      document.getElementById('memberCard').innerHTML = `
+        <h2>${member.last_name} ${member.first_name}</h2>
+        <div class="info">
+          <div><strong>Date de naissance:</strong> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
+          <div><strong>Début d’abonnement:</strong> ${new Date(member.start_date).toLocaleDateString('fr-FR')}</div>
+          <div><strong>Fin d’abonnement:</strong> ${endDate.toLocaleDateString('fr-FR')}</div>
+        </div>
+        ${status}
+      `;
+    }
+
+    loadMember();
+  </script>
+</body>
+</html>
