@@ -788,6 +788,128 @@
             background: rgba(255, 193, 7, 0.2);
             color: var(--warning-color);
         }
+        /* ============================================ */
+/* NOTIFICATION STYLES */
+/* ============================================ */
+.notification-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    max-width: 400px;
+}
+
+.notification {
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-left: 5px solid var(--danger-color);
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transform: translateX(400px);
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-height: 0;
+    overflow: hidden;
+}
+
+.notification.show {
+    transform: translateX(0);
+    opacity: 1;
+    max-height: 200px;
+}
+
+.notification.hide {
+    transform: translateX(400px);
+    opacity: 0;
+    max-height: 0;
+    margin-bottom: 0;
+}
+
+.notification-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.notification-content {
+    flex: 1;
+}
+
+.notification-title {
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 4px;
+    font-size: 14px;
+}
+
+.notification-message {
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1.4;
+}
+
+.notification-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-close:hover {
+    color: var(--text-primary);
+}
+
+.notification-warning {
+    border-left-color: var(--warning-color);
+}
+
+.notification-info {
+    border-left-color: var(--info-color);
+}
+
+.notification-success {
+    border-left-color: var(--success-color);
+}
+
+.notification-danger {
+    border-left-color: var(--danger-color);
+}
+
+.notification-badge {
+    position: fixed;
+    top: 80px;
+    right: 20px;
+    background: var(--danger-color);
+    color: white;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    z-index: 9999;
+    box-shadow: 0 4px 12px rgba(220, 53, 69, 0.4);
+    animation: pulse 2s infinite;
+    cursor: pointer;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
     </style>
 </head>
 <body>
@@ -1282,7 +1404,129 @@
         let currentClub = null;
         let selectedMemberForPhoto = null;
         let html5QrCode = null;
+        let notificationContainer = null;
 
+function initNotificationContainer() {
+    if (!document.getElementById('notification-container')) {
+        const container = document.createElement('div');
+        container.id = 'notification-container';
+        container.className = 'notification-container';
+        document.body.appendChild(container);
+        notificationContainer = container;
+    } else {
+        notificationContainer = document.getElementById('notification-container');
+    }
+}
+
+function showNotification(title, message, type = 'info', duration = 5000) {
+    initNotificationContainer();
+    
+    const notificationId = 'notification-' + Date.now();
+    const icon = getNotificationIcon(type);
+    
+    const notification = document.createElement('div');
+    notification.id = notificationId;
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <div class="notification-icon">${icon}</div>
+        <div class="notification-content">
+            <div class="notification-title">${title}</div>
+            <div class="notification-message">${message}</div>
+        </div>
+        <button class="notification-close" onclick="closeNotification('${notificationId}')">×</button>
+    `;
+    
+    notificationContainer.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 100);
+    
+    if (duration > 0) {
+        setTimeout(() => {
+            closeNotification(notificationId);
+        }, duration);
+    }
+    
+    return notificationId;
+}
+
+function getNotificationIcon(type) {
+    const icons = {
+        'info': 'ℹ️',
+        'success': '✅',
+        'warning': '⚠️',
+        'danger': '❌'
+    };
+    return icons[type] || 'ℹ️';
+}
+
+function closeNotification(notificationId) {
+    const notification = document.getElementById(notificationId);
+    if (notification) {
+        notification.classList.remove('show');
+        notification.classList.add('hide');
+        
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }
+}
+
+function updateNotificationBadge(count) {
+    const oldBadge = document.getElementById('notification-badge');
+    if (oldBadge) {
+        oldBadge.remove();
+    }
+    
+    if (count > 0) {
+        const badge = document.createElement('div');
+        badge.id = 'notification-badge';
+        badge.className = 'notification-badge';
+        badge.textContent = count > 9 ? '9+' : count;
+        badge.title = `${count} notification(s) d'abonnement`;
+        
+        const themeToggle = document.getElementById('themeToggle');
+        if (themeToggle) {
+            const rect = themeToggle.getBoundingClientRect();
+            badge.style.top = (rect.top + window.scrollY) + 'px';
+            badge.style.right = (window.innerWidth - rect.right) + 'px';
+        } else {
+            badge.style.top = '80px';
+            badge.style.right = '20px';
+        }
+        
+        document.body.appendChild(badge);
+        
+        badge.addEventListener('click', function() {
+            switchToTab('membersListSection');
+            document.getElementById('filterStatus').value = 'expired';
+            loadMembers();
+        });
+    }
+}
+
+function clearAllNotifications() {
+    if (notificationContainer) {
+        notificationContainer.innerHTML = '';
+    }
+    updateNotificationBadge(0);
+}
+
+// Fonctions utilitaires de notification
+function showSuccessNotification(message) {
+    showNotification('✅ Succès', message, 'success', 4000);
+}
+
+function showErrorNotification(message) {
+    showNotification('❌ Erreur', message, 'danger', 6000);
+}
+
+function showInfoNotification(message) {
+    showNotification('ℹ️ Information', message, 'info', 4000);
+}
         // ============================================
         // INITIALIZATION
         // ============================================
@@ -1388,6 +1632,7 @@
                 currentClub = JSON.parse(savedClub);
                 showMainApp();
             }
+            startSubscriptionMonitoring();
         }
 
         function showMainApp() {
@@ -1399,6 +1644,10 @@
 
             setupNavigation();
             loadDashboard();
+            // Vérifier les abonnements expirés après la connexion
+setTimeout(() => {
+    checkExpiredSubscriptions();
+}, 2000);
         }
 
         function logout() {
@@ -1408,7 +1657,121 @@
             document.getElementById('loginPage').classList.remove('hidden');
             document.getElementById('mainApp').classList.add('hidden');
         }
+// ============================================
+// NOTIFICATION SYSTEM
+// ============================================
 
+
+// ============================================
+// SUBSCRIPTION MONITORING
+// ============================================
+
+function computeEndDate(member) {
+    const start = new Date(member.start_date);
+    const end = new Date(start);
+    switch (member.subscription) {
+        case "monthly": end.setMonth(end.getMonth() + 1); break;
+        case "quarterly": end.setMonth(end.getMonth() + 3); break;
+        case "biannual": end.setMonth(end.getMonth() + 6); break;
+        case "annual": end.setFullYear(end.getFullYear() + 1); break;
+    }
+    return end;
+}
+
+async function checkExpiredSubscriptions() {
+    try {
+        let query = supabase.from('members').select('*');
+        
+        if (currentUser !== 'admin') {
+            if (currentClub && currentClub.id) {
+                query = query.eq('club_id', currentClub.id);
+            } else {
+                return;
+            }
+        }
+        
+        const { data: members, error } = await query;
+        
+        if (error) throw error;
+        
+        if (!members || members.length === 0) return;
+        
+        const now = new Date();
+        const expiredMembers = [];
+        const expiringSoonMembers = [];
+        
+        members.forEach(member => {
+            const endDate = computeEndDate(member);
+            const timeDiff = endDate.getTime() - now.getTime();
+            const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+            
+            if (daysDiff < 0) {
+                expiredMembers.push(member);
+            } else if (daysDiff <= 7) {
+                expiringSoonMembers.push(member);
+            }
+        });
+        
+        if (expiredMembers.length > 0) {
+            showExpiredNotification(expiredMembers);
+        }
+        
+        if (expiringSoonMembers.length > 0) {
+            showExpiringSoonNotification(expiringSoonMembers);
+        }
+        
+        updateNotificationBadge(expiredMembers.length + expiringSoonMembers.length);
+        
+    } catch (error) {
+        console.error('Erreur vérification abonnements:', error);
+    }
+}
+
+function showExpiredNotification(expiredMembers) {
+    if (expiredMembers.length === 1) {
+        const member = expiredMembers[0];
+        showNotification(
+            '❌ Abonnement expiré',
+            `L'abonnement de ${member.first_name} ${member.last_name} a expiré`,
+            'danger',
+            8000
+        );
+    } else {
+        showNotification(
+            '❌ Abonnements expirés',
+            `${expiredMembers.length} adhérent(s) ont un abonnement expiré`,
+            'danger',
+            8000
+        );
+    }
+}
+
+function showExpiringSoonNotification(expiringSoonMembers) {
+    if (expiringSoonMembers.length === 1) {
+        const member = expiringSoonMembers[0];
+        const endDate = computeEndDate(member);
+        const daysLeft = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+        
+        showNotification(
+            '⚠️ Abonnement bientôt expiré',
+            `${member.first_name} ${member.last_name} - Expire dans ${daysLeft} jour(s)`,
+            'warning',
+            6000
+        );
+    } else {
+        showNotification(
+            '⚠️ Abonnements bientôt expirés',
+            `${expiringSoonMembers.length} adhérent(s) ont un abonnement qui expire bientôt`,
+            'warning',
+            6000
+        );
+    }
+}
+
+function startSubscriptionMonitoring() {
+    checkExpiredSubscriptions();
+    setInterval(checkExpiredSubscriptions, 30 * 60 * 1000);
+}
         // ============================================
         // NAVIGATION
         // ============================================
@@ -2673,7 +3036,10 @@ async function validateAttendanceAfterRenew(memberId) {
         // ============================================
         // CARD GENERATION
         // ============================================
-        async function loadMembersForCards() {
+       // ============================================
+// CARD GENERATION - CORRIGÉ
+// ============================================
+async function loadMembersForCards() {
     try {
         // Construire la requête de base
         let query = supabase.from('members').select('*');
@@ -2683,7 +3049,13 @@ async function validateAttendanceAfterRenew(memberId) {
             if (currentClub && currentClub.id) {
                 query = query.eq('club_id', currentClub.id);
             } else {
-                showMessage('cardsGrid', 'Erreur: Club non trouvé', 'danger');
+                // Afficher l'erreur directement dans le conteneur des cartes
+                const grid = document.getElementById('cardsGrid');
+                grid.innerHTML = `
+                    <div class="alert alert-danger">
+                        ❌ Erreur: Club non trouvé. Veuillez vous reconnecter.
+                    </div>
+                `;
                 return;
             }
         }
@@ -2700,6 +3072,9 @@ async function validateAttendanceAfterRenew(memberId) {
                 <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">
                     <h3>📋 Aucun adhérent trouvé</h3>
                     <p>Ajoutez des adhérents dans la section "➕ Ajouter Adhérent" pour générer des cartes.</p>
+                    <button class="btn btn-primary" onclick="switchToTab('addMemberSection')" style="margin-top: 15px;">
+                        ➕ Ajouter un adhérent
+                    </button>
                 </div>
             `;
             return;
@@ -2709,14 +3084,14 @@ async function validateAttendanceAfterRenew(memberId) {
         const grid = document.getElementById('cardsGrid');
         grid.innerHTML = `
             <div style="grid-column: 1/-1; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
                     <h3>Sélectionnez les adhérents pour générer les cartes</h3>
                     <div>
                         <button class="btn btn-info btn-sm" onclick="selectAllMembers()">✓ Tout sélectionner</button>
                         <button class="btn btn-secondary btn-sm" onclick="deselectAllMembers()">✗ Tout désélectionner</button>
                     </div>
                 </div>
-                <button class="btn btn-success" onclick="generateSelectedCards()" style="margin-top: 10px;">
+                <button class="btn btn-success" onclick="generateSelectedCards()" style="margin-top: 15px; width: 100%;">
                     🎫 Générer les cartes sélectionnées (${members.length} adhérent(s) disponible(s))
                 </button>
             </div>
@@ -2733,9 +3108,11 @@ async function validateAttendanceAfterRenew(memberId) {
                             </div>
                         </div>
                         ${member.photo_url ? 
-                            `<img src="${member.photo_url}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 2px solid var(--primary-color);">` : 
-                            `<div style="width: 50px; height: 50px; border-radius: 8px; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; color: var(--text-secondary);">📷</div>`
+                            `<img src="${member.photo_url}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 2px solid var(--primary-color);" 
+                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : 
+                            ''
                         }
+                        <div style="width: 50px; height: 50px; border-radius: 8px; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); ${member.photo_url ? 'display: none;' : ''}">📷</div>
                     </label>
                 </div>
             `).join('')}
@@ -2752,22 +3129,30 @@ async function validateAttendanceAfterRenew(memberId) {
         `;
 
         // Ajouter le style pour l'effet hover
-        const style = document.createElement('style');
-        style.textContent = `
-            .member-selection-card label:hover {
-                background: var(--bg-tertiary) !important;
-                border-color: var(--primary-color) !important;
-                transform: translateY(-2px);
-            }
-            .member-checkbox:checked + div {
-                background: rgba(200, 16, 46, 0.1);
-            }
-        `;
-        document.head.appendChild(style);
+        if (!document.getElementById('card-selection-styles')) {
+            const style = document.createElement('style');
+            style.id = 'card-selection-styles';
+            style.textContent = `
+                .member-selection-card label:hover {
+                    background: var(--bg-tertiary) !important;
+                    border-color: var(--primary-color) !important;
+                    transform: translateY(-2px);
+                }
+                .member-checkbox:checked + div {
+                    background: rgba(200, 16, 46, 0.1);
+                }
+            `;
+            document.head.appendChild(style);
+        }
 
     } catch (error) {
         console.error('Error loading members for cards:', error);
-        showMessage('cardsGrid', 'Erreur lors du chargement des membres: ' + error.message, 'danger');
+        const grid = document.getElementById('cardsGrid');
+        grid.innerHTML = `
+            <div class="alert alert-danger">
+                ❌ Erreur lors du chargement des membres: ${error.message}
+            </div>
+        `;
     }
 }
 
@@ -2805,22 +3190,19 @@ document.addEventListener('click', function(e) {
       
 
 
-       async function generateSelectedCards() {
-  try {
-    const checkboxes = document.querySelectorAll('input[name="cardMember"]:checked');
-    if (checkboxes.length === 0) {
-      alert('Veuillez sélectionner au moins un adhérent');
-      return;
-    }
+async function generateSelectedCards() {
+    try {
+        const checkboxes = document.querySelectorAll('input[name="cardMember"]:checked');
+        if (checkboxes.length === 0) {
+            alert('Veuillez sélectionner au moins un adhérent');
+            return;
+        }
 
-    const selectedMemberIds = Array.from(checkboxes).map(cb => cb.value);
-
-    const backgroundFile = document.getElementById('cardBackgroundImage').files[0];
-    if (!backgroundFile) {
-      alert('Veuillez sélectionner une image d\'arrière-plan');
-      return;
-    }
-
+        const backgroundFile = document.getElementById('cardBackgroundImage').files[0];
+        if (!backgroundFile) {
+            alert('Veuillez sélectionner une image d\'arrière-plan');
+            return;
+        }
     const backgroundUrl = await new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = e => resolve(e.target.result);
@@ -2843,57 +3225,66 @@ document.addEventListener('click', function(e) {
       const cardContainer = await generateCard(member, backgroundUrl);
       cardsContainer.appendChild(cardContainer);
     }
-  } catch (error) {
-    console.error('Erreur génération cartes :', error);
-    alert('Erreur lors de la génération des cartes : ' + error.message);
-  }
+} catch (error) {
+        console.error('Erreur génération cartes :', error);
+        const previewDiv = document.getElementById('cardsPreview');
+        previewDiv.innerHTML = `
+            <div class="alert alert-danger">
+                ❌ Erreur lors de la génération des cartes : ${error.message}
+            </div>
+        `;
+    }
 }
-
 async function generateCard(member, backgroundUrl) {
   const wrapper = document.createElement("div");
   wrapper.style.cssText = `
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
+    gap: 15px;
+    margin: 20px 0;
   `;
 
-  // Carte principale
+  // Carte principale - dimensions 638x1011
   const cardDiv = document.createElement("div");
   cardDiv.style.cssText = `
     width: 638px;
     height: 1011px;
-    background-image: url('${backgroundUrl}');
-    background-size: cover;
-    background-position: center;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
     border-radius: 20px;
-    box-shadow: 0 6px 18px rgba(0,0,0,0.16);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
     display: flex;
     flex-direction: column;
-    align-items: center;
     position: relative;
     overflow: hidden;
-    padding: 0;
-    text-align: center;
+    border: 2px solid #e9ecef;
+    font-family: 'Segoe UI', Arial, sans-serif;
   `;
 
-  // Positionnement des éléments avec des positions absolues
-  // PHOTO en cercle - positionné en haut
-  const circlePhotoStyle = `
-    width: 150px;
-    height: 150px;
-    object-fit: cover;
-    border-radius: 50%;
-    border: 4px solid #fff;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-    background: #fff;
-    position: absolute;
-    top: 180px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 10;
+  // En-tête de la carte
+  const headerDiv = document.createElement("div");
+  headerDiv.style.cssText = `
+    width: 100%;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    padding: 30px 20px;
+    text-align: center;
+    border-radius: 20px 20px 0 0;
   `;
-  
+  headerDiv.innerHTML = `
+    <h2 style="margin: 0; font-size: 28px; font-weight: 700; margin-bottom: 10px;">KYOKUSHIN KARATE</h2>
+    <p style="margin: 0; font-size: 18px; opacity: 0.9;">Carte d'Adhérent</p>
+  `;
+  cardDiv.appendChild(headerDiv);
+
+  // Photo en cercle centrée
+  const photoContainer = document.createElement("div");
+  photoContainer.style.cssText = `
+    display: flex;
+    justify-content: center;
+    margin: 40px 0 30px 0;
+  `;
+
   let photo;
   if (member.photo_url) {
     photo = document.createElement("img");
@@ -2912,114 +3303,161 @@ async function generateCard(member, backgroundUrl) {
     } catch (err) {
       console.error("Erreur chargement photo:", err);
     }
-    photo.style.cssText = circlePhotoStyle;
+    photo.style.cssText = `
+      width: 200px;
+      height: 200px;
+      object-fit: cover;
+      border-radius: 50%;
+      border: 5px solid white;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    `;
   } else {
     photo = document.createElement("div");
-    photo.style.cssText = circlePhotoStyle + "display:flex;align-items:center;justify-content:center;";
-    photo.innerHTML = `
-      <svg width="80" height="80" viewBox="0 0 90 90" fill="#bbb" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="45" cy="36" r="20" fill="#bbb"/>
-        <ellipse cx="45" cy="70" rx="27" ry="16" fill="#bbb"/>
-      </svg>
+    photo.style.cssText = `
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+      border: 5px solid white;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 60px;
     `;
+    photo.innerHTML = `👤`;
   }
-  cardDiv.appendChild(photo);
+  photoContainer.appendChild(photo);
+  cardDiv.appendChild(photoContainer);
 
-  // Bloc d'infos - positionné au centre
+  // Informations principales
   const infoDiv = document.createElement("div");
   infoDiv.style.cssText = `
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    font-size: 1.2rem;
-    color: #222;
-    font-family: 'Poppins', 'Arial', sans-serif;
-    font-weight: 700;
-    line-height: 1.4;
-    position: absolute;
-    top: 380px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 80%;
+    padding: 0 40px;
     text-align: center;
-    background: rgba(255, 255, 255, 0.85);
-    padding: 20px;
-    border-radius: 15px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    margin-bottom: 30px;
   `;
-  
+
   const fullName = `${member.last_name.toUpperCase()} ${member.first_name}`;
   infoDiv.innerHTML = `
-    <div style="font-size: 1.1rem;"><b>ID :</b> ${member.id}</div>
-    <div style="font-size: 1.5rem; margin: 5px 0;">${fullName}</div>
-    <div style="font-size: 1.1rem;"><b>Date de naissance :</b> ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
-    <div style="font-size: 1.1rem;"><b>Groupe sanguin :</b> ${member.blood_type || 'N/A'}</div>
+    <div style="font-size: 32px; font-weight: 700; color: var(--text-primary); margin-bottom: 20px; line-height: 1.2;">
+      ${fullName}
+    </div>
+    <div style="background: var(--primary-color); color: white; padding: 8px 20px; border-radius: 25px; display: inline-block; font-size: 18px; font-weight: 600;">
+      ID: ${member.id}
+    </div>
   `;
   cardDiv.appendChild(infoDiv);
 
-  // QR CODE - positionné en bas
-  const qrDiv = document.createElement("div");
-  qrDiv.style.cssText = `
-    background: white;
-    padding: 12px;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    position: absolute;
-    bottom: 100px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+  // Détails de l'adhérent
+  const detailsDiv = document.createElement("div");
+  detailsDiv.style.cssText = `
+    padding: 0 50px;
+    margin-bottom: 40px;
   `;
-  
-  const qrWrapper = document.createElement("div");
-  qrWrapper.style.width = "120px";
-  qrWrapper.style.height = "120px";
-  qrDiv.appendChild(qrWrapper);
-
-  function computeEndDate(member) {
-    const start = new Date(member.start_date);
-    const end = new Date(start);
-    switch (member.subscription) {
-      case "monthly": end.setMonth(end.getMonth() + 1); break;
-      case "quarterly": end.setMonth(end.getMonth() + 3); break;
-      case "biannual": end.setMonth(end.getMonth() + 6); break;
-      case "annual": end.setFullYear(end.getFullYear() + 1); break;
-    }
-    return end;
-  }
 
   const endDateObj = computeEndDate(member);
   const endDate = endDateObj.toLocaleDateString('fr-FR');
   const isActive = new Date() <= endDateObj;
   const status = isActive ? "Actif" : "Expiré";
+  const statusColor = isActive ? "var(--success-color)" : "var(--danger-color)";
 
-  const qrText =
-    `ID: ${member.id}\n` +
-    `Nom complet: ${member.last_name.toUpperCase()} ${member.first_name}\n` +
-    `Date de naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}\n` +
-    `Fin d'abonnement: ${endDate}\n` +
-    `Statut: ${status}`;
+  detailsDiv.innerHTML = `
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; font-size: 18px;">
+      <div style="text-align: left;">
+        <div style="font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;">Date de naissance</div>
+        <div style="color: var(--text-primary); font-weight: 500;">${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
+      </div>
+      <div style="text-align: left;">
+        <div style="font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;">Groupe sanguin</div>
+        <div style="color: var(--text-primary); font-weight: 500;">${member.blood_type || 'N/A'}</div>
+      </div>
+      <div style="text-align: left;">
+        <div style="font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;">Fin d'abonnement</div>
+        <div style="color: var(--text-primary); font-weight: 500;">${endDate}</div>
+      </div>
+      <div style="text-align: left;">
+        <div style="font-weight: 600; color: var(--text-secondary); margin-bottom: 8px;">Statut</div>
+        <div style="color: ${statusColor}; font-weight: 600;">${status}</div>
+      </div>
+    </div>
+  `;
+  cardDiv.appendChild(detailsDiv);
+
+  // QR Code centré en bas
+  const qrContainer = document.createElement("div");
+  qrContainer.style.cssText = `
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    padding: 0 40px 40px 40px;
+  `;
+
+  const qrDiv = document.createElement("div");
+  qrDiv.style.cssText = `
+    background: white;
+    padding: 15px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+  `;
+
+  const qrText = `
+ID: ${member.id}
+Nom: ${member.last_name.toUpperCase()} ${member.first_name}
+Naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}
+Fin abonnement: ${endDate}
+Statut: ${status}
+  `.trim();
+
   new QRCode(qrDiv, { 
     text: qrText,
-    width: 120,
-    height: 120
+    width: 180,
+    height: 180,
+    colorDark: "#000000",
+    colorLight: "#ffffff",
+    correctLevel: QRCode.CorrectLevel.H
   });
 
-  cardDiv.appendChild(qrDiv);
+  qrContainer.appendChild(qrDiv);
+  cardDiv.appendChild(qrContainer);
+
+  // Pied de page
+  const footerDiv = document.createElement("div");
+  footerDiv.style.cssText = `
+    width: 100%;
+    background: var(--bg-tertiary);
+    padding: 20px;
+    text-align: center;
+    border-radius: 0 0 20px 20px;
+    border-top: 1px solid var(--border-color);
+  `;
+  
 
   // Bouton de téléchargement
   const exportBtn = document.createElement("button");
-  exportBtn.textContent = "💾 Télécharger PNG";
-  exportBtn.className = "btn btn-info btn-sm";
+  exportBtn.textContent = "💾 Télécharger la carte";
+  exportBtn.className = "btn btn-primary";
   exportBtn.style.marginTop = "10px";
-  exportBtn.onclick = () => exportCardAsPNG(cardDiv, member);
+  exportBtn.onclick = () => exportCardAsPNG(cardDiv, member.id);
 
   wrapper.appendChild(cardDiv);
   wrapper.appendChild(exportBtn);
   return wrapper;
+}
+
+function computeEndDate(member) {
+  const start = new Date(member.start_date);
+  const end = new Date(start);
+  switch (member.subscription) {
+    case "monthly": end.setMonth(end.getMonth() + 1); break;
+    case "quarterly": end.setMonth(end.getMonth() + 3); break;
+    case "biannual": end.setMonth(end.getMonth() + 6); break;
+    case "annual": end.setFullYear(end.getFullYear() + 1); break;
+  }
+  return end;
 }
 
         async function exportCardAsPNG(cardElement, memberId) {
