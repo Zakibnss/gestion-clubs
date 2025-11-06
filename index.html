@@ -4269,7 +4269,7 @@ async function generateSelectedCards() {
         text-align: center;
     `;
     dobDiv.innerHTML = `
-        <div style="font-size: 22px; color: black">
+        <div style="font-size: 28px; color: black">
             <span style="font-weight: 600; color: black">Date de naissance: </span>
             ${new Date(member.dob).toLocaleDateString('fr-FR')}
         </div>
@@ -4281,7 +4281,7 @@ async function generateSelectedCards() {
         text-align: center;
     `;
     bloodDiv.innerHTML = `
-        <div style="font-size: 22px; color: black">
+        <div style="font-size: 28px; color: black">
             <span style="font-weight: 600; color: black">Groupe sanguin: </span>
             ${member.blood_type || 'N/A'}
         </div>
