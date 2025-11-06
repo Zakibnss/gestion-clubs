@@ -3156,7 +3156,7 @@ function isSubscriptionActive(member) {
 
         // Vérifier si l'abonnement est actif
         if (!isSubscriptionActive(member)) {
-            showSubscriptionAlert(member);
+            showSubscriptionAlertForScan(member);
             return false;
         }
 
@@ -3210,6 +3210,26 @@ function isSubscriptionActive(member) {
         return false;
     }
 }
+function computeEndDate(member) {
+    const start = new Date(member.start_date);
+    const end = new Date(start);
+    
+    switch (member.subscription) {
+        case "monthly": 
+            end.setMonth(end.getMonth() + 1); 
+            break;
+        case "quarterly": 
+            end.setMonth(end.getMonth() + 3); 
+            break;
+        case "biannual": 
+            end.setMonth(end.getMonth() + 6); 
+            break;
+        case "annual": 
+            end.setFullYear(end.getFullYear() + 1); 
+            break;
+    }
+    return end;
+}
 function playSuccessSound() {
     try {
         // Créer un son de succès simple
@@ -3253,32 +3273,104 @@ function showScanMessage(message, type) {
 // ============================================
 // SUBSCRIPTION ALERT HANDLING
 // ============================================
-function showSubscriptionAlert(member) {
-  const modal = document.getElementById('subscriptionAlertModal');
-  modal.classList.add('active');
-
-  document.getElementById('renewBtn').onclick = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const { error } = await supabase
-        .from('members')
-        .update({ start_date: today })
-        .eq('id', member.id);
-
-      if (error) throw error;
-
-      closeModal('subscriptionAlertModal');
-      showMessage('validationMessage', 'Abonnement renouvelé avec succès ✅', 'success');
-      await validateAttendanceAfterRenew(member.id);
-    } catch (err) {
-      showMessage('validationMessage', 'Erreur lors du renouvellement', 'danger');
-    }
-  };
-
-  document.getElementById('ignoreBtn').onclick = () => {
-    closeModal('subscriptionAlertModal');
-    showMessage('validationMessage', '⚠️ Abonnement expiré — validation annulée', 'warning');
-  };
+async function recordAttendance(member) {
+    const today = new Date().toISOString().split('T')[0];
+    const now = new Date();
+    
+    const { error } = await supabase.from('attendance').insert([{
+        member_id: member.id,
+        club_id: member.club_id,
+        attendance_date: today,
+        attendance_time: now.toTimeString().split(' ')[0],
+        month: now.toISOString().slice(0, 7)
+    }]);
+    
+    if (error) throw error;
+    
+    // Mettre à jour le dashboard
+    loadDashboard();
+    
+    return true;
+}
+function showSubscriptionAlertForScan(member) {
+    const modal = document.getElementById('subscriptionAlertModal');
+    const message = document.getElementById('subscriptionAlertMessage');
+    
+    // Calculer la date de fin
+    const endDate = computeEndDate(member);
+    const endDateFormatted = endDate.toLocaleDateString('fr-FR');
+    
+    message.innerHTML = `
+        <div style="text-align: center; padding: 10px;">
+            <div style="font-size: 3rem; margin-bottom: 15px;">⚠️</div>
+            <h3 style="color: var(--warning-color); margin-bottom: 15px;">Abonnement Expiré</h3>
+            <div style="background: rgba(255,193,7,0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                <p style="margin: 5px 0; font-size: 1.1rem;">
+                    <strong>${member.first_name} ${member.last_name}</strong>
+                </p>
+                <p style="margin: 5px 0; color: var(--text-secondary);">
+                    ID: ${member.id}
+                </p>
+                <p style="margin: 5px 0; color: var(--danger-color); font-weight: 600;">
+                    Abonnement expiré depuis le ${endDateFormatted}
+                </p>
+            </div>
+            <p style="color: var(--text-secondary);">
+                Que souhaitez-vous faire ?
+            </p>
+        </div>
+    `;
+    
+    // Configurer les boutons
+    document.getElementById('renewBtn').onclick = async () => {
+        try {
+            // Renouveler l'abonnement (date d'aujourd'hui)
+            const today = new Date().toISOString().split('T')[0];
+            const { error } = await supabase
+                .from('members')
+                .update({ start_date: today })
+                .eq('id', member.id);
+            
+            if (error) throw error;
+            
+            // Enregistrer la présence après renouvellement
+            await recordAttendance(member);
+            
+            showMessage('scanResult', 
+                `✅ Abonnement renouvelé et présence validée pour ${member.first_name} ${member.last_name}`, 
+                'success'
+            );
+            
+            closeModal('subscriptionAlertModal');
+            
+        } catch (error) {
+            console.error('Erreur renouvellement:', error);
+            showMessage('scanResult', '❌ Erreur lors du renouvellement', 'danger');
+            closeModal('subscriptionAlertModal');
+        }
+    };
+    
+    document.getElementById('ignoreBtn').onclick = async () => {
+        try {
+            // Valider la présence même avec abonnement expiré
+            await recordAttendance(member);
+            
+            showMessage('scanResult', 
+                `⚠️ Présence validée (abonnement expiré) pour ${member.first_name} ${member.last_name}`, 
+                'warning'
+            );
+            
+            closeModal('subscriptionAlertModal');
+            
+        } catch (error) {
+            console.error('Erreur validation avec abonnement expiré:', error);
+            showMessage('scanResult', '❌ Erreur lors de la validation', 'danger');
+            closeModal('subscriptionAlertModal');
+        }
+    };
+    
+    // Ouvrir le modal
+    openModal('subscriptionAlertModal');
 }
 
 async function validateAttendanceAfterRenew(memberId) {
@@ -3472,7 +3564,7 @@ async function startScanner() {
 }
 async function validateAttendanceFromScan(memberId) {
     try {
-        console.log('🎯 Validation présence pour:', memberId);
+        console.log('🎯 Validation présence pour ID:', memberId);
         
         if (!memberId) {
             showMessage('scanResult', '❌ ID adhérent vide', 'danger');
@@ -3492,13 +3584,11 @@ async function validateAttendanceFromScan(memberId) {
         }
 
         // Vérifier si l'abonnement est actif
-        if (!isSubscriptionActive(member)) {
-            showMessage('scanResult', 
-                `❌ Abonnement expiré pour ${member.first_name} ${member.last_name}`, 
-                'warning'
-            );
-            // Proposer le renouvellement
-            showSubscriptionAlert(member);
+        const isActive = isSubscriptionActive(member);
+        
+        if (!isActive) {
+            // Abonnement expiré - afficher l'alerte
+            showSubscriptionAlertForScan(member);
             return false;
         }
 
@@ -3519,37 +3609,19 @@ async function validateAttendanceFromScan(memberId) {
             return false;
         }
 
-        // Enregistrer la présence
-        const now = new Date();
-        const { error: insertError } = await supabase.from('attendance').insert([{
-            member_id: memberId,
-            club_id: member.club_id,
-            attendance_date: today,
-            attendance_time: now.toTimeString().split(' ')[0],
-            month: now.toISOString().slice(0, 7)
-        }]);
-
-        if (insertError) throw insertError;
-
-        // SUCCÈS - Afficher un message clair
-        const successMessage = `✅ Présence validée pour ${member.first_name} ${member.last_name} à ${now.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}`;
+        // Enregistrer la présence (abonnement actif)
+        await recordAttendance(member);
+        
+        // SUCCÈS
+        const successMessage = `✅ Présence validée pour ${member.first_name} ${member.last_name}`;
         
         showMessage('scanResult', successMessage, 'success');
-        showMessage('validationMessage', successMessage, 'success');
         
         // Notifier
         notifyAttendance(member);
         
-        // Jouer un son de succès (optionnel)
-        playSuccessSound();
-        
         // Mettre à jour le dashboard
         loadDashboard();
-        
-        // Arrêter le scanner après 2 secondes pour voir le message
-        setTimeout(() => {
-            stopScanner();
-        }, 2000);
         
         return true;
         
@@ -3679,18 +3751,53 @@ async function onScanSuccess(decodedText) {
     try {
         console.log('✅ QR Code scanné:', decodedText);
         
+        // Extraire seulement l'ID du texte complet du QR code
+        const memberId = extractMemberIdFromQR(decodedText);
+        
+        if (!memberId) {
+            showMessage('scanResult', '❌ ID adhérent non trouvé dans le QR Code', 'danger');
+            return;
+        }
+        
+        console.log('🎯 ID extrait:', memberId);
+        
         // Afficher temporairement le résultat du scan
-        showMessage('scanResult', `🔍 Code scanné: ${decodedText}`, 'info');
+        showMessage('scanResult', `🔍 ID extrait: ${memberId}`, 'info');
         
-        // Mettre à jour l'input manuel
-        document.getElementById('validateMemberId').value = decodedText;
-        
-        // Valider IMMÉDIATEMENT la présence
-        await validateAttendanceFromScan(decodedText);
+        // Valider IMMÉDIATEMENT la présence avec l'ID
+        await validateAttendanceFromScan(memberId);
         
     } catch (error) {
         console.error('❌ Erreur lors du scan:', error);
         showMessage('scanResult', '❌ Erreur lors de la validation: ' + error.message, 'danger');
+    }
+}
+
+// Fonction pour extraire l'ID du texte complet du QR code
+function extractMemberIdFromQR(qrText) {
+    try {
+        // Méthode 1: Chercher la ligne qui commence par "ID: "
+        const idLine = qrText.split('\n').find(line => line.startsWith('ID:'));
+        if (idLine) {
+            return idLine.replace('ID:', '').trim();
+        }
+        
+        // Méthode 2: Chercher un pattern KYO suivi de chiffres
+        const idMatch = qrText.match(/(KYO\d+)/i);
+        if (idMatch) {
+            return idMatch[1];
+        }
+        
+        // Méthode 3: Si le texte est court, c'est probablement juste l'ID
+        if (qrText.length <= 10 && qrText.match(/[A-Za-z0-9]{3,10}/)) {
+            return qrText.trim();
+        }
+        
+        return null;
+        
+    } catch (error) {
+        console.error('Erreur extraction ID:', error);
+        return null;
     }
 }
 
