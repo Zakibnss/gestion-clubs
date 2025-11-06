@@ -1952,8 +1952,8 @@ async function generateCard(member, backgroundUrl) {
   // === CARTE ===
   const cardDiv = document.createElement("div");
   cardDiv.style.cssText = `
-    width: 638px;
-    height: 1011px;
+    width: 638px;  /* ≈ 8.1 cm */
+    height: 1011px; /* ≈ 12.8 cm */
     background-image: url('${backgroundUrl}');
     background-size: cover;
     background-position: center;
@@ -1996,7 +1996,7 @@ async function generateCard(member, backgroundUrl) {
       width: 170px;
       height: 170px;
       object-fit: cover;
-      object-position: top center; /* centrer le visage */
+      object-position: top center;
       border-radius: 50%;
       margin-top: 25px;
       margin-bottom: 18px;
@@ -2048,7 +2048,6 @@ async function generateCard(member, backgroundUrl) {
   `;
 
   const fullName = `${member.last_name.toUpperCase()} ${member.first_name}`;
-
   infoDiv.innerHTML = `
     <div>ID: ${member.id}</div>
     <div style="font-size: 1.15rem;">${fullName}</div>
@@ -2076,20 +2075,17 @@ async function generateCard(member, backgroundUrl) {
   new QRCode(qrWrapper, { text: member.id, width: 85, height: 85 });
   cardDiv.appendChild(qrDiv);
 
-  // === AJOUT À LA PAGE ===
-  wrapper.appendChild(cardDiv);
-  document.body.appendChild(wrapper);
-};
-
-  // === BOUTON EN DEHORS DE LA CARTE ===
+  // === BOUTON DE TÉLÉCHARGEMENT ===
   const exportBtn = document.createElement("button");
   exportBtn.textContent = "💾 Télécharger PNG";
   exportBtn.className = "btn btn-info btn-sm";
+  exportBtn.style.marginTop = "10px";
   exportBtn.onclick = () => exportCardAsPNG(cardDiv, member);
 
-  // Assembler le tout
+  // === AJOUT À LA PAGE ===
   wrapper.appendChild(cardDiv);
   wrapper.appendChild(exportBtn);
+  document.body.appendChild(wrapper);
 
   return wrapper;
 }
