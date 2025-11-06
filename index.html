@@ -1939,8 +1939,8 @@
             }
         }
 
-        async function generateCard(member, backgroundUrl) {
-  // Créer un conteneur principal (carte + bouton)
+async function generateCard(member, backgroundUrl) {
+  // === CONTENEUR PRINCIPAL ===
   const wrapper = document.createElement("div");
   wrapper.style.cssText = `
     display: flex;
@@ -1959,7 +1959,7 @@
     background-position: center;
     color: white;
     border-radius: 15px;
-    padding: 20px;
+    padding: 25px 20px;
     margin: 10px;
     display: flex;
     flex-direction: column;
@@ -1968,6 +1968,7 @@
     text-align: center;
     position: relative;
     box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    overflow: hidden;
   `;
 
   // === PHOTO ===
@@ -1992,57 +1993,68 @@
     }
 
     photo.style.cssText = `
-      width: 150px;
-      height: 150px;
+      width: 170px;
+      height: 170px;
       object-fit: cover;
+      object-position: top center; /* centrer le visage */
       border-radius: 50%;
-      margin-bottom: 15px;
-      border: 3px solid white;
+      margin-top: 25px;
+      margin-bottom: 18px;
+      border: 4px solid white;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      background: #fff;
     `;
   } else {
+    // === PHOTO PAR DÉFAUT ===
     photo = document.createElement("div");
     photo.style.cssText = `
-      width: 150px;
-      height: 150px;
+      width: 170px;
+      height: 170px;
       display: flex;
       align-items: center;
       justify-content: center;
       border-radius: 50%;
-      margin-bottom: 15px;
-      border: 3px solid white;
+      margin-top: 25px;
+      margin-bottom: 18px;
+      border: 4px solid white;
       background: #eee;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     `;
     photo.innerHTML = `
-      <svg width="80" height="80" viewBox="0 0 80 80" fill="#bbb" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="40" cy="32" r="18" fill="#bbb"/>
-        <ellipse cx="40" cy="62" rx="24" ry="14" fill="#bbb"/>
+      <svg width="90" height="90" viewBox="0 0 90 90" fill="#bbb" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="45" cy="36" r="20" fill="#bbb"/>
+        <ellipse cx="45" cy="70" rx="27" ry="16" fill="#bbb"/>
       </svg>
     `;
   }
   cardDiv.appendChild(photo);
 
   // === INFOS ===
-const infoDiv = document.createElement("div");
-infoDiv.style.cssText = `
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  font-size: 1rem;
-  margin-bottom: 15px;
-  color: #222;
-  font-family: 'Poppins', 'Arial', sans-serif;
-  font-weight: 700; /* tout en gras */
-`;
+  const infoDiv = document.createElement("div");
+  infoDiv.style.cssText = `
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 1rem;
+    margin-top: 5px;
+    margin-bottom: 25px;
+    color: #111;
+    font-family: 'Poppins', 'Arial', sans-serif;
+    font-weight: 700;
+    text-align: center;
+    line-height: 1.4;
+  `;
 
-const fullName = `${member.last_name.toUpperCase()} ${member.first_name}`;
+  const fullName = `${member.last_name.toUpperCase()} ${member.first_name}`;
 
-infoDiv.innerHTML = `
-  <div>ID: ${member.id}</div>
-  <div style="font-size: 1.1rem;">${fullName}</div>
-  <div>Date de naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
-  <div>Groupe sanguin: ${member.blood_type || 'N/A'}</div>
-`;
+  infoDiv.innerHTML = `
+    <div>ID: ${member.id}</div>
+    <div style="font-size: 1.15rem;">${fullName}</div>
+    <div>Date de naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
+    <div>Groupe sanguin: ${member.blood_type || 'N/A'}</div>
+  `;
   cardDiv.appendChild(infoDiv);
 
   // === QR CODE ===
@@ -2050,18 +2062,24 @@ infoDiv.innerHTML = `
   qrDiv.style.cssText = `
     background: white;
     padding: 8px;
-    border-radius: 8px;
+    border-radius: 10px;
     position: absolute;
-    bottom: 20px;
+    bottom: 25px;
     left: 50%;
     transform: translateX(-50%);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.25);
   `;
   const qrWrapper = document.createElement("div");
-  qrWrapper.style.width = "80px";
-  qrWrapper.style.height = "80px";
+  qrWrapper.style.width = "85px";
+  qrWrapper.style.height = "85px";
   qrDiv.appendChild(qrWrapper);
-  new QRCode(qrWrapper, { text: member.id, width: 80, height: 80 });
+  new QRCode(qrWrapper, { text: member.id, width: 85, height: 85 });
   cardDiv.appendChild(qrDiv);
+
+  // === AJOUT À LA PAGE ===
+  wrapper.appendChild(cardDiv);
+  document.body.appendChild(wrapper);
+};
 
   // === BOUTON EN DEHORS DE LA CARTE ===
   const exportBtn = document.createElement("button");
