@@ -3108,23 +3108,37 @@ async function handleEditMember(e) {
         // EXCEL IMPORT/EXPORT
         // ============================================
         function downloadTemplate() {
-  // Chaque sous-tableau = une ligne du fichier Excel
+  // Template avec format de date JJ/MM/AAAA
   const template = [
     ["ID", "Nom", "Prénom", "DateNaissance", "GroupeSanguin", "NuméroTéléphone", "Abonnement", "DateDébut"],
-    ["", "", "", "", "", "", "", ""]
+    ["KYO001", "DUPONT", "Jean", "15/05/1990", "A+", "0123456789", "monthly", "01/01/2024"],
+    ["KYO002", "MARTIN", "Marie", "22/08/1985", "O-", "0987654321", "annual", "01/01/2024"],
+    ["", "", "", "JJ/MM/AAAA", "", "", "monthly/quarterly/biannual/annual", "JJ/MM/AAAA"]
   ];
 
   // Créer le classeur et la feuille
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(template);
 
+  // Définir les largeurs de colonnes
+  const colWidths = [
+    { wch: 10 }, // ID
+    { wch: 15 }, // Nom
+    { wch: 15 }, // Prénom
+    { wch: 12 }, // DateNaissance
+    { wch: 8 },  // GroupeSanguin
+    { wch: 15 }, // NuméroTéléphone
+    { wch: 12 }, // Abonnement
+    { wch: 12 }  // DateDébut
+  ];
+  ws['!cols'] = colWidths;
+
   // Ajouter la feuille au classeur
   XLSX.utils.book_append_sheet(wb, ws, "Template");
 
   // Sauvegarder le fichier
-  XLSX.writeFile(wb, "template_adherents.xlsx");
+  XLSX.writeFile(wb, "template_adherents_format_francais.xlsx");
 }
-
 
 async function importExcel() {
     const file = document.getElementById('excelFile').files[0];
@@ -3133,21 +3147,41 @@ async function importExcel() {
         return;
     }
 
+    // Vérifier l'extension du fichier
+    if (!file.name.match(/\.(xlsx|xls)$/i)) {
+        showMessage('importMessage', '❌ Veuillez sélectionner un fichier Excel (.xlsx ou .xls)', 'danger');
+        return;
+    }
+
     const reader = new FileReader();
     reader.onload = async function(e) {
         try {
+            showMessage('importMessage', '📊 Lecture du fichier Excel...', 'info');
+            
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
+            
+            // Vérifier qu'il y a au moins une feuille
+            if (workbook.SheetNames.length === 0) {
+                throw new Error('Le fichier Excel ne contient aucune feuille');
+            }
+            
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
             
-            // Lire les données - important: raw: false pour les dates texte
+            // Lire les données avec conversion texte pour les dates
             const rows = XLSX.utils.sheet_to_json(sheet, { 
-                raw: false, // ← CHANGEMENT IMPORTANT: false pour forcer le texte
+                raw: false, // Important pour les dates en texte
                 defval: ""
             });
 
-            console.log('Données lues depuis Excel:', rows);
-            showMessage('importMessage', `Import de ${rows.length} adhérents...`, 'info');
+            console.log('📋 Données lues depuis Excel:', rows);
+            
+            if (rows.length === 0) {
+                showMessage('importMessage', '❌ Le fichier ne contient aucune donnée', 'warning');
+                return;
+            }
+
+            showMessage('importMessage', `🔄 Traitement de ${rows.length} ligne(s)...`, 'info');
 
             const members = [];
             const errors = [];
@@ -3170,14 +3204,14 @@ async function importExcel() {
                         return;
                     }
 
-                    // Conversion des dates
+                    // Conversion des dates avec la nouvelle fonction
                     console.log(`--- Ligne ${index + 2} ---`);
                     console.log(`DateNaissance brute:`, row.DateNaissance, `Type:`, typeof row.DateNaissance);
                     
                     const dob = convertExcelDate(row.DateNaissance);
                     
                     if (!dob) {
-                        errors.push(`Ligne ${index + 2}: Date de naissance invalide ("${row.DateNaissance}") - Utilisez MM/DD/YYYY`);
+                        errors.push(`Ligne ${index + 2}: Date de naissance invalide ("${row.DateNaissance}")`);
                         return;
                     }
 
@@ -3185,7 +3219,7 @@ async function importExcel() {
                     const startDate = convertExcelDate(row.DateDébut);
                     
                     if (!startDate) {
-                        errors.push(`Ligne ${index + 2}: Date de début invalide ("${row.DateDébut}") - Utilisez MM/DD/YYYY`);
+                        errors.push(`Ligne ${index + 2}: Date de début invalide ("${row.DateDébut}")`);
                         return;
                     }
 
@@ -3196,7 +3230,7 @@ async function importExcel() {
                         first_name: row.Prénom.toString().trim(),
                         dob: dob,
                         blood_type: row.GroupeSanguin ? row.GroupeSanguin.toString().trim() : null,
-                        subscription: row.Abonnement ? row.Abonnement.toString().trim() : 'monthly',
+                        subscription: row.Abonnement ? row.Abonnement.toString().trim().toLowerCase() : 'monthly',
                         start_date: startDate,
                         phone_number: row.NuméroTéléphone ? row.NuméroTéléphone.toString().trim() : null
                     };
@@ -3228,6 +3262,11 @@ async function importExcel() {
                 
                 loadDashboard();
                 loadMembers();
+                
+                // Notifier pour les nouveaux membres
+                members.forEach(member => {
+                    notifyNewMember(member);
+                });
             } else {
                 showMessage('importMessage', '❌ Aucun membre valide à importer', 'danger');
             }
@@ -3418,6 +3457,81 @@ function computeEndDate(member) {
     } catch (error) {
         console.error('❌ Erreur dans computeEndDate:', error);
         return null;
+    }
+}
+// ============================================
+// DATE CONVERSION FUNCTIONS
+// ============================================
+
+// ============================================
+// DATE CONVERSION FUNCTIONS - FORMAT JJ/MM/AAAA
+// ============================================
+
+function convertExcelDate(dateString) {
+    if (!dateString) return null;
+    
+    console.log('🔄 Conversion date:', dateString);
+    
+    // Si c'est une chaîne au format JJ/MM/AAAA
+    if (typeof dateString === 'string') {
+        const cleanDate = dateString.toString().trim();
+        
+        // Format JJ/MM/AAAA ou JJ/MM/AA
+        if (cleanDate.match(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/)) {
+            const parts = cleanDate.split('/');
+            let day = parseInt(parts[0]);
+            let month = parseInt(parts[1]);
+            let year = parseInt(parts[2]);
+            
+            // Gérer les années à 2 chiffres
+            if (year < 100) {
+                year = 2000 + year;
+            }
+            
+            // Valider les valeurs
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31 && year >= 1900 && year <= 2100) {
+                // Formater directement en YYYY-MM-DD sans passer par Date()
+                const formattedYear = String(year);
+                const formattedMonth = String(month).padStart(2, '0');
+                const formattedDay = String(day).padStart(2, '0');
+                
+                return `${formattedYear}-${formattedMonth}-${formattedDay}`;
+            }
+        }
+    }
+    
+    console.error('❌ Format de date non reconnu:', dateString);
+    return null;
+}
+// NOUVELLE FONCTION pour formater les dates sans décalage horaire
+function formatDateForDatabase(date) {
+    if (!date || isNaN(date.getTime())) return null;
+    
+    // Utiliser les composants locaux de la date pour éviter le décalage UTC
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}`;
+}
+
+// Fonction utilitaire pour l'affichage (garder l'ancienne pour l'export)
+function formatDateForExcel(dateString) {
+    if (!dateString) return 'N/A';
+    
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Date invalide';
+        
+        // Utiliser le formatage local pour l'affichage
+        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const year = date.getFullYear();
+        
+        return `${day}/${month}/${year}`;
+    } catch (error) {
+        console.error('Erreur formatage date:', error);
+        return 'Erreur';
     }
 }
 function playSuccessSound() {
