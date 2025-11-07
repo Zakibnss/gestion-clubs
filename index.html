@@ -1778,36 +1778,107 @@ function clearAllNotifications() {
 
 // Ajouter une nouvelle notification
 function addNotification(type, title, message) {
-    // Vérifie si une notification strictement identique (type, titre, message, non lue) existe déjà
-    const exists = notifications.some(n =>
-        n.type === type &&
-        n.title === title &&
-        n.message === message &&
-        !n.read
-    );
-    if (exists) return;
+    try {
+        // Vérification plus stricte des doublons
+        const now = new Date();
+        const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000); // 5 minutes
+        
+        const duplicate = notifications.find(n =>
+            n.type === type &&
+            n.title === title &&
+            n.message === message &&
+            new Date(n.timestamp) > fiveMinutesAgo && // Même notification dans les 5 dernières minutes
+            !n.read
+        );
 
-    const newNotification = {
-        id: "notif" + Date.now(),
-        type,
-        title,
-        message,
-        timestamp: new Date().toISOString(),
-        read: false
-    };
-    notifications.unshift(newNotification);
-    saveNotifications();
-    updateNotificationBadge();
+        if (duplicate) {
+            console.log('🔔 Notification dupliquée ignorée:', title);
+            return;
+        }
 
-    // Affiche une notification toast si l'utilisateur est sur l'application
-    if (
-        document.getElementById('mainApp') &&
-        !document.getElementById('mainApp').classList.contains('hidden')
-    ) {
-        showNotification(title, message, type, 5000);
+        const newNotification = {
+            id: "notif_" + Date.now() + "_" + Math.random().toString(36).substr(2, 9),
+            type: type,
+            title: title,
+            message: message,
+            timestamp: now.toISOString(),
+            read: false
+        };
+
+        notifications.unshift(newNotification);
+        
+        // Garder seulement les 50 dernières notifications
+        if (notifications.length > 50) {
+            notifications = notifications.slice(0, 50);
+        }
+        
+        saveNotifications();
+        updateNotificationBadge();
+
+        // Afficher une notification toast seulement si l'application est active
+        if (document.getElementById('mainApp') && 
+            !document.getElementById('mainApp').classList.contains('hidden')) {
+            showNotification(title, message, type, 5000);
+        }
+        
+        console.log('🔔 Nouvelle notification:', title);
+        
+    } catch (error) {
+        console.error('❌ Erreur ajout notification:', error);
     }
 }
+function resetSubscriptionNotifications() {
+    if (confirm('Voulez-vous réinitialiser toutes les notifications d\'abonnement ? Cela supprimera les notifications existantes.')) {
+        // Filtrer pour garder seulement les notifications non liées aux abonnements
+        notifications = notifications.filter(n => 
+            !n.title.includes('Abonnement expiré') && 
+            !n.title.includes('Abonnement bientôt expiré')
+        );
+        
+        saveNotifications();
+        updateNotificationBadge();
+        displayNotificationsList();
+        
+        showNotification(
+            'Notifications réinitialisées',
+            'Les notifications d\'abonnement ont été réinitialisées',
+            'success'
+        );
+    }
+}
+function addDebugButton() {
+    const debugBtn = document.createElement('button');
+    debugBtn.textContent = '🐛 Debug Abonnements';
+    debugBtn.className = 'btn btn-warning btn-sm';
+    debugBtn.style.marginLeft = '10px';
+    debugBtn.onclick = async () => {
+        await debugSubscriptions();
+    };
+    
+    const headerActions = document.querySelector('.header-actions');
+    headerActions.appendChild(debugBtn);
+}
 
+async function debugSubscriptions() {
+    console.log('=== 🐛 DEBUG ABONNEMENTS ===');
+    
+    let query = supabase.from('members').select('*');
+    if (currentUser !== 'admin' && currentClub) {
+        query = query.eq('club_id', currentClub.id);
+    }
+    
+    const { data: members } = await query;
+    
+    members.forEach(member => {
+        const endDate = computeEndDate(member);
+        const daysLeft = Math.ceil((endDate - new Date()) / (1000 * 3600 * 24));
+        const status = daysLeft < 0 ? 'EXPIRÉ' : daysLeft <= 7 ? 'BIENTÔT EXPIRÉ' : 'ACTIF';
+        
+        console.log(`${member.first_name} ${member.last_name}: ${status} (${daysLeft} jours)`);
+    });
+    
+    alert('Voir la console pour les détails de débogage');
+}
 
 // Fonctions utilitaires pour différents types de notifications
 function notifySubscriptionExpired(member) {
@@ -1994,71 +2065,136 @@ function computeEndDate(member) {
 
 async function checkExpiredSubscriptions() {
     try {
+        console.log('🔍 Vérification des abonnements...');
+        
         let query = supabase.from('members').select('*');
         
         if (currentUser !== 'admin') {
             if (currentClub && currentClub.id) {
                 query = query.eq('club_id', currentClub.id);
             } else {
+                console.log('❌ Club non trouvé');
                 return;
             }
         }
         
         const { data: members, error } = await query;
         
-        if (error) throw error;
+        if (error) {
+            console.error('Erreur récupération membres:', error);
+            return;
+        }
         
-        if (!members || members.length === 0) return;
-        
+        if (!members || members.length === 0) {
+            console.log('ℹ️ Aucun membre trouvé');
+            return;
+        }
+
         const now = new Date();
         const expiredMembers = [];
         const expiringSoonMembers = [];
         
+        console.log(`📊 Vérification de ${members.length} membres`);
+
         members.forEach(member => {
-            const endDate = computeEndDate(member);
-            const timeDiff = endDate.getTime() - now.getTime();
-            const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
-            
-            if (daysDiff < 0) {
-                expiredMembers.push(member);
-            } else if (daysDiff <= 7) {
-                expiringSoonMembers.push(member);
+            try {
+                if (!member.start_date) {
+                    console.log(`❌ Membre ${member.id} sans date de début`);
+                    return;
+                }
+
+                const startDate = new Date(member.start_date);
+                if (isNaN(startDate.getTime())) {
+                    console.log(`❌ Date de début invalide pour ${member.id}: ${member.start_date}`);
+                    return;
+                }
+
+                const endDate = computeEndDate(member);
+                if (!endDate || isNaN(endDate.getTime())) {
+                    console.log(`❌ Date de fin invalide pour ${member.id}`);
+                    return;
+                }
+
+                const timeDiff = endDate.getTime() - now.getTime();
+                const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
+                
+                console.log(`📅 ${member.first_name} ${member.last_name}: ${daysDiff} jour(s) restant(s)`);
+
+                // Abonnement EXPIRÉ (jours négatifs)
+                if (daysDiff < 0) {
+                    expiredMembers.push({
+                        member: member,
+                        daysExpired: Math.abs(daysDiff)
+                    });
+                    console.log(`❌ ${member.first_name} ${member.last_name} - Expiré depuis ${Math.abs(daysDiff)} jour(s)`);
+                } 
+                // Abonnement expire dans moins de 7 jours (mais pas encore expiré)
+                else if (daysDiff <= 7 && daysDiff >= 0) {
+                    expiringSoonMembers.push({
+                        member: member,
+                        daysLeft: daysDiff
+                    });
+                    console.log(`⚠️ ${member.first_name} ${member.last_name} - Expire dans ${daysDiff} jour(s)`);
+                } else {
+                    console.log(`✅ ${member.first_name} ${member.last_name} - Actif (${daysDiff} jours restants)`);
+                }
+
+            } catch (memberError) {
+                console.error(`Erreur avec le membre ${member.id}:`, memberError);
             }
         });
-        
+
+        console.log(`📊 Résultats - Expirés: ${expiredMembers.length}, Bientôt expirés: ${expiringSoonMembers.length}`);
+
         // NOTIFICATIONS POUR ABONNEMENTS EXPIRÉS
-        if (expiredMembers.length > 0) {
-            expiredMembers.forEach(member => {
+        expiredMembers.forEach(({ member, daysExpired }) => {
+            // Vérifier si une notification similaire existe déjà
+            const existingNotification = notifications.find(n => 
+                n.type === 'danger' && 
+                n.title.includes('Abonnement expiré') &&
+                n.message.includes(member.first_name) &&
+                !n.read
+            );
+            
+            if (!existingNotification) {
                 addNotification(
                     'danger',
                     '❌ Abonnement expiré',
-                    `${member.first_name} ${member.last_name} - L'abonnement a expiré`
+                    `${member.first_name} ${member.last_name} - Expiré depuis ${daysExpired} jour(s)`
                 );
-            });
-        }
+                console.log(`🔔 Notification envoyée: ${member.first_name} ${member.last_name} - Expiré`);
+            }
+        });
         
         // NOTIFICATIONS POUR ABONNEMENTS BIENTÔT EXPIRÉS
-        if (expiringSoonMembers.length > 0) {
-            expiringSoonMembers.forEach(member => {
-                const endDate = computeEndDate(member);
-                const daysLeft = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
-                
+        expiringSoonMembers.forEach(({ member, daysLeft }) => {
+            // Vérifier si une notification similaire existe déjà
+            const existingNotification = notifications.find(n => 
+                n.type === 'warning' && 
+                n.title.includes('Abonnement bientôt expiré') &&
+                n.message.includes(member.first_name) &&
+                n.message.includes(`Expire dans ${daysLeft} jour`) &&
+                !n.read
+            );
+            
+            if (!existingNotification) {
                 addNotification(
                     'warning',
                     '⚠️ Abonnement bientôt expiré',
                     `${member.first_name} ${member.last_name} - Expire dans ${daysLeft} jour(s)`
                 );
-            });
-        }
+                console.log(`🔔 Notification envoyée: ${member.first_name} ${member.last_name} - Expire dans ${daysLeft} jours`);
+            }
+        });
         
         updateNotificationBadge();
         
+        console.log('✅ Vérification des abonnements terminée');
+
     } catch (error) {
-        console.error('Erreur vérification abonnements:', error);
+        console.error('❌ Erreur vérification abonnements:', error);
     }
 }
-
-
 function startSubscriptionMonitoring() {
     checkExpiredSubscriptions();
     setInterval(checkExpiredSubscriptions, 30 * 60 * 1000);
@@ -2990,7 +3126,7 @@ async function handleEditMember(e) {
 }
 
 
-  async function importExcel() {
+async function importExcel() {
     const file = document.getElementById('excelFile').files[0];
     if (!file) {
         showMessage('importMessage', 'Sélectionnez un fichier Excel', 'danger');
@@ -3004,62 +3140,101 @@ async function handleEditMember(e) {
             const workbook = XLSX.read(data, { type: 'array' });
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
             
-            // CORRECTION : Utiliser l'option raw: false pour obtenir les dates formatées
-            const rows = XLSX.utils.sheet_to_json(sheet, { raw: false });
-
-            showMessage('importMessage', `Import de ${rows.length} adhérents...`, 'info');
-
-            const members = rows.map(row => {
-                // Fonction pour convertir les dates Excel
-                const convertExcelDate = (excelDate) => {
-                    if (!excelDate) return null;
-                    
-                    // Si c'est déjà une date valide
-                    if (typeof excelDate === 'string' && excelDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-                        return excelDate;
-                    }
-                    
-                    // Si c'est un nombre (format Excel)
-                    if (!isNaN(excelDate)) {
-                        // Conversion depuis le format Excel (1er janvier 1900 = 1)
-                        const date = new Date((excelDate - 25569) * 86400 * 1000);
-                        return date.toISOString().split('T')[0];
-                    }
-                    
-                    // Si c'est une chaîne de date
-                    try {
-                        const date = new Date(excelDate);
-                        return !isNaN(date.getTime()) ? date.toISOString().split('T')[0] : null;
-                    } catch {
-                        return null;
-                    }
-                };
-
-                return {
-                    id: row.ID,
-                    club_id: currentClub.id,
-                    last_name: row.Nom,
-                    first_name: row.Prénom,
-                    dob: convertExcelDate(row.DateNaissance),
-                    blood_type: row.GroupeSanguin,
-                    subscription: row.Abonnement,
-                    start_date: convertExcelDate(row.DateDébut),
-                    phone_number: row.NuméroTéléphone
-                };
+            // Lire les données - important: raw: false pour les dates texte
+            const rows = XLSX.utils.sheet_to_json(sheet, { 
+                raw: false, // ← CHANGEMENT IMPORTANT: false pour forcer le texte
+                defval: ""
             });
 
-            // Vérifier les données avant insertion
-            console.log('Membres à importer:', members);
+            console.log('Données lues depuis Excel:', rows);
+            showMessage('importMessage', `Import de ${rows.length} adhérents...`, 'info');
 
-            const { error } = await supabase.from('members').insert(members);
-            if (error) throw error;
+            const members = [];
+            const errors = [];
 
-            showMessage('importMessage', 'Import réussi!', 'success');
-            loadDashboard();
-            loadMembers();
+            rows.forEach((row, index) => {
+                try {
+                    // Validation des champs obligatoires
+                    if (!row.ID && row.ID !== 0) {
+                        errors.push(`Ligne ${index + 2}: ID manquant`);
+                        return;
+                    }
+                    
+                    if (!row.Nom) {
+                        errors.push(`Ligne ${index + 2}: Nom manquant`);
+                        return;
+                    }
+                    
+                    if (!row.Prénom) {
+                        errors.push(`Ligne ${index + 2}: Prénom manquant`);
+                        return;
+                    }
+
+                    // Conversion des dates
+                    console.log(`--- Ligne ${index + 2} ---`);
+                    console.log(`DateNaissance brute:`, row.DateNaissance, `Type:`, typeof row.DateNaissance);
+                    
+                    const dob = convertExcelDate(row.DateNaissance);
+                    
+                    if (!dob) {
+                        errors.push(`Ligne ${index + 2}: Date de naissance invalide ("${row.DateNaissance}") - Utilisez MM/DD/YYYY`);
+                        return;
+                    }
+
+                    console.log(`DateDébut brute:`, row.DateDébut, `Type:`, typeof row.DateDébut);
+                    const startDate = convertExcelDate(row.DateDébut);
+                    
+                    if (!startDate) {
+                        errors.push(`Ligne ${index + 2}: Date de début invalide ("${row.DateDébut}") - Utilisez MM/DD/YYYY`);
+                        return;
+                    }
+
+                    const member = {
+                        id: row.ID.toString().trim(),
+                        club_id: currentClub.id,
+                        last_name: row.Nom.toString().trim(),
+                        first_name: row.Prénom.toString().trim(),
+                        dob: dob,
+                        blood_type: row.GroupeSanguin ? row.GroupeSanguin.toString().trim() : null,
+                        subscription: row.Abonnement ? row.Abonnement.toString().trim() : 'monthly',
+                        start_date: startDate,
+                        phone_number: row.NuméroTéléphone ? row.NuméroTéléphone.toString().trim() : null
+                    };
+
+                    console.log('✅ Membre préparé:', member);
+                    members.push(member);
+
+                } catch (error) {
+                    errors.push(`Ligne ${index + 2}: Erreur de traitement - ${error.message}`);
+                    console.error('Erreur ligne', index + 2, error);
+                }
+            });
+
+            // Afficher les erreurs
+            if (errors.length > 0) {
+                const errorMessage = `Erreurs détectées (${errors.length}):<br>${errors.slice(0, 5).join('<br>')}${errors.length > 5 ? '<br>... et ' + (errors.length - 5) + ' autres erreurs' : ''}`;
+                showMessage('importMessage', errorMessage, 'warning');
+            }
+
+            // Insérer les membres valides
+            if (members.length > 0) {
+                console.log('🎯 Membres à importer:', members);
+
+                const { error } = await supabase.from('members').insert(members);
+                if (error) throw error;
+
+                const successMessage = `✅ Import réussi! ${members.length} adhérent(s) importé(s)${errors.length > 0 ? ` (${errors.length} erreur(s) ignorée(s))` : ''}`;
+                showMessage('importMessage', successMessage, 'success');
+                
+                loadDashboard();
+                loadMembers();
+            } else {
+                showMessage('importMessage', '❌ Aucun membre valide à importer', 'danger');
+            }
+
         } catch (error) {
             console.error('Import error:', error);
-            showMessage('importMessage', 'Erreur: ' + error.message, 'danger');
+            showMessage('importMessage', '❌ Erreur: ' + error.message, 'danger');
         }
     };
     reader.readAsArrayBuffer(file);
@@ -3104,27 +3279,16 @@ function isSubscriptionActive(member) {
         const startDate = new Date(member.start_date);
         if (isNaN(startDate.getTime())) return false;
         
+        const endDate = computeEndDate(member);
+        if (!endDate || isNaN(endDate.getTime())) return false;
+        
         const now = new Date();
-        const endDate = new Date(startDate);
-
-        switch (member.subscription) {
-            case 'monthly':
-                endDate.setMonth(endDate.getMonth() + 1);
-                break;
-            case 'quarterly':
-                endDate.setMonth(endDate.getMonth() + 3);
-                break;
-            case 'biannual':
-                endDate.setMonth(endDate.getMonth() + 6);
-                break;
-            case 'annual':
-                endDate.setFullYear(endDate.getFullYear() + 1);
-                break;
-            default:
-                return false;
-        }
-
-        return now <= endDate;
+        const isActive = now <= endDate;
+        
+        console.log(`🔍 Vérification statut ${member.first_name}: ${isActive ? 'ACTIF' : 'EXPIRÉ'}`);
+        
+        return isActive;
+        
     } catch (error) {
         console.error('Erreur vérification abonnement:', error);
         return false;
@@ -3211,24 +3375,50 @@ function isSubscriptionActive(member) {
     }
 }
 function computeEndDate(member) {
-    const start = new Date(member.start_date);
-    const end = new Date(start);
-    
-    switch (member.subscription) {
-        case "monthly": 
-            end.setMonth(end.getMonth() + 1); 
-            break;
-        case "quarterly": 
-            end.setMonth(end.getMonth() + 3); 
-            break;
-        case "biannual": 
-            end.setMonth(end.getMonth() + 6); 
-            break;
-        case "annual": 
-            end.setFullYear(end.getFullYear() + 1); 
-            break;
+    try {
+        if (!member.start_date) {
+            console.log('❌ computeEndDate: start_date manquant');
+            return null;
+        }
+
+        const start = new Date(member.start_date);
+        if (isNaN(start.getTime())) {
+            console.log('❌ computeEndDate: start_date invalide', member.start_date);
+            return null;
+        }
+
+        const end = new Date(start);
+        
+        switch (member.subscription) {
+            case "monthly":
+                end.setMonth(end.getMonth() + 1);
+                break;
+            case "quarterly":
+                end.setMonth(end.getMonth() + 3);
+                break;
+            case "biannual":
+                end.setMonth(end.getMonth() + 6);
+                break;
+            case "annual":
+                end.setFullYear(end.getFullYear() + 1);
+                break;
+            default:
+                console.log('❌ Type d\'abonnement inconnu:', member.subscription);
+                end.setMonth(end.getMonth() + 1); // Valeur par défaut
+        }
+        
+        // Vérifier que la date de fin est valide
+        if (isNaN(end.getTime())) {
+            console.log('❌ computeEndDate: date de fin calculée invalide');
+            return null;
+        }
+        
+        return end;
+        
+    } catch (error) {
+        console.error('❌ Erreur dans computeEndDate:', error);
+        return null;
     }
-    return end;
 }
 function playSuccessSound() {
     try {
