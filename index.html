@@ -4540,19 +4540,16 @@ async function generateCard(member, backgroundUrl) {
     contentDiv.appendChild(photoContainer);
 
     // Nom complet positionné
-    const nameDiv = document.createElement("div"); nameDiv.style.cssText = `position:absolute;top:580px;width:350px;text-align:center;white-space:nowrap;`; const fullName = `${member.last_name.toUpperCase()} ${member.first_name.toUpperCase()}`; 
+    const nameDiv = document.createElement("div"); nameDiv.style.cssText = `position:absolute;left:140px;top:580px;width:350px;text-align:center;`; const fullName = `${member.last_name.toUpperCase()} ${member.first_name.toUpperCase()}`; 
 // Ajuster left en fonction de la longueur du nom
-const nameLength = fullName.length;
-const baseLeft = 140;
-const adjustedLeft = nameLength > 20 ? baseLeft - ((nameLength - 20) * 3) : baseLeft;
-nameDiv.style.left = `${Math.max(50, adjustedLeft)}px`; // Minimum 50px pour éviter de sortir
-nameDiv.innerHTML = `<div style="font-size:30.1px;font-weight:800;color:#a81a10;line-height:1;font-family:'Poppins',sans-serif;white-space:nowrap;">${fullName}</div>`; contentDiv.appendChild(nameDiv);
+
+nameDiv.innerHTML = `<div style="font-size:30.1px;font-weight:800;color:#a81a10;line-height:1;font-family:'Poppins',sans-serif;">${fullName}</div>`; contentDiv.appendChild(nameDiv);
 // Informations (ID, DDN, GS) positionnées
 const infoContainer = document.createElement("div");
 infoContainer.style.cssText = `
     position: absolute;
     left: 150px;
-    top: 629px;
+    top: 640px;
     display: flex;
     flex-direction: column;
     gap: 8px;
