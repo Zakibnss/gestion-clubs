@@ -2055,10 +2055,10 @@ function computeEndDate(member) {
     const start = new Date(member.start_date);
     const end = new Date(start);
     switch (member.subscription) {
-        case "monthly": end.setMonth(end.getMonth() + 1); break;
-        case "quarterly": end.setMonth(end.getMonth() + 3); break;
-        case "biannual": end.setMonth(end.getMonth() + 6); break;
-        case "annual": end.setFullYear(end.getFullYear() + 1); break;
+        case "monthly" || "Mensuel": end.setMonth(end.getMonth() + 1); break;
+        case "quarterly"||"Trimestriele": end.setMonth(end.getMonth() + 3); break;
+        case "biannual"||"Semestriel": end.setMonth(end.getMonth() + 6); break;
+        case "annual"||"Annuel": end.setFullYear(end.getFullYear() + 1); break;
     }
     return end;
 }
@@ -4585,31 +4585,9 @@ infoContainer.appendChild(dobDiv);
 infoContainer.appendChild(bloodDiv);
 contentDiv.appendChild(infoContainer);
 
-    // Calcul de la date de fin et statut
-    function computeEndDate(member) {
-        const start = new Date(member.start_date);
-        const end = new Date(start);
-        switch (member.subscription) {
-            case "monthly": 
-                end.setMonth(end.getMonth() + 1); 
-                break;
-            case "quarterly": 
-                end.setMonth(end.getMonth() + 3); 
-                break;
-            case "biannual": 
-                end.setMonth(end.getMonth() + 6); 
-                break;
-            case "annual": 
-                end.setFullYear(end.getFullYear() + 1); 
-                break;
-        }
-        return end;
-    }
+    
 
-    const endDateObj = computeEndDate(member);
-    const endDate = endDateObj.toLocaleDateString('fr-FR');
-    const isActive = new Date() <= endDateObj;
-    const status = isActive ? "Actif" : "Expiré";
+     const { status, endDate, badgeClass } = calculateMemberStatus(member);
 
     // QR Code positionné précisément
     const qrContainer = document.createElement("div");
