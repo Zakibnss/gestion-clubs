@@ -4473,7 +4473,7 @@ async function generateCard(member, backgroundUrl) {
         position: relative;
         overflow: hidden;
         border: 2px solid #e9ecef;
-        font-family: 'Segoe UI', Arial, sans-serif;
+        font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
     `;
 
     // Contenu principal
@@ -4484,15 +4484,19 @@ async function generateCard(member, backgroundUrl) {
         height: 100%;
         display: flex;
         flex-direction: column;
-        padding: 40px;
     `;
 
-    // Photo en cercle centrée avec cadre professionnel
+    // Photo en cercle positionnée précisément
     const photoContainer = document.createElement("div");
     photoContainer.style.cssText = `
+        position: absolute;
+        left: 167px;
+        top: 254px;
+        width: 300px;
+        height: 300px;
         display: flex;
         justify-content: center;
-        margin: 40px 0 30px 0;
+        align-items: center;
     `;
 
     let photo;
@@ -4515,73 +4519,74 @@ async function generateCard(member, backgroundUrl) {
             photo = createPlaceholderPhoto();
         }
         photo.style.cssText = `
-            width: 180px;
-            height: 180px;
+            width: 300px;
+            height: 300px;
+            object-fit: cover;
+            border-radius: 50%;
+        
+        `;
+    } else {
+        photo = createPlaceholderPhoto();
+        photo.style.cssText = `
+            width: 316px;
+            height: 316px;
             object-fit: cover;
             border-radius: 50%;
             border: 4px solid white;
             box-shadow: 0 4px 15px rgba(0,0,0,0.2);
         `;
-    } else {
-        photo = createPlaceholderPhoto();
     }
     photoContainer.appendChild(photo);
     contentDiv.appendChild(photoContainer);
 
-    // Informations organisées professionnellement
-    const infoContainer = document.createElement("div");
-    infoContainer.style.cssText = `
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
-        margin-bottom: 30px;
-        text-align: center;
-    `;
+    // Nom complet positionné
+    const nameDiv = document.createElement("div"); nameDiv.style.cssText = `position:absolute;top:580px;width:350px;text-align:center;white-space:nowrap;`; const fullName = `${member.last_name.toUpperCase()} ${member.first_name.toUpperCase()}`; 
+// Ajuster left en fonction de la longueur du nom
+const nameLength = fullName.length;
+const baseLeft = 140;
+const adjustedLeft = nameLength > 20 ? baseLeft - ((nameLength - 20) * 3) : baseLeft;
+nameDiv.style.left = `${Math.max(50, adjustedLeft)}px`; // Minimum 50px pour éviter de sortir
+nameDiv.innerHTML = `<div style="font-size:30.1px;font-weight:800;color:#a81a10;line-height:1;font-family:'Poppins',sans-serif;white-space:nowrap;">${fullName}</div>`; contentDiv.appendChild(nameDiv);
+// Informations (ID, DDN, GS) positionnées
+const infoContainer = document.createElement("div");
+infoContainer.style.cssText = `
+    position: absolute;
+    left: 150px;
+    top: 629px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+`;
 
-    // Nom complet
-    const nameDiv = document.createElement("div");
-    nameDiv.style.cssText = `
-        margin-bottom: 10px;
-    `;
-    const fullName = `${member.last_name.toUpperCase()} ${member.first_name}`;
-    nameDiv.innerHTML = `
-        <div style="font-size: 28px; font-weight: 700; color: black; line-height: 1.2;">
-            ${fullName}
-        </div>
-    `;
+// ID
+const idDiv = document.createElement("div");
+idDiv.innerHTML = `
+    <div style="font-size: 26px; font-weight: 600; color: black; font-family: 'Poppins', sans-serif;">
+        ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${member.id}
+    </div>
+`;
 
-    // ID
-    const idDiv = document.createElement("div");
-    idDiv.style.cssText = `
-        margin-bottom: 15px;
-    `;
-    idDiv.innerHTML = `
-        <div style="font-size: 30px; font-weight: 700; color: black;">
-            ID: ${member.id}
-        </div>
-    `;
+// Date de naissance
+const dobDiv = document.createElement("div");
+const formattedDob = new Date(member.dob).toLocaleDateString('fr-FR');
+dobDiv.innerHTML = `
+    <div style="font-size: 26px; font-weight: 600; color: black; font-family: 'Poppins', sans-serif;">
+        DDN&nbsp;&nbsp;: ${formattedDob}
+    </div>
+`;
 
-    // Date de naissance
-    const dobDiv = document.createElement("div");
-    dobDiv.innerHTML = `
-        <div style="font-size: 30px; color: black;">
-            <span style="font-weight: 700;">Date de naissance:</span> ${new Date(member.dob).toLocaleDateString('fr-FR')}
-        </div>
-    `;
+// Groupe sanguin
+const bloodDiv = document.createElement("div");
+bloodDiv.innerHTML = `
+    <div style="font-size: 26px; font-weight: 600; color: black; font-family: 'Poppins', sans-serif;">
+        G.S&nbsp;&nbsp;&nbsp;: ${member.blood_type || 'N/A'}
+    </div>
+`;
 
-    // Groupe sanguin
-    const bloodDiv = document.createElement("div");
-    bloodDiv.innerHTML = `
-        <div style="font-size: 30px; color: black;">
-            <span style="font-weight: 700;">Groupe sanguin:</span> ${member.blood_type || 'N/A'}
-        </div>
-    `;
-
-    infoContainer.appendChild(nameDiv);
-    infoContainer.appendChild(idDiv);
-    infoContainer.appendChild(dobDiv);
-    infoContainer.appendChild(bloodDiv);
-    contentDiv.appendChild(infoContainer);
+infoContainer.appendChild(idDiv);
+infoContainer.appendChild(dobDiv);
+infoContainer.appendChild(bloodDiv);
+contentDiv.appendChild(infoContainer);
 
     // Calcul de la date de fin et statut
     function computeEndDate(member) {
@@ -4609,23 +4614,31 @@ async function generateCard(member, backgroundUrl) {
     const isActive = new Date() <= endDateObj;
     const status = isActive ? "Actif" : "Expiré";
 
-    // QR Code plus petit et positionné en bas
+    // QR Code positionné précisément
     const qrContainer = document.createElement("div");
     qrContainer.style.cssText = `
+        position: absolute;
+        left: 245px;
+        top: 780px;
+        width: 145px;
+        height: 145px;
         display: flex;
         justify-content: center;
         align-items: center;
-        flex: 1;
-        padding: 0 20px 40px 20px;
     `;
 
     const qrDiv = document.createElement("div");
     qrDiv.style.cssText = `
         background: white;
-        padding: 15px;
-        border-radius: 12px;
+        padding: 8px;
+        border-radius: 8px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         border: 1px solid #ddd;
+        width: 145px;
+        height: 145px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
     `;
 
     const qrText = 
@@ -4638,8 +4651,8 @@ async function generateCard(member, backgroundUrl) {
 
     new QRCode(qrDiv, { 
         text: qrText,
-        width: 150,
-        height: 150,
+        width: 130,
+        height: 130,
         colorDark: "#000000",
         colorLight: "#ffffff",
         correctLevel: QRCode.CorrectLevel.H
@@ -4664,6 +4677,8 @@ async function generateCard(member, backgroundUrl) {
     wrapper.appendChild(exportBtn);
     return wrapper;
 }
+
+
 // Fonction helper pour créer une photo placeholder
 function createPlaceholderPhoto() {
     const placeholder = document.createElement("div");
