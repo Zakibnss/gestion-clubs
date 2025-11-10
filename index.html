@@ -1060,6 +1060,111 @@
     50% { transform: scale(1.1); }
     100% { transform: scale(1); }
 }
+/* Styles pour la section compétitions */
+.competition-step {
+    background: var(--bg-secondary);
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 1px solid var(--border-color);
+}
+
+.member-selection-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: var(--bg-primary);
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.member-selection-item:hover {
+    background: var(--bg-tertiary);
+    border-color: var(--primary-color);
+}
+
+.member-selection-item.selected {
+    background: rgba(200, 16, 46, 0.1);
+    border-color: var(--primary-color);
+}
+
+.member-selection-info {
+    flex: 1;
+}
+
+.member-selection-name {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.member-selection-details {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin-top: 4px;
+}
+
+.weights-table-container {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.weights-table-container table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.weights-table-container th,
+.weights-table-container td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.weights-table-container th {
+    background: var(--primary-color);
+    color: white;
+    font-weight: 600;
+}
+
+.weight-input {
+    width: 80px;
+    padding: 8px;
+    border: 2px solid var(--border-color);
+    border-radius: 5px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.weight-input:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+.weight-input.valid {
+    border-color: var(--success-color);
+    background: rgba(40, 167, 69, 0.1);
+}
+
+.weight-input.invalid {
+    border-color: var(--danger-color);
+    background: rgba(220, 53, 69, 0.1);
+}
+
+/* Badge pour le compteur */
+.selection-badge {
+    background: var(--primary-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin-left: 8px;
+}
     </style>
 </head>
 <body>
@@ -1558,6 +1663,66 @@
     </div>
     <div id="cameraPermission" class="alert alert-info hidden">
         📱 Veuillez autoriser l'accès à la caméra pour utiliser le scanner
+    </div>
+</div>
+<!-- Compétitions Section -->
+<div id="competitionsSection" class="content-section">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🏆 Gestion des Compétitions</h2>
+        </div>
+        
+        <!-- Étape 1: Sélection des adhérents -->
+        <div class="competition-step" id="step1">
+            <h3>📋 Étape 1: Sélection des participants</h3>
+            <div class="form-group">
+                <label>Sélectionner les adhérents pour la compétition:</label>
+                <div class="members-selection-grid" id="membersSelectionGrid" style="max-height: 400px; overflow-y: auto; margin-top: 15px; border: 1px solid var(--border-color); border-radius: 10px; padding: 15px;">
+                    <!-- Les membres seront chargés ici -->
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="proceedToWeights()" id="proceedBtn" disabled>
+                ✅ Confirmer la sélection (<span id="selectedCount">0</span> adhérents)
+            </button>
+        </div>
+
+        <!-- Étape 2: Saisie des poids -->
+        <div class="competition-step hidden" id="step2">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3>⚖️ Étape 2: Saisie des poids</h3>
+                <button class="btn btn-secondary" onclick="backToSelection()">⬅️ Retour à la sélection</button>
+            </div>
+            
+            <div class="weights-table-container">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr>
+                            <th>Nom</th>
+                            <th>Prénom</th>
+                            <th>Date de naissance</th>
+                            <th>Sexe</th>
+                            <th>Poids (kg)</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="weightsTableBody">
+                        <!-- Les participants avec champs poids seront ajoutés ici -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="btn btn-success" onclick="validateWeights()" id="validateWeightsBtn">
+                    ✅ Valider tous les poids
+                </button>
+                <button class="btn btn-primary" onclick="exportCompetitionData()" id="exportBtn" disabled>
+                    📊 Exporter en Excel
+                </button>
+            </div>
+        </div>
+
+        <!-- Liste des participants sélectionnés -->
+        <div id="selectedParticipants" style="margin-top: 20px;"></div>
     </div>
 </div>
     <script>
@@ -2216,7 +2381,9 @@ function startSubscriptionMonitoring() {
                 { id: 'scanner', label: '📱 Scanner', section: 'scannerSection' },
                 { id: 'validation', label: '✅ Validation', section: 'validationSection' },
                 { id: 'attendance', label: '📋 Présences', section: 'attendanceListSection' },
-                { id: 'cards', label: '🎫 Cartes', section: 'cardsSection' }
+                { id: 'cards', label: '🎫 Cartes', section: 'cardsSection' },
+               
+{ id: 'competitions', label: '🏆 Compétitions', section: 'competitionsSection' }
             ];
 
             navTabs.innerHTML = tabs.map(tab => 
@@ -2241,6 +2408,7 @@ function startSubscriptionMonitoring() {
                     if (section === 'membersListSection') loadMembers();
                     if (section === 'preferencesSection') loadPreferences();
                     if (section === 'addMemberSection') loadClubsForMember();
+                    if (section === 'competitionsSection') loadMembersForCompetition();
                 });
             });
         }
@@ -3865,6 +4033,429 @@ async function startScanner() {
             }
         }
     }
+}
+// Variables globales pour les compétitions
+let selectedParticipants = [];
+let competitionData = [];
+
+// Charger les membres pour la sélection
+async function loadMembersForCompetition() {
+    try {
+        const membersSelectionGrid = document.getElementById('membersSelectionGrid');
+        membersSelectionGrid.innerHTML = '<div class="spinner"></div>';
+
+        let query = supabase.from('members').select('*');
+        if (currentUser !== 'admin') {
+            query = query.eq('club_id', currentClub.id);
+        }
+
+        const { data: members, error } = await query;
+
+        if (error) throw error;
+
+        if (!members || members.length === 0) {
+            membersSelectionGrid.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">👥</div>
+                    <h3>Aucun adhérent trouvé</h3>
+                    <p>Ajoutez des adhérents pour pouvoir les sélectionner pour les compétitions.</p>
+                </div>
+            `;
+            return;
+        }
+
+        membersSelectionGrid.innerHTML = members.map(member => {
+            const isSelected = selectedParticipants.some(p => p.id === member.id);
+            return `
+                <div class="member-selection-item ${isSelected ? 'selected' : ''}" 
+                     onclick="toggleMemberSelection('${member.id}')"
+                     data-member-id="${member.id}">
+                    <input type="checkbox" ${isSelected ? 'checked' : ''} 
+                           onchange="toggleMemberSelection('${member.id}')"
+                           style="transform: scale(1.2);">
+                    <div class="member-selection-info">
+                        <div class="member-selection-name">
+                            ${member.last_name} ${member.first_name}
+                        </div>
+                        <div class="member-selection-details">
+                            ID: ${member.id} | Naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')} | 
+                            Téléphone: ${member.phone_number || 'N/A'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        updateSelectionCount();
+
+    } catch (error) {
+        console.error('Erreur chargement membres:', error);
+        document.getElementById('membersSelectionGrid').innerHTML = `
+            <div class="alert alert-danger">
+                ❌ Erreur lors du chargement des adhérents: ${error.message}
+            </div>
+        `;
+    }
+}
+
+// Basculer la sélection d'un membre
+// REMPLACEZ cette fonction :
+function toggleMemberSelection(memberId) {
+    const memberItem = document.querySelector(`[data-member-id="${memberId}"]`);
+    const checkbox = memberItem.querySelector('input[type="checkbox"]');
+    
+    if (checkbox.checked) {
+        // Ajouter le membre
+        const member = getMemberById(memberId);
+        if (member && !selectedParticipants.some(p => p.id === memberId)) {
+            selectedParticipants.push({
+                ...member,
+                weight: '',
+                sex: determineSexFromName(member.first_name) // Estimation basée sur le prénom
+            });
+            memberItem.classList.add('selected');
+        }
+    } else {
+        // Retirer le membre
+        selectedParticipants = selectedParticipants.filter(p => p.id !== memberId);
+        memberItem.classList.remove('selected');
+    }
+    
+    updateSelectionCount();
+}
+
+// PAR cette version corrigée avec meilleur debug :
+function toggleMemberSelection(memberId) {
+    console.log('Toggle selection pour:', memberId);
+    
+    const memberItem = document.querySelector(`[data-member-id="${memberId}"]`);
+    if (!memberItem) {
+        console.error('Élément non trouvé pour:', memberId);
+        return;
+    }
+    
+    const checkbox = memberItem.querySelector('input[type="checkbox"]');
+    const isCurrentlySelected = selectedParticipants.some(p => p.id === memberId);
+    
+    if (!isCurrentlySelected) {
+        // Ajouter le membre
+        const member = getMemberById(memberId);
+        console.log('Membre trouvé:', member);
+        
+        if (member) {
+            selectedParticipants.push({
+                ...member,
+                weight: '',
+                sex: determineSexFromName(member.first_name)
+            });
+            memberItem.classList.add('selected');
+            checkbox.checked = true;
+            console.log('Membre ajouté. Total:', selectedParticipants.length);
+        }
+    } else {
+        // Retirer le membre
+        selectedParticipants = selectedParticipants.filter(p => p.id !== memberId);
+        memberItem.classList.remove('selected');
+        checkbox.checked = false;
+        console.log('Membre retiré. Total:', selectedParticipants.length);
+    }
+    
+    updateSelectionCount();
+}
+// Obtenir un membre par son ID
+// REMPLACEZ cette fonction problématique :
+function getMemberById(memberId) {
+    // Cette fonction devrait récupérer le membre depuis les données chargées
+    // Pour l'instant, on va recharger les données
+    return selectedParticipants.find(p => p.id === memberId) || null;
+}
+
+// PAR cette version corrigée :
+let allMembersForCompetition = []; // Variable globale pour stocker tous les membres
+
+async function loadMembersForCompetition() {
+    try {
+        const membersSelectionGrid = document.getElementById('membersSelectionGrid');
+        membersSelectionGrid.innerHTML = '<div class="spinner"></div>';
+
+        let query = supabase.from('members').select('*');
+        if (currentUser !== 'admin') {
+            query = query.eq('club_id', currentClub.id);
+        }
+
+        const { data: members, error } = await query;
+
+        if (error) throw error;
+
+        // Stocker tous les membres dans la variable globale
+        allMembersForCompetition = members || [];
+
+        if (!members || members.length === 0) {
+            membersSelectionGrid.innerHTML = `
+                <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">👥</div>
+                    <h3>Aucun adhérent trouvé</h3>
+                    <p>Ajoutez des adhérents pour pouvoir les sélectionner pour les compétitions.</p>
+                </div>
+            `;
+            return;
+        }
+
+        membersSelectionGrid.innerHTML = members.map(member => {
+            const isSelected = selectedParticipants.some(p => p.id === member.id);
+            return `
+                <div class="member-selection-item ${isSelected ? 'selected' : ''}" 
+                     onclick="toggleMemberSelection('${member.id}')"
+                     data-member-id="${member.id}">
+                    <input type="checkbox" ${isSelected ? 'checked' : ''} 
+                           onchange="toggleMemberSelection('${member.id}')"
+                           style="transform: scale(1.2);">
+                    <div class="member-selection-info">
+                        <div class="member-selection-name">
+                            ${member.last_name} ${member.first_name}
+                        </div>
+                        <div class="member-selection-details">
+                            ID: ${member.id} | Naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')} | 
+                            Téléphone: ${member.phone_number || 'N/A'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        updateSelectionCount();
+
+    } catch (error) {
+        console.error('Erreur chargement membres:', error);
+        document.getElementById('membersSelectionGrid').innerHTML = `
+            <div class="alert alert-danger">
+                ❌ Erreur lors du chargement des adhérents: ${error.message}
+            </div>
+        `;
+    }
+}
+
+// Fonction corrigée pour obtenir un membre par ID
+function getMemberById(memberId) {
+    return allMembersForCompetition.find(member => member.id === memberId);
+}
+// Déterminer le sexe basé sur le prénom (estimation)
+function determineSexFromName(firstName) {
+    const maleNames = ['jean', 'pierre', 'paul', 'jacques', 'michel', 'alain', 'david', 'thomas'];
+    const femaleNames = ['marie', 'anne', 'sophie', 'isabelle', 'catherine', 'nathalie', 'julie', 'sandrine'];
+    
+    const lowerName = firstName.toLowerCase();
+    
+    if (maleNames.some(name => lowerName.includes(name))) return 'M';
+    if (femaleNames.some(name => lowerName.includes(name))) return 'F';
+    
+    return 'N/A'; // Non déterminé
+}
+
+// Mettre à jour le compteur de sélection
+function updateSelectionCount() {
+    const count = selectedParticipants.length;
+    document.getElementById('selectedCount').textContent = count;
+    document.getElementById('proceedBtn').disabled = count === 0;
+}
+
+// Passer à l'étape des poids
+function proceedToWeights() {
+    if (selectedParticipants.length === 0) {
+        alert('Veuillez sélectionner au moins un adhérent');
+        return;
+    }
+
+    document.getElementById('step1').classList.add('hidden');
+    document.getElementById('step2').classList.remove('hidden');
+    
+    loadWeightsTable();
+}
+
+// Retour à la sélection
+function backToSelection() {
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('step1').classList.remove('hidden');
+}
+
+// Charger le tableau des poids
+function loadWeightsTable() {
+    const tableBody = document.getElementById('weightsTableBody');
+    
+    tableBody.innerHTML = selectedParticipants.map((participant, index) => `
+        <tr>
+            <td>${participant.last_name}</td>
+            <td>${participant.first_name}</td>
+            <td>${new Date(participant.dob).toLocaleDateString('fr-FR')}</td>
+            <td>
+                <select class="sex-select" onchange="updateParticipantSex(${index}, this.value)" 
+                        style="padding: 6px; border-radius: 5px; border: 1px solid var(--border-color);">
+                    <option value="M" ${participant.sex === 'M' ? 'selected' : ''}>Masculin</option>
+                    <option value="F" ${participant.sex === 'F' ? 'selected' : ''}>Féminin</option>
+                    <option value="N/A" ${!['M','F'].includes(participant.sex) ? 'selected' : ''}>Non spécifié</option>
+                </select>
+            </td>
+            <td>
+                <input type="number" 
+                       class="weight-input ${participant.weight ? 'valid' : ''}"
+                       value="${participant.weight || ''}"
+                       placeholder="0.0"
+                       step="0.1"
+                       min="20"
+                       max="200"
+                       onchange="updateParticipantWeight(${index}, this.value)"
+                       oninput="validateWeightInput(this)"
+                       style="width: 80px;">
+                <span style="margin-left: 5px; color: var(--text-secondary);">kg</span>
+            </td>
+            <td>
+                <button class="btn btn-danger btn-sm" onclick="removeParticipant(${index})">
+                    🗑️ Retirer
+                </button>
+            </td>
+        </tr>
+    `).join('');
+
+    updateValidationButton();
+}
+
+// Mettre à jour le poids d'un participant
+function updateParticipantWeight(index, weight) {
+    if (weight && weight >= 20 && weight <= 200) {
+        selectedParticipants[index].weight = parseFloat(weight);
+        updateValidationButton();
+    }
+}
+
+// Mettre à jour le sexe d'un participant
+function updateParticipantSex(index, sex) {
+    selectedParticipants[index].sex = sex;
+}
+
+// Valider la saisie du poids
+function validateWeightInput(input) {
+    const weight = parseFloat(input.value);
+    if (weight && weight >= 20 && weight <= 200) {
+        input.classList.add('valid');
+        input.classList.remove('invalid');
+    } else if (input.value) {
+        input.classList.add('invalid');
+        input.classList.remove('valid');
+    } else {
+        input.classList.remove('valid', 'invalid');
+    }
+}
+
+// Retirer un participant
+function removeParticipant(index) {
+    if (confirm('Retirer cet adhérent de la liste des participants ?')) {
+        selectedParticipants.splice(index, 1);
+        loadWeightsTable();
+        updateSelectionCount();
+        
+        // Si plus de participants, retour à l'étape 1
+        if (selectedParticipants.length === 0) {
+            backToSelection();
+        }
+    }
+}
+
+// Mettre à jour le bouton de validation
+function updateValidationButton() {
+    const allWeightsValid = selectedParticipants.every(p => p.weight && p.weight >= 20 && p.weight <= 200);
+    document.getElementById('validateWeightsBtn').disabled = !allWeightsValid;
+    document.getElementById('exportBtn').disabled = !allWeightsValid;
+}
+
+// Valider tous les poids
+function validateWeights() {
+    const invalidParticipants = selectedParticipants.filter(p => !p.weight || p.weight < 20 || p.weight > 200);
+    
+    if (invalidParticipants.length > 0) {
+        alert('Veuillez saisir un poids valide (entre 20 et 200 kg) pour tous les participants');
+        return;
+    }
+
+    competitionData = [...selectedParticipants];
+    alert(`✅ ${selectedParticipants.length} participants validés avec succès !\nVous pouvez maintenant exporter les données.`);
+}
+
+// Exporter les données en Excel
+function exportCompetitionData() {
+    if (selectedParticipants.length === 0) {
+        alert('Aucun participant à exporter');
+        return;
+    }
+
+    const invalidParticipants = selectedParticipants.filter(p => !p.weight || p.weight < 20 || p.weight > 200);
+    if (invalidParticipants.length > 0) {
+        alert('Veuillez valider tous les poids avant d\'exporter');
+        return;
+    }
+
+    try {
+        // Préparer les données pour l'export
+        const exportData = selectedParticipants.map(participant => ({
+            'Nom': participant.last_name,
+            'Prénom': participant.first_name,
+            'Date de naissance': new Date(participant.dob).toLocaleDateString('fr-FR'),
+            'Sexe': participant.sex === 'M' ? 'Masculin' : participant.sex === 'F' ? 'Féminin' : 'Non spécifié',
+            'Poids (kg)': participant.weight,
+        }));
+
+        // Créer le workbook
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(exportData);
+
+        // Définir les largeurs de colonnes
+        const colWidths = [
+            { wch: 15 }, // Nom
+            { wch: 15 }, // Prénom
+            { wch: 12 }, // Date naissance
+            { wch: 8 },  // Âge
+            { wch: 10 }, // Sexe
+            { wch: 10 }, // Poids
+            { wch: 12 }, // ID
+            { wch: 15 }, // Téléphone
+            { wch: 12 }  // Groupe sanguin
+        ];
+        ws['!cols'] = colWidths;
+
+        // Ajouter la feuille au workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Participants Compétition');
+
+        // Générer le nom du fichier avec date
+        const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const fileName = `participants_competition_${date}.xlsx`;
+
+        // Exporter
+        XLSX.writeFile(wb, fileName);
+
+        // Notification de succès
+        showNotification(
+            'Export réussi',
+            `${selectedParticipants.length} participants exportés vers ${fileName}`,
+            'success'
+        );
+
+    } catch (error) {
+        console.error('Erreur export:', error);
+        alert('Erreur lors de l\'export: ' + error.message);
+    }
+}
+
+// Fonction utilitaire pour calculer l'âge
+function calculateAge(birthDate) {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    
+    return age;
 }
 async function validateAttendanceFromScan(memberId) {
     try {
