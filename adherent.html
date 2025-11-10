@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informations Adhérent - Kyokushin</title>
+    <link rel="icon" type="image/png" href="logo_site.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #c8102e;
+            --secondary-color: #1a1a1a;
+            --accent-color: #ffd700;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+            --warning-color: #ffc107;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8f9fa;
+            --bg-tertiary: #e9ecef;
+            --text-primary: #212529;
+            --text-secondary: #6c757d;
+            --border-color: #dee2e6;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
+            --shadow-md: 0 4px 8px rgba(0,0,0,0.15);
+            --shadow-lg: 0 8px 16px rgba(0,0,0,0.2);
+            --transition: all 0.3s ease;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            flex: 1;
+        }
+
+        /* Header Styles */
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 30px 0;
+            box-shadow: var(--shadow-md);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: white;
+            padding: 10px;
+            margin: 0 auto 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+        }
+
+        .header-title h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .header-title p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* Member Card */
+        .member-card {
+            background: var(--bg-primary);
+            border-radius: 20px;
+            box-shadow: var(--shadow-lg);
+            overflow: hidden;
+            margin-bottom: 30px;
+            transition: var(--transition);
+        }
+
+        .member-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .member-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+        }
+
+        .member-photo-container {
+            margin-bottom: 20px;
+        }
+
+        .member-photo {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 5px solid rgba(255,255,255,0.3);
+            margin: 0 auto;
+            display: block;
+            background: var(--bg-tertiary);
+        }
+
+        .member-name {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .member-id {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+
+        .member-content {
+            padding: 30px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .info-section {
+            margin-bottom: 25px;
+        }
+
+        .info-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .info-value {
+            color: var(--text-secondary);
+            text-align: right;
+        }
+
+        /* Subscription Status */
+        .subscription-status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .status-active {
+            background: rgba(40, 167, 69, 0.2);
+            color: var(--success-color);
+            border: 1px solid var(--success-color);
+        }
+
+        .status-expired {
+            background: rgba(220, 53, 69, 0.2);
+            color: var(--danger-color);
+            border: 1px solid var(--danger-color);
+        }
+
+        .status-warning {
+            background: rgba(255, 193, 7, 0.2);
+            color: var(--warning-color);
+            border: 1px solid var(--warning-color);
+        }
+
+        /* Alert Messages */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.1);
+            border: 1px solid var(--warning-color);
+            color: var(--warning-color);
+        }
+
+        /* Footer */
+        .footer {
+            background: var(--secondary-color);
+            color: white;
+            text-align: center;
+            padding: 20px 0;
+            margin-top: auto;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            
+            .header-title h1 {
+                font-size: 1.8rem;
+            }
+            
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .member-photo {
+                width: 120px;
+                height: 120px;
+            }
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 40px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo">🥋</div>
+        <div class="header-title">
+            <h1>Kyokushin Karaté Club</h1>
+            <p>Informations de l'adhérent</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Member Information Card -->
+        <div id="memberCard" class="member-card">
+            <div class="member-header">
+                <div class="member-photo-container">
+                    <img id="memberPhoto" class="member-photo" src="" alt="Photo de l'adhérent">
+                    <div id="memberPhotoPlaceholder" class="member-photo" style="display: flex; align-items: center; justify-content: center; font-size: 4rem;">
+                        👤
+                    </div>
+                </div>
+                <h2 class="member-name" id="memberFullName">-</h2>
+                <div class="member-id" id="memberIdDisplay">ID: -</div>
+            </div>
+            
+            <div class="member-content">
+                <div class="info-grid">
+                    <div class="info-section">
+                        <h3 class="info-title">📋 Informations personnelles</h3>
+                        <div class="info-row">
+                            <span class="info-label">Nom complet:</span>
+                            <span class="info-value" id="memberFullNameDetail">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Date de naissance:</span>
+                            <span class="info-value" id="memberDob">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Âge:</span>
+                            <span class="info-value" id="memberAge">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Groupe sanguin:</span>
+                            <span class="info-value" id="memberBloodType">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Téléphone:</span>
+                            <span class="info-value" id="memberPhone">-</span>
+                        </div>
+                    </div>
+                    
+                    <div class="info-section">
+                        <h3 class="info-title">💰 Informations d'abonnement</h3>
+                        <div class="info-row">
+                            <span class="info-label">Type d'abonnement:</span>
+                            <span class="info-value" id="memberSubscription">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Date de début:</span>
+                            <span class="info-value" id="memberStartDate">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Date de fin:</span>
+                            <span class="info-value" id="memberEndDate">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Jours restants:</span>
+                            <span class="info-value" id="memberDaysLeft">-</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="info-label">Statut:</span>
+                            <span class="info-value">
+                                <span id="memberStatus" class="subscription-status">-</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Alert for expiring subscription -->
+                <div id="subscriptionAlert" class="alert alert-warning hidden">
+                    ⚠️ <strong>Attention:</strong> L'abonnement expire bientôt!
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingState" class="hidden">
+            <div class="spinner"></div>
+            <p style="text-align: center; color: var(--text-secondary); margin-top: 15px;">
+                Chargement des informations de l'adhérent...
+            </p>
+        </div>
+
+        <!-- Error State -->
+        <div id="errorState" class="hidden" style="text-align: center; padding: 40px 20px;">
+            <div style="font-size: 4rem; margin-bottom: 20px;">❌</div>
+            <h2 style="color: var(--danger-color); margin-bottom: 15px;">Adhérent non trouvé</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 25px;">
+                Impossible de trouver les informations pour cet adhérent.
+            </p>
+            <p style="font-size: 0.9rem; color: var(--text-secondary);">
+                Vérifiez que le QR code a été scanné correctement ou contactez l'administration du club.
+            </p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <p>&copy; 2024 Kyokushin Karaté Club - Tous droits réservés</p>
+        <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 5px;">
+            Cette page affiche les informations d'un adhérent via scan de QR code
+        </p>
+    </div>
+
+    <script>
+        // Configuration Supabase
+        const SUPABASE_URL = 'https://gmoyoflorwaltuanfswn.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdtb3lvZmxvcndhbHR1YW5mc3duIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxNTc0OTIsImV4cCI6MjA3NzczMzQ5Mn0.Yr0SFLvcPNbvRqNSjzwFdTZkrIz3Z6WZxcIyx8gwjZA';
+        
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Fonction pour calculer la date de fin d'abonnement
+        function computeEndDate(startDate, subscriptionType) {
+            const start = new Date(startDate);
+            const end = new Date(start);
+            
+            switch (subscriptionType) {
+                case "monthly":
+                    end.setMonth(end.getMonth() + 1);
+                    break;
+                case "quarterly":
+                    end.setMonth(end.getMonth() + 3);
+                    break;
+                case "biannual":
+                    end.setMonth(end.getMonth() + 6);
+                    break;
+                case "annual":
+                    end.setFullYear(end.getFullYear() + 1);
+                    break;
+                default:
+                    end.setMonth(end.getMonth() + 1);
+            }
+            
+            return end;
+        }
+
+        // Fonction pour calculer l'âge
+        function calculateAge(birthDate) {
+            const today = new Date();
+            const birth = new Date(birthDate);
+            let age = today.getFullYear() - birth.getFullYear();
+            const monthDiff = today.getMonth() - birth.getMonth();
+            
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+                age--;
+            }
+            
+            return age;
+        }
+
+        // Fonction pour calculer les jours restants
+        function calculateDaysLeft(endDate) {
+            const today = new Date();
+            const end = new Date(endDate);
+            const timeDiff = end.getTime() - today.getTime();
+            const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
+            
+            return daysLeft;
+        }
+
+        // Fonction pour déterminer le statut de l'abonnement
+        function getSubscriptionStatus(daysLeft) {
+            if (daysLeft < 0) {
+                return { text: "Expiré", class: "status-expired" };
+            } else if (daysLeft <= 7) {
+                return { text: "Bientôt expiré", class: "status-warning" };
+            } else {
+                return { text: "Actif", class: "status-active" };
+            }
+        }
+
+        // Fonction pour formater la date en français
+        function formatDate(dateString) {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('fr-FR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+
+        // Fonction pour formater le type d'abonnement
+        function formatSubscriptionType(type) {
+            const types = {
+                "monthly": "Mensuel",
+                "quarterly": "Trimestriel", 
+                "biannual": "Semestriel",
+                "annual": "Annuel"
+            };
+            
+            return types[type] || type;
+        }
+
+        // Fonction pour extraire l'ID du membre de l'URL
+        function getMemberIdFromURL() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id');
+        }
+
+        // Fonction principale pour charger les données du membre
+        async function loadMemberData(memberId) {
+            try {
+                // Afficher l'état de chargement
+                document.getElementById('memberCard').classList.add('hidden');
+                document.getElementById('errorState').classList.add('hidden');
+                document.getElementById('loadingState').classList.remove('hidden');
+                
+                // Récupérer les données du membre depuis Supabase
+                const { data: member, error } = await supabase
+                    .from('members')
+                    .select('*')
+                    .eq('id', memberId)
+                    .single();
+
+                if (error || !member) {
+                    throw new Error('Adhérent non trouvé');
+                }
+
+                // Calculer les dates et statuts
+                const endDate = computeEndDate(member.start_date, member.subscription);
+                const daysLeft = calculateDaysLeft(endDate);
+                const status = getSubscriptionStatus(daysLeft);
+                const age = calculateAge(member.dob);
+                
+                // Mettre à jour l'interface
+                document.getElementById('memberFullName').textContent = `${member.last_name} ${member.first_name}`;
+                document.getElementById('memberFullNameDetail').textContent = `${member.last_name} ${member.first_name}`;
+                document.getElementById('memberIdDisplay').textContent = `ID: ${member.id}`;
+                document.getElementById('memberDob').textContent = formatDate(member.dob);
+                document.getElementById('memberAge').textContent = `${age} ans`;
+                document.getElementById('memberBloodType').textContent = member.blood_type || 'Non renseigné';
+                document.getElementById('memberPhone').textContent = member.phone_number || 'Non renseigné';
+                document.getElementById('memberSubscription').textContent = formatSubscriptionType(member.subscription);
+                document.getElementById('memberStartDate').textContent = formatDate(member.start_date);
+                document.getElementById('memberEndDate').textContent = formatDate(endDate);
+                document.getElementById('memberDaysLeft').textContent = `${daysLeft} jour(s)`;
+                
+                // Mettre à jour le statut
+                const statusElement = document.getElementById('memberStatus');
+                statusElement.textContent = status.text;
+                statusElement.className = `subscription-status ${status.class}`;
+                
+                // Gérer la photo
+                if (member.photo_url) {
+                    document.getElementById('memberPhoto').src = member.photo_url;
+                    document.getElementById('memberPhoto').style.display = 'block';
+                    document.getElementById('memberPhotoPlaceholder').style.display = 'none';
+                } else {
+                    document.getElementById('memberPhoto').style.display = 'none';
+                    document.getElementById('memberPhotoPlaceholder').style.display = 'flex';
+                }
+                
+                // Afficher l'alerte si l'abonnement expire bientôt
+                if (daysLeft <= 7 && daysLeft >= 0) {
+                    document.getElementById('subscriptionAlert').classList.remove('hidden');
+                } else {
+                    document.getElementById('subscriptionAlert').classList.add('hidden');
+                }
+                
+                // Afficher la carte du membre
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('memberCard').classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Erreur lors du chargement des données:', error);
+                
+                // Afficher l'état d'erreur
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('memberCard').classList.add('hidden');
+                document.getElementById('errorState').classList.remove('hidden');
+            }
+        }
+
+        // Initialisation au chargement de la page
+        document.addEventListener('DOMContentLoaded', function() {
+            const memberId = getMemberIdFromURL();
+            
+            if (memberId) {
+                loadMemberData(memberId);
+            } else {
+                // Aucun ID fourni, afficher l'état d'erreur
+                document.getElementById('loadingState').classList.add('hidden');
+                document.getElementById('memberCard').classList.add('hidden');
+                document.getElementById('errorState').classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
