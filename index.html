@@ -4539,11 +4539,9 @@ async function generateCard(member, backgroundUrl) {
     photoContainer.appendChild(photo);
     contentDiv.appendChild(photoContainer);
 
-    // Nom complet positionné
-    const nameDiv = document.createElement("div"); nameDiv.style.cssText = `position:absolute;left:140px;top:580px;width:350px;text-align:center;`; const fullName = `${member.last_name.toUpperCase()} ${member.first_name.toUpperCase()}`; 
-// Ajuster left en fonction de la longueur du nom
+    const nameDiv = document.createElement("div"); nameDiv.style.cssText = `position:absolute;left:140px;top:575px;width:350px;text-align:center;`; const fullName = `${member.last_name.toUpperCase()} ${member.first_name.toUpperCase()}`; 
 
-nameDiv.innerHTML = `<div style="font-size:30.1px;font-weight:800;color:#a81a10;line-height:1;font-family:'Poppins',sans-serif;">${fullName}</div>`; contentDiv.appendChild(nameDiv);
+nameDiv.innerHTML = `<div style="font-size:28px;font-weight:820;color:#a81a10;line-height:1;font-family:'Poppins',sans-serif;">${fullName}</div>`; contentDiv.appendChild(nameDiv);
 // Informations (ID, DDN, GS) positionnées
 const infoContainer = document.createElement("div");
 infoContainer.style.cssText = `
@@ -4615,17 +4613,12 @@ contentDiv.appendChild(infoContainer);
         justify-content: center;
         align-items: center;
     `;
+    const memberURL = `https://zakibnss.github.io/gestion-clubs/adherent.html?id=${member.id}`;
 
-    const qrText = 
-    `ID: ${member.id}\n` +
-    `Nom complet: ${member.last_name.toUpperCase()} ${member.first_name}\n` +
-    `Date de naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}\n` +
-    `Groupe sanguin: ${member.blood_type || 'N/A'}\n` +
-    `Fin d'abonnement: ${endDate}\n` +
-    `Statut: ${status}`;
+    
 
     new QRCode(qrDiv, { 
-        text: qrText,
+        text: memberURL,
         width: 130,
         height: 130,
         colorDark: "#000000",
