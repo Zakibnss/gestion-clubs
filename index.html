@@ -3947,12 +3947,20 @@ async function startScanner() {
         }
 
         // Configuration du scanner
-        const config = {
-            fps: 10,
-            qrbox: { width: 250, height: 250 },
-            aspectRatio: 1.0,
-            focusMode: "continuous"
-        };
+        // Configuration spécifique pour petits QR codes
+const config = {
+    fps: 15,                    /* Augmentez les images/seconde */
+    qrbox: { 
+        width: 200,             /* Zone légèrement plus grande que le QR code */
+        height: 200
+    },
+    aspectRatio: 1.0,
+    focusMode: "continuous",
+    disableFlip: false,
+    experimentalFeatures: {
+        useBarCodeDetectorIfSupported: true
+    }
+};
 
         // Démarrer avec la caméra spécifique ou en mode automatique
         let startPromise;
@@ -5180,41 +5188,41 @@ contentDiv.appendChild(infoContainer);
      const { status, endDate, badgeClass } = calculateMemberStatus(member);
 
     // QR Code positionné précisément
-    <!-- Dans la fonction generateCard, modifiez seulement la configuration du QR code : -->
+    <!-- Dans generateCard(), gardez la même taille mais optimisez : -->
 
-// QR Code simplifié positionné précisément
+// QR Code optimisé pour 1.2cm × 1.2cm
 const qrContainer = document.createElement("div");
 qrContainer.style.cssText = `
     position: absolute;
     left: 245px;
     top: 780px;
-    width: 145px;
-    height: 145px;
+    width: 142px; /* Exactement pour 1.2cm à 300 DPI */
+    height: 142px;
     display: flex;
     justify-content: center;
     align-items: center;
     background: white;
-    padding: 5px;
-    border-radius: 5px;
+    padding: 1px;
+    border: 1px solid #000000; /* Contour pour mieux le délimiter */
 `;
 
 const qrDiv = document.createElement("div");
 qrDiv.style.cssText = `
-    width: 135px;
-    height: 135px;
+    width: 140px;
+    height: 140px;
 `;
 
 const memberURL = `https://zakibnss.github.io/gestion-clubs/adherent.html?id=${member.id}`;
 
 new QRCode(qrDiv, { 
-    text: memberURL, // Même contenu
-    width: 135,
-    height: 135,
-    colorDark: "#000000", // Noir pur pour meilleur contraste
-    colorLight: "#FFFFFF", // Blanc pur
-    correctLevel: QRCode.CorrectLevel.M, // Réduit la complexité
-    margin: 0, // Marge minimale
-    useSVG: false // Forcer le rendu bitmap
+    text: memberURL,
+    width: 138,   /* Légèrement réduit pour la bordure */
+    height: 138,
+    colorDark: "#000000",   /* Noir absolu */
+    colorLight: "#FFFFFF",  /* Blanc absolu */
+    correctLevel: QRCode.CorrectLevel.L, /* Niveau bas - crucial pour petite taille */
+    margin: 0,    /* Pas de marge - essentiel */
+    useSVG: false
 });
 
 qrContainer.appendChild(qrDiv);
