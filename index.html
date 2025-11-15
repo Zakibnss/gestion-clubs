@@ -5180,46 +5180,45 @@ contentDiv.appendChild(infoContainer);
      const { status, endDate, badgeClass } = calculateMemberStatus(member);
 
     // QR Code positionné précisément
-    const qrContainer = document.createElement("div");
-    qrContainer.style.cssText = `
-        position: absolute;
-        left: 245px;
-        top: 780px;
-        width: 145px;
-        height: 145px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    `;
+    <!-- Dans la fonction generateCard, modifiez seulement la configuration du QR code : -->
 
-    const qrDiv = document.createElement("div");
-    qrDiv.style.cssText = `
-        background: white;
-        padding: 8px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        border: 1px solid #ddd;
-        width: 145px;
-        height: 145px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    `;
-    const memberURL = `https://zakibnss.github.io/gestion-clubs/adherent.html?id=${member.id}`;
+// QR Code simplifié positionné précisément
+const qrContainer = document.createElement("div");
+qrContainer.style.cssText = `
+    position: absolute;
+    left: 245px;
+    top: 780px;
+    width: 145px;
+    height: 145px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: white;
+    padding: 5px;
+    border-radius: 5px;
+`;
 
-    
+const qrDiv = document.createElement("div");
+qrDiv.style.cssText = `
+    width: 135px;
+    height: 135px;
+`;
 
-    new QRCode(qrDiv, { 
-        text: memberURL,
-        width: 130,
-        height: 130,
-        colorDark: "#000000",
-        colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
-    });
+const memberURL = `https://zakibnss.github.io/gestion-clubs/adherent.html?id=${member.id}`;
 
-    qrContainer.appendChild(qrDiv);
-    contentDiv.appendChild(qrContainer);
+new QRCode(qrDiv, { 
+    text: memberURL, // Même contenu
+    width: 135,
+    height: 135,
+    colorDark: "#000000", // Noir pur pour meilleur contraste
+    colorLight: "#FFFFFF", // Blanc pur
+    correctLevel: QRCode.CorrectLevel.M, // Réduit la complexité
+    margin: 0, // Marge minimale
+    useSVG: false // Forcer le rendu bitmap
+});
+
+qrContainer.appendChild(qrDiv);
+contentDiv.appendChild(qrContainer);
 
     // Ajouter le contenu à la carte
     cardDiv.appendChild(contentDiv);
