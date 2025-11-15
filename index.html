@@ -3507,11 +3507,21 @@ function isSubscriptionActive(member) {
         // ATTENDANCE VALIDATION
         // ============================================
         async function validateAttendance() {
-    const memberId = document.getElementById('validateMemberId').value.trim();
+            const memberId = document.getElementById('validateMemberId').value.trim().toUpperCase();
+    
     if (!memberId) {
         showMessage('validationMessage', '❌ Entrez un ID adhérent', 'danger');
-        return false;
+        return;
     }
+
+    // Validation du format
+    if (!memberId.match(/^KYO\d+$/)) {
+        showMessage('validationMessage', '❌ Format ID invalide (ex: KYO001)', 'danger');
+        return;
+    }
+
+    // Utiliser la même fonction que le scanner
+    validateAttendanceFromScan(memberId);
 
     try {
         // Vérifier si le membre existe
@@ -3582,6 +3592,7 @@ function isSubscriptionActive(member) {
         return false;
     }
 }
+
 function computeEndDate(member) {
     try {
         if (!member.start_date) {
@@ -3631,6 +3642,7 @@ function computeEndDate(member) {
 // ============================================
 // DATE CONVERSION FUNCTIONS
 // ============================================
+
 
 // ============================================
 // DATE CONVERSION FUNCTIONS - FORMAT JJ/MM/AAAA
@@ -3948,19 +3960,34 @@ async function startScanner() {
 
         // Configuration du scanner
         // Configuration spécifique pour petits QR codes
+// Dans startScanner(), utilisez cette configuration optimisée :
 const config = {
-    fps: 15,                    /* Augmentez les images/seconde */
+    fps: 30,                    // Fréquence maximale
     qrbox: { 
-        width: 200,             /* Zone légèrement plus grande que le QR code */
-        height: 200
+        width: 100,             // Très petite zone ciblée
+        height: 100
     },
     aspectRatio: 1.0,
     focusMode: "continuous",
     disableFlip: false,
+    // Options expérimentales pour petits QR codes
     experimentalFeatures: {
-        useBarCodeDetectorIfSupported: true
+        useBarCodeDetectorIfSupported: true,
+        inheritedFeatures: true
     }
 };
+
+// Et pour le démarrage, forcez la caméra arrière avec résolution
+await html5QrCode.start(
+    { 
+        facingMode: "environment",
+        width: { ideal: 1920 },  // Haute résolution
+        height: { ideal: 1080 }
+    }, 
+    config, 
+    onScanSuccess, 
+    onScanError
+);
 
         // Démarrer avec la caméra spécifique ou en mode automatique
         let startPromise;
@@ -4046,7 +4073,17 @@ const config = {
 // Variables globales pour les compétitions
 let selectedParticipants = [];
 let competitionData = [];
+// Ajoutez cette fonction pour zoomer sur la zone de scan
+function enableScannerZoom() {
+    const videoElement = document.querySelector('#reader video');
+    if (videoElement) {
+        videoElement.style.transform = 'scale(1.5)'; // Zoom 150%
+        videoElement.style.transformOrigin = 'center center';
+    }
+}
 
+// Appelez-la après le démarrage du scanner
+setTimeout(enableScannerZoom, 1000);
 // Charger les membres pour la sélection
 async function loadMembersForCompetition() {
     try {
@@ -4678,38 +4715,69 @@ async function onScanSuccess(decodedText) {
 }
 
 // Fonction pour extraire l'ID du texte complet du QR code
+// Modifiez la fonction extractMemberIdFromQR pour mieux gérer l'URL
 function extractMemberIdFromQR(qrText) {
     try {
-        // Méthode 1: Chercher la ligne qui commence par "ID: "
-        const idLine = qrText.split('\n').find(line => line.startsWith('ID:'));
-        if (idLine) {
-            return idLine.replace('ID:', '').trim();
+        console.log('📝 Texte QR reçu:', qrText);
+        
+        // Méthode 1: Extraction depuis l'URL
+        if (qrText.includes('adherent.html?id=')) {
+            const urlObj = new URL(qrText);
+            const memberId = urlObj.searchParams.get('id');
+            if (memberId && memberId.match(/^KYO\d+$/i)) {
+                console.log('✅ ID extrait depuis URL:', memberId);
+                return memberId.toUpperCase();
+            }
         }
         
-        // Méthode 2: Chercher un pattern KYO suivi de chiffres
+        // Méthode 2: ID direct (au cas où)
+        const cleanText = qrText.trim().toUpperCase();
+        if (cleanText.match(/^KYO\d+$/)) {
+            console.log('✅ ID direct:', cleanText);
+            return cleanText;
+        }
+        
+        // Méthode 3: Pattern flexible
         const idMatch = qrText.match(/(KYO\d+)/i);
         if (idMatch) {
-            return idMatch[1];
+            console.log('✅ ID trouvé par pattern:', idMatch[1]);
+            return idMatch[1].toUpperCase();
         }
         
-        // Méthode 3: Si le texte est court, c'est probablement juste l'ID
-        if (qrText.length <= 10 && qrText.match(/[A-Za-z0-9]{3,10}/)) {
-            return qrText.trim();
-        }
-        
+        console.log('❌ Aucun ID valide trouvé');
         return null;
         
     } catch (error) {
-        console.error('Erreur extraction ID:', error);
-        return null;
+        console.error('❌ Erreur extraction:', error);
+        // En cas d'erreur URL, essayer de trouver KYO dans le texte
+        const idMatch = qrText.match(/(KYO\d+)/i);
+        return idMatch ? idMatch[1].toUpperCase() : null;
     }
 }
 
-function onScanError(error) {
-    // Erreurs silencieuses pendant le scan - pas besoin d'afficher chaque erreur
-    // Seulement les erreurs critiques
-    if (error && !error.includes('NotFoundException')) {
-        console.log('Erreur scan (normal):', error);
+// Et modifiez onScanSuccess pour mieux debugger
+async function onScanSuccess(decodedText) {
+    try {
+        console.log('🔍 Scan réussi, texte brut:', decodedText);
+        
+        const memberId = extractMemberIdFromQR(decodedText);
+        
+        if (!memberId) {
+            showMessage('scanResult', 
+                `❌ Impossible d'extraire l'ID<br>Texte scanné: "${decodedText}"`, 
+                'danger'
+            );
+            return;
+        }
+        
+        showMessage('scanResult', `🔍 ID détecté: ${memberId}<br>Validation en cours...`, 'info');
+        
+        // Valider directement
+        await validateAttendanceFromScan(memberId);
+        
+    } catch (error) {
+        console.error('❌ Erreur scan:', error);
+        showMessage('scanResult', '❌ Erreur: ' + error.message, 'danger');
     }
 }
 
