@@ -1508,22 +1508,27 @@
                 </div>
             </div>
 
-            <!-- Cards Generation Section -->
-            <div id="cardsSection" class="content-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">🎫 Génération de Cartes</h2>
-                    </div>
-                    <div class="form-group">
-                        <label>Uploader une image d'arrière-plan</label>
-                        <input type="file" id="cardBackgroundImage" class="form-control" accept="image/*">
-                        <small class="form-text text-muted">Veuillez sélectionner une image à utiliser comme arrière-plan de la carte.</small>
-                    </div>
-                    <button class="btn btn-primary" id="loadMembersForCardsBtn">📋 Charger les adhérents</button>
-                </div>
+           <!-- Dans la section Cards Generation -->
+<div id="cardsSection" class="content-section">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🎫 Génération de Cartes</h2>
+        </div>
+        <div class="grid grid-2">
+            <div class="form-group">
+                <label>Uploader une image pour le RECTO</label>
+                <input type="file" id="cardFrontImage" class="form-control" accept="image/*">
+                <small class="form-text text-muted">Image pour la face avant de la carte</small>
+            </div>
+            <div class="form-group">
+                <label>Uploader une image pour le VERSO</label>
+                <input type="file" id="cardBackImage" class="form-control" accept="image/*">
+                <small class="form-text text-muted">Image pour la face arrière de la carte</small>
             </div>
         </div>
+        <button class="btn btn-primary" id="loadMembersForCardsBtn">📋 Charger les adhérents</button>
     </div>
+</div>
 
     <!-- Modals -->
     <!-- Add Club Modal -->
@@ -5116,22 +5121,33 @@ async function generateSelectedCards() {
             return;
         }
 
-        const backgroundFile = document.getElementById('cardBackgroundImage').files[0];
-        if (!backgroundFile) {
-            alert('Veuillez sélectionner une image d\'arrière-plan');
+        const frontImageFile = document.getElementById('cardFrontImage').files[0];
+        const backImageFile = document.getElementById('cardBackImage').files[0];
+        
+        if (!frontImageFile || !backImageFile) {
+            alert('Veuillez sélectionner les deux images (recto et verso)');
             return;
         }
+
+        // Récupérer les URLs des deux images
+        const [frontImageUrl, backImageUrl] = await Promise.all([
+            new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(frontImageFile);
+            }),
+            new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(backImageFile);
+            })
+        ]);
 
         // Récupérer les IDs des membres sélectionnés
         const selectedMemberIds = Array.from(checkboxes).map(checkbox => checkbox.value);
         
-        const backgroundUrl = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = e => resolve(e.target.result);
-            reader.onerror = reject;
-            reader.readAsDataURL(backgroundFile);
-        });
-
         const { data: members, error } = await supabase
             .from('members')
             .select('*')
@@ -5143,20 +5159,34 @@ async function generateSelectedCards() {
         previewDiv.innerHTML = `
             <div style="grid-column: 1/-1; text-align: center; margin-bottom: 20px;">
                 <h3>🎫 Cartes générées (${members.length} adhérent(s))</h3>
-                <p style="color: var(--text-secondary);">Cliquez sur "Télécharger la carte" pour sauvegarder chaque carte en PNG</p>
+                <p style="color: var(--text-secondary);">
+                    Cliquez sur "Télécharger Recto+Verso" pour sauvegarder les deux faces en une seule image
+                </p>
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 25px; justify-content: center;"></div>
         `;
         const cardsContainer = previewDiv.querySelector('div:last-child');
 
         // Afficher un indicateur de chargement
+        const loadingDiv = document.createElement('div');
+        loadingDiv.innerHTML = `
+            <div style="text-align: center; padding: 40px;">
+                <div class="spinner"></div>
+                <p style="margin-top: 15px; color: var(--text-secondary);">
+                    Génération des cartes en cours...
+                </p>
+            </div>
+        `;
+        cardsContainer.appendChild(loadingDiv);
 
+        // Générer les cartes pour chaque membre
         for (const member of members) {
-            const cardContainer = await generateCard(member, backgroundUrl);
+            const cardContainer = await generateCard(member, frontImageUrl, backImageUrl);
             cardsContainer.appendChild(cardContainer);
         }
 
-       
+        // Supprimer l'indicateur de chargement
+        loadingDiv.remove();
 
     } catch (error) {
         console.error('Erreur génération cartes :', error);
@@ -5169,8 +5199,7 @@ async function generateSelectedCards() {
     }
 }
 
-
-async function generateCard(member, backgroundUrl) {
+async function generateCard(member, frontImageUrl, backImageUrl) {
     const wrapper = document.createElement("div");
     wrapper.style.cssText = `
         display: flex;
@@ -5178,14 +5207,45 @@ async function generateCard(member, backgroundUrl) {
         align-items: center;
         gap: 15px;
         margin: 20px 0;
+        padding: 20px;
+        background: var(--bg-secondary);
+        border-radius: 15px;
+        border: 1px solid var(--border-color);
     `;
 
-    // Carte principale avec l'image d'arrière-plan
-    const cardDiv = document.createElement("div");
-    cardDiv.style.cssText = `
+    // En-tête avec le nom du membre
+    const headerDiv = document.createElement("div");
+    headerDiv.style.cssText = `
+        text-align: center;
+        margin-bottom: 15px;
+        width: 100%;
+    `;
+    headerDiv.innerHTML = `
+        <h4 style="color: var(--primary-color); margin-bottom: 5px;">
+            ${member.last_name} ${member.first_name}
+        </h4>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">
+            ID: ${member.id}
+        </p>
+    `;
+    wrapper.appendChild(headerDiv);
+
+    // Conteneur pour les deux faces de la carte
+    const cardContainer = document.createElement("div");
+    cardContainer.style.cssText = `
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+        justify-content: center;
+        width: 100%;
+    `;
+
+    // ==================== CARTE RECTO (FACE AVANT) ====================
+    const frontCardDiv = document.createElement("div");
+    frontCardDiv.style.cssText = `
         width: 638px;
         height: 1011px;
-        background: url('${backgroundUrl}') no-repeat center center;
+        background: url('${frontImageUrl}') no-repeat center center;
         background-size: cover;
         border-radius: 20px;
         box-shadow: 0 10px 30px rgba(0,0,0,0.15);
@@ -5197,9 +5257,9 @@ async function generateCard(member, backgroundUrl) {
         font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
     `;
 
-    // Contenu principal
-    const contentDiv = document.createElement("div");
-    contentDiv.style.cssText = `
+    // Contenu principal de la face avant
+    const frontContentDiv = document.createElement("div");
+    frontContentDiv.style.cssText = `
         position: relative;
         z-index: 2;
         height: 100%;
@@ -5211,10 +5271,10 @@ async function generateCard(member, backgroundUrl) {
     const photoContainer = document.createElement("div");
     photoContainer.style.cssText = `
         position: absolute;
-        left: 167px;
-        top: 254px;
-        width: 300px;
-        height: 300px;
+        left: 169px;
+        top: 255px;
+        width: 295px;
+        height: 295px;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -5244,7 +5304,6 @@ async function generateCard(member, backgroundUrl) {
             height: 300px;
             object-fit: cover;
             border-radius: 50%;
-        
         `;
     } else {
         photo = createPlaceholderPhoto();
@@ -5258,64 +5317,104 @@ async function generateCard(member, backgroundUrl) {
         `;
     }
     photoContainer.appendChild(photo);
-    contentDiv.appendChild(photoContainer);
+    frontContentDiv.appendChild(photoContainer);
 
-    const nameDiv = document.createElement("div"); nameDiv.style.cssText = `position:absolute;left:140px;top:575px;width:350px;text-align:center;`; const fullName = `${member.last_name.toUpperCase()} ${member.first_name.toUpperCase()}`; 
+    // Nom complet avec plus d'espace et plus grand
+    const nameDiv = document.createElement("div"); 
+    nameDiv.style.cssText = `
+        position: absolute;
+        left: 140px;
+        top: 600px;
+        width: 350px;
+        text-align: center;
+    `; 
+    const fullName = `${member.last_name.toUpperCase()} ${member.first_name.toUpperCase()}`; 
+    nameDiv.innerHTML = `
+        <div style="font-size: 36px; font-weight: 890; color: #a81a10; line-height: 1.2; font-family: 'Poppins', sans-serif;">
+            ${fullName}
+        </div>
+    `; 
+    frontContentDiv.appendChild(nameDiv);
 
-nameDiv.innerHTML = `<div style="font-size:28px;font-weight:820;color:#a81a10;line-height:1;font-family:'Poppins',sans-serif;">${fullName}</div>`; contentDiv.appendChild(nameDiv);
-// Informations (ID, DDN, GS) positionnées
-const infoContainer = document.createElement("div");
-infoContainer.style.cssText = `
-    position: absolute;
-    left: 150px;
-    top: 640px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-`;
+    // Informations (ID, DDN, GS) positionnées avec plus d'espace
+    const infoContainer = document.createElement("div");
+    infoContainer.style.cssText = `
+        position: absolute;
+        left: 150px;
+        top: 700px;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    `;
 
-// ID
-const idDiv = document.createElement("div");
-idDiv.innerHTML = `
-    <div style="font-size: 26px; font-weight: 600; color: black; font-family: 'Poppins', sans-serif;">
-        ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${member.id}
-    </div>
-`;
+    // ID
+    const idDiv = document.createElement("div");
+    idDiv.innerHTML = `
+        <div style="font-size: 35px; font-weight: 700; color: black; font-family: 'Poppins', sans-serif;">
+            ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${member.id}
+        </div>
+    `;
 
-// Date de naissance
-const dobDiv = document.createElement("div");
-const formattedDob = new Date(member.dob).toLocaleDateString('fr-FR');
-dobDiv.innerHTML = `
-    <div style="font-size: 26px; font-weight: 600; color: black; font-family: 'Poppins', sans-serif;">
-        DDN&nbsp;&nbsp;: ${formattedDob}
-    </div>
-`;
+    // Date de naissance
+    const dobDiv = document.createElement("div");
+    const formattedDob = new Date(member.dob).toLocaleDateString('fr-FR');
+    dobDiv.innerHTML = `
+        <div style="font-size: 35px; font-weight: 700; color: black; font-family: 'Poppins', sans-serif;">
+            DDN&nbsp;&nbsp;: ${formattedDob}
+        </div>
+    `;
 
-// Groupe sanguin
-const bloodDiv = document.createElement("div");
-bloodDiv.innerHTML = `
-    <div style="font-size: 26px; font-weight: 600; color: black; font-family: 'Poppins', sans-serif;">
-        G.S&nbsp;&nbsp;&nbsp;: ${member.blood_type || 'N/A'}
-    </div>
-`;
+    // Groupe sanguin
+    const bloodDiv = document.createElement("div");
+    bloodDiv.innerHTML = `
+        <div style="font-size: 35px; font-weight: 700; color: black; font-family: 'Poppins', sans-serif;">
+            G.S&nbsp;&nbsp;&nbsp;: ${member.blood_type || 'N/A'}
+        </div>
+    `;
 
-infoContainer.appendChild(idDiv);
-infoContainer.appendChild(dobDiv);
-infoContainer.appendChild(bloodDiv);
-contentDiv.appendChild(infoContainer);
+    infoContainer.appendChild(idDiv);
+    infoContainer.appendChild(dobDiv);
+    infoContainer.appendChild(bloodDiv);
+    frontContentDiv.appendChild(infoContainer);
 
-    
+    // Ajouter le contenu à la carte recto
+    frontCardDiv.appendChild(frontContentDiv);
 
-     const { status, endDate, badgeClass } = calculateMemberStatus(member);
+    // ==================== CARTE VERSO (FACE ARRIÈRE) ====================
+    const backCardDiv = document.createElement("div");
+    backCardDiv.style.cssText = `
+        width: 638px;
+        height: 1011px;
+        background: url('${backImageUrl}') no-repeat center center;
+        background-size: cover;
+        border-radius: 20px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        display: flex;
+        flex-direction: column;
+        position: relative;
+        overflow: hidden;
+        border: 2px solid #e9ecef;
+        font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    `;
 
-    // QR Code positionné précisément
+    // Contenu principal de la face arrière
+    const backContentDiv = document.createElement("div");
+    backContentDiv.style.cssText = `
+        position: relative;
+        z-index: 2;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    `;
+
+    // QR Code positionné selon vos spécifications
     const qrContainer = document.createElement("div");
     qrContainer.style.cssText = `
         position: absolute;
-        left: 245px;
-        top: 780px;
-        width: 145px;
-        height: 145px;
+        left: 200px;
+        top: 550px;
+        width: 300px;
+        height: 300px;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -5324,49 +5423,96 @@ contentDiv.appendChild(infoContainer);
     const qrDiv = document.createElement("div");
     qrDiv.style.cssText = `
         background: white;
-        padding: 8px;
-        border-radius: 8px;
+        top:200px;
+        left:200px;
+        border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         border: 1px solid #ddd;
-        width: 145px;
-        height: 145px;
+        width: 300px;
+        height: 300px;
         display: flex;
         justify-content: center;
         align-items: center;
     `;
-    const memberURL = `https://zakibnss.github.io/gestion-clubs/adherent.html?id=${member.id}`;
-
     
+    const memberURL = `https://zakibnss.github.io/gestion-clubs/adherent.html?id=${member.id}`;
 
     new QRCode(qrDiv, { 
         text: memberURL,
-        width: 130,
-        height: 130,
+        width: 300,
+        height: 300,
         colorDark: "#000000",
         colorLight: "#ffffff",
         correctLevel: QRCode.CorrectLevel.H
     });
-
+    const qrText = document.createElement("div");
+qrText.textContent = `ID: ${member.id}`;
+qrText.style.cssText = `
+    width: 300px;
+    background: #000;
+    color: #fff;
+    font-size: 20px;
+    font-weight: bold;
+    text-align: center;
+    padding:0 8px ;
+    border-radius: 0 0 12px 12px;
+    margin-top: 0px;
+`;
     qrContainer.appendChild(qrDiv);
-    contentDiv.appendChild(qrContainer);
+    qrContainer.appendChild(qrText);
+    backContentDiv.appendChild(qrContainer);
 
-    // Ajouter le contenu à la carte
-    cardDiv.appendChild(contentDiv);
+    // Ajouter le contenu à la carte verso
+    backCardDiv.appendChild(backContentDiv);
 
-    // Bouton de téléchargement
-    const exportBtn = document.createElement("button");
-    exportBtn.textContent = "💾 Télécharger la carte";
-    exportBtn.className = "btn btn-primary";
-    exportBtn.style.marginTop = "15px";
-    exportBtn.style.padding = "12px 25px";
-    exportBtn.style.fontSize = "16px";
-    exportBtn.onclick = () => exportCardAsPNG(cardDiv, member.id);
+    // ==================== ASSEMBLAGE FINAL ====================
 
-    wrapper.appendChild(cardDiv);
-    wrapper.appendChild(exportBtn);
+    // Ajouter les deux faces au conteneur
+    cardContainer.appendChild(frontCardDiv);
+    cardContainer.appendChild(backCardDiv);
+    wrapper.appendChild(cardContainer);
+
+    // Boutons de téléchargement
+    const buttonsContainer = document.createElement("div");
+    buttonsContainer.style.cssText = `
+        display: flex;
+        gap: 15px;
+        margin-top: 15px;
+        flex-wrap: wrap;
+        justify-content: center;
+    `;
+
+    // Bouton pour télécharger les deux faces en une seule image
+    const exportBothBtn = document.createElement("button");
+    exportBothBtn.textContent = "📄 Télécharger Recto+Verso";
+    exportBothBtn.className = "btn btn-success";
+    exportBothBtn.style.padding = "12px 25px";
+    exportBothBtn.style.fontSize = "16px";
+    exportBothBtn.onclick = () => exportBothCardsAsPNG(frontCardDiv, backCardDiv, member.id);
+
+    // Bouton pour télécharger seulement le recto
+    const exportFrontBtn = document.createElement("button");
+    exportFrontBtn.textContent = "💾 Télécharger Recto";
+    exportFrontBtn.className = "btn btn-primary";
+    exportFrontBtn.style.padding = "12px 25px";
+    exportFrontBtn.style.fontSize = "16px";
+    exportFrontBtn.onclick = () => exportCardAsPNG(frontCardDiv, `${member.id}_recto`);
+
+    // Bouton pour télécharger seulement le verso
+    const exportBackBtn = document.createElement("button");
+    exportBackBtn.textContent = "💾 Télécharger Verso";
+    exportBackBtn.className = "btn btn-primary";
+    exportBackBtn.style.padding = "12px 25px";
+    exportBackBtn.style.fontSize = "16px";
+    exportBackBtn.onclick = () => exportCardAsPNG(backCardDiv, `${member.id}_verso`);
+
+    buttonsContainer.appendChild(exportBothBtn);
+    buttonsContainer.appendChild(exportFrontBtn);
+    buttonsContainer.appendChild(exportBackBtn);
+
+    wrapper.appendChild(buttonsContainer);
     return wrapper;
 }
-
 
 // Fonction helper pour créer une photo placeholder
 function createPlaceholderPhoto() {
@@ -5388,8 +5534,58 @@ function createPlaceholderPhoto() {
     return placeholder;
 }
 
-// Fonction pour exporter la carte en PNG
-async function exportCardAsPNG(cardElement, memberId) {
+// Fonction pour exporter les deux faces en une seule image
+async function exportBothCardsAsPNG(frontCard, backCard, memberId) {
+    try {
+        // Créer un conteneur temporaire pour les deux cartes côte à côte
+        const tempContainer = document.createElement("div");
+        tempContainer.style.cssText = `
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            background: var(--bg-secondary);
+        `;
+
+        // Cloner les cartes pour éviter de modifier l'affichage actuel
+        const frontClone = frontCard.cloneNode(true);
+        const backClone = backCard.cloneNode(true);
+        
+        // Ajuster les styles pour l'export
+        frontClone.style.boxShadow = "0 5px 15px rgba(0,0,0,0.1)";
+        backClone.style.boxShadow = "0 5px 15px rgba(0,0,0,0.1)";
+        
+        tempContainer.appendChild(frontClone);
+        tempContainer.appendChild(backClone);
+
+        // Ajouter temporairement au DOM pour le rendu
+        document.body.appendChild(tempContainer);
+
+        // Générer l'image
+        const canvas = await html2canvas(tempContainer, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#ffffff',
+            width: tempContainer.scrollWidth,
+            height: tempContainer.scrollHeight
+        });
+
+        // Nettoyer
+        document.body.removeChild(tempContainer);
+
+        // Télécharger
+        const link = document.createElement('a');
+        link.download = `carte_complete_${memberId}.png`;
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
+        
+    } catch (error) {
+        console.error('Erreur export PNG double:', error);
+        alert('Erreur lors du téléchargement des deux faces de la carte');
+    }
+}
+
+// Fonction pour exporter une seule carte
+async function exportCardAsPNG(cardElement, fileName) {
     try {
         const canvas = await html2canvas(cardElement, {
             scale: 2,
@@ -5398,7 +5594,7 @@ async function exportCardAsPNG(cardElement, memberId) {
         });
         
         const link = document.createElement('a');
-        link.download = `carte_${memberId}.png`;
+        link.download = `${fileName}.png`;
         link.href = canvas.toDataURL('image/png', 1.0);
         link.click();
         
@@ -5407,27 +5603,8 @@ async function exportCardAsPNG(cardElement, memberId) {
         alert('Erreur lors du téléchargement de la carte');
     }
 }
+// Nouvelle fonction pour exporter les deux faces en une seule image
 
-
-// Fonction pour exporter la carte en PNG
-async function exportCardAsPNG(cardElement, memberId) {
-    try {
-        const canvas = await html2canvas(cardElement, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: '#ffffff'
-        });
-        
-        const link = document.createElement('a');
-        link.download = `carte_${memberId}.png`;
-        link.href = canvas.toDataURL('image/png', 1.0);
-        link.click();
-        
-    } catch (error) {
-        console.error('Erreur export PNG:', error);
-        alert('Erreur lors du téléchargement de la carte');
-    }
-}
 
         // ============================================
         // UTILITY FUNCTIONS
