@@ -4647,54 +4647,183 @@ async function onScanSuccess(decodedText) {
     try {
         console.log('✅ QR Code scanné:', decodedText);
         
-        // Extraire seulement l'ID du texte complet du QR code
+        // Afficher le texte brut pour débogage
+        const shortText = decodedText.length > 100 ? 
+            decodedText.substring(0, 100) + '...' : decodedText;
+        showMessage('scanResult', `🔍 Texte scanné: "${shortText}"`, 'info');
+        
+        // Extraire l'ID avec la nouvelle fonction
         const memberId = extractMemberIdFromQR(decodedText);
         
         if (!memberId) {
-            showMessage('scanResult', '❌ ID adhérent non trouvé dans le QR Code', 'danger');
+            showMessage('scanResult', 
+                `❌ Impossible d'extraire l'ID depuis le QR Code<br>
+                 <strong>Format détecté:</strong> ${getTextFormat(decodedText)}<br>
+                 <small>Utilisez la validation manuelle en bas de page</small>`, 
+                'danger'
+            );
             return;
         }
         
         console.log('🎯 ID extrait:', memberId);
         
-        // Afficher temporairement le résultat du scan
-        showMessage('scanResult', `🔍 ID extrait: ${memberId}`, 'info');
+        // Afficher l'ID extrait
+        showMessage('scanResult', 
+            `🔍 ID extrait: <strong>${memberId}</strong><br>Validation en cours...`, 
+            'info'
+        );
         
-        // Valider IMMÉDIATEMENT la présence avec l'ID
+        // Valider la présence
         await validateAttendanceFromScan(memberId);
         
     } catch (error) {
         console.error('❌ Erreur lors du scan:', error);
-        showMessage('scanResult', '❌ Erreur lors de la validation: ' + error.message, 'danger');
+        showMessage('scanResult', 
+            `❌ Erreur lors de la validation: ${error.message}<br>
+             <small>Utilisez la validation manuelle</small>`, 
+            'danger'
+        );
     }
 }
 
+// Fonction pour identifier le format du texte
+function getTextFormat(text) {
+    if (text.includes('http')) return 'URL Web';
+    if (text.includes('ID:')) return 'Format étiqueté';
+    if (text.includes('id=')) return 'URL avec paramètres';
+    if (text.match(/^[A-Z0-9]{3,10}$/)) return 'Code simple';
+    if (text.includes('\n')) return 'Texte multi-lignes';
+    return 'Format inconnu';
+}
 // Fonction pour extraire l'ID du texte complet du QR code
+// Fonction améliorée pour extraire l'ID depuis une URL ou d'autres formats
 function extractMemberIdFromQR(qrText) {
     try {
-        // Méthode 1: Chercher la ligne qui commence par "ID: "
-        const idLine = qrText.split('\n').find(line => line.startsWith('ID:'));
-        if (idLine) {
-            return idLine.replace('ID:', '').trim();
+        console.log('🔍 Texte QR scanné:', qrText);
+        
+        const cleanText = qrText.trim();
+        
+        // Méthode 1: Extraction depuis une URL (prioritaire)
+        const urlId = extractIdFromURL(cleanText);
+        if (urlId) {
+            console.log('✅ ID extrait depuis URL:', urlId);
+            return urlId;
         }
         
-        // Méthode 2: Chercher un pattern KYO suivi de chiffres
-        const idMatch = qrText.match(/(KYO\d+)/i);
-        if (idMatch) {
-            return idMatch[1];
+        // Méthode 2: Chercher un paramètre ID dans n'importe quel format
+        const paramId = extractIdFromParams(cleanText);
+        if (paramId) {
+            console.log('✅ ID extrait depuis paramètres:', paramId);
+            return paramId;
         }
         
-        // Méthode 3: Si le texte est court, c'est probablement juste l'ID
-        if (qrText.length <= 10 && qrText.match(/[A-Za-z0-9]{3,10}/)) {
-            return qrText.trim();
+        // Méthode 3: Pattern avec "ID:" ou "id="
+        const labeledId = extractIdFromLabel(cleanText);
+        if (labeledId) {
+            console.log('✅ ID extrait depuis label:', labeledId);
+            return labeledId;
         }
         
+        // Méthode 4: Code alphanumérique seul (3-10 caractères)
+        const standaloneId = extractStandaloneId(cleanText);
+        if (standaloneId) {
+            console.log('✅ ID autonome détecté:', standaloneId);
+            return standaloneId;
+        }
+        
+        console.log('❌ Aucun ID valide trouvé');
         return null;
         
     } catch (error) {
-        console.error('Erreur extraction ID:', error);
+        console.error('❌ Erreur extraction ID:', error);
         return null;
     }
+}
+
+// Sous-fonctions d'extraction
+function extractIdFromURL(text) {
+    try {
+        // Si c'est une URL complète
+        if (text.includes('http') || text.includes('://') || text.includes('/')) {
+            console.log('🌐 Détection URL:', text);
+            
+            // Extraire les paramètres d'URL
+            const urlParams = new URLSearchParams(text.split('?')[1] || '');
+            const idFromUrl = urlParams.get('id') || urlParams.get('member') || urlParams.get('member_id');
+            
+            if (idFromUrl) {
+                return idFromUrl.toUpperCase();
+            }
+            
+            // Chercher dans le path de l'URL
+            const pathMatch = text.match(/\/([a-z0-9]{3,10})(?:\?|$|\/)/i);
+            if (pathMatch) {
+                return pathMatch[1].toUpperCase();
+            }
+            
+            // Chercher id= dans tout le texte
+            const idMatch = text.match(/[?&](?:id|member)=([a-z0-9]{3,10})/i);
+            if (idMatch) {
+                return idMatch[1].toUpperCase();
+            }
+        }
+        
+        return null;
+    } catch (error) {
+        console.log('❌ Erreur extraction URL:', error);
+        return null;
+    }
+}
+
+function extractIdFromParams(text) {
+    // Chercher id=, member=, adherent=, etc.
+    const paramPatterns = [
+        /[?&](?:id|member|adherent|user)=([a-z0-9]{3,10})/gi,
+        /(?:id|member|adherent)[=:]\\s*([a-z0-9]{3,10})/gi
+    ];
+    
+    for (let pattern of paramPatterns) {
+        const match = pattern.exec(text);
+        if (match) {
+            return match[1].toUpperCase();
+        }
+    }
+    return null;
+}
+
+function extractIdFromLabel(text) {
+    // Chercher ID: , ID :, etc.
+    const labelPatterns = [
+        /ID\s*:\s*([a-z0-9]{3,10})/gi,
+        /identifiant\s*:\s*([a-z0-9]{3,10})/gi,
+        /code\s*:\s*([a-z0-9]{3,10})/gi
+    ];
+    
+    for (let pattern of labelPatterns) {
+        const match = pattern.exec(text);
+        if (match) {
+            return match[1].toUpperCase();
+        }
+    }
+    return null;
+}
+
+function extractStandaloneId(text) {
+    // Chercher un code alphanumérique de 3-10 caractères seul
+    const words = text.split(/[\s\n\t\r,;]+/);
+    
+    for (let word of words) {
+        const cleanWord = word.trim();
+        // Code alphanumérique de 3-10 caractères
+        if (cleanWord.match(/^[a-z0-9]{3,10}$/i)) {
+            // Exclure les mots communs qui pourraient être détectés par erreur
+            const commonWords = ['http', 'https', 'www', 'com', 'org', 'net', 'fr'];
+            if (!commonWords.includes(cleanWord.toLowerCase())) {
+                return cleanWord.toUpperCase();
+            }
+        }
+    }
+    return null;
 }
 
 function onScanError(error) {
