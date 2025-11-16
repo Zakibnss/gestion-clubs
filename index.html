@@ -2220,30 +2220,11 @@ setTimeout(() => {
 function computeEndDate(member) {
     const start = new Date(member.start_date);
     const end = new Date(start);
-    
-    // CORRECTION : Gestion des types d'abonnement en français/anglais
-    const subscriptionType = member.subscription?.toLowerCase().trim();
-    
-    switch (subscriptionType) {
-        case "monthly":
-        case "mensuel":
-            end.setMonth(end.getMonth() + 1);
-            break;
-        case "quarterly":
-        case "trimestriel":
-            end.setMonth(end.getMonth() + 3);
-            break;
-        case "biannual":
-        case "semestriel":
-            end.setMonth(end.getMonth() + 6);
-            break;
-        case "annual":
-        case "annuel":
-            end.setFullYear(end.getFullYear() + 1);
-            break;
-        default:
-            console.log(`⚠️ Type d'abonnement inconnu: "${member.subscription}" - utilisation de mensuel par défaut`);
-            end.setMonth(end.getMonth() + 1); // Valeur par défaut
+    switch (member.subscription) {
+        case "monthly" || "Mensuel": end.setMonth(end.getMonth() + 1); break;
+        case "quarterly"||"Trimestriele": end.setMonth(end.getMonth() + 3); break;
+        case "biannual"||"Semestriel": end.setMonth(end.getMonth() + 6); break;
+        case "annual"||"Annuel": end.setFullYear(end.getFullYear() + 1); break;
     }
     return end;
 }
@@ -3526,21 +3507,11 @@ function isSubscriptionActive(member) {
         // ATTENDANCE VALIDATION
         // ============================================
         async function validateAttendance() {
-            const memberId = document.getElementById('validateMemberId').value.trim().toUpperCase();
-    
+    const memberId = document.getElementById('validateMemberId').value.trim();
     if (!memberId) {
         showMessage('validationMessage', '❌ Entrez un ID adhérent', 'danger');
-        return;
+        return false;
     }
-
-    // Validation du format
-    if (!memberId.match(/^KYO\d+$/)) {
-        showMessage('validationMessage', '❌ Format ID invalide (ex: KYO001)', 'danger');
-        return;
-    }
-
-    // Utiliser la même fonction que le scanner
-    validateAttendanceFromScan(memberId);
 
     try {
         // Vérifier si le membre existe
@@ -3611,7 +3582,6 @@ function isSubscriptionActive(member) {
         return false;
     }
 }
-
 function computeEndDate(member) {
     try {
         if (!member.start_date) {
@@ -3661,7 +3631,6 @@ function computeEndDate(member) {
 // ============================================
 // DATE CONVERSION FUNCTIONS
 // ============================================
-
 
 // ============================================
 // DATE CONVERSION FUNCTIONS - FORMAT JJ/MM/AAAA
@@ -3933,74 +3902,143 @@ document.addEventListener('DOMContentLoaded', function() {
 async function startScanner() {
     console.log('🔧 Démarrage du scanner...');
     
+    // Vérifier si le scanner est déjà en cours
     if (html5QrCode && html5QrCode.isScanning) {
-        showMessage('scanResult', '⚠️ Scanner déjà en cours', 'warning');
+        showMessage('scanResult', '⚠️ Le scanner est déjà en cours d\'exécution', 'warning');
+        return;
+    }
+
+    // Vérifier le support du navigateur
+    if (!isScannerSupported()) {
+        showMessage('scanResult', 
+            '❌ Votre navigateur ne supporte pas le scanner QR Code', 
+            'danger'
+        );
         return;
     }
 
     try {
-        showMessage('scanResult', '🔧 Initialisation...', 'info');
+        // Afficher un message de démarrage
+        showMessage('scanResult', '🔧 Initialisation du scanner...', 'info');
         
-        // Réinitialiser l'instance
-        html5QrCode = new Html5Qrcode("reader");
+        // Créer une nouvelle instance du scanner
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("reader");
+        }
 
-        // Configuration SIMPLIFIÉE pour petits QR codes
+        // Essayer d'abord la caméra arrière (environment)
+        let cameraId = null;
+        
+        // Obtenir la liste des caméras disponibles
+        const cameras = await Html5Qrcode.getCameras();
+        console.log('📷 Caméras disponibles:', cameras);
+        
+        if (cameras && cameras.length > 0) {
+            // Préférer la caméra arrière
+            const rearCamera = cameras.find(cam => 
+                cam.label.toLowerCase().includes('back') || 
+                cam.label.toLowerCase().includes('arrière') ||
+                cam.label.toLowerCase().includes('environment')
+            );
+            
+            // Sinon utiliser la première caméra disponible
+            cameraId = rearCamera ? rearCamera.id : cameras[0].id;
+            console.log('🎯 Caméra sélectionnée:', cameraId);
+        }
+
+        // Configuration du scanner
         const config = {
             fps: 10,
-            qrbox: { width: 150, height: 150 }, // Zone réduite pour petits QR codes
+            qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
             focusMode: "continuous"
         };
 
-        // CORRECTION : Configuration caméra SIMPLIFIÉE
-        // Ne passez qu'UN SEUL paramètre, pas un objet avec multiple clés
-        const cameraConfig = { facingMode: "environment" }; // SEULEMENT cette ligne
+        // Démarrer avec la caméra spécifique ou en mode automatique
+        let startPromise;
+        if (cameraId) {
+            startPromise = html5QrCode.start(
+                cameraId, 
+                config, 
+                onScanSuccess, 
+                onScanError
+            );
+        } else {
+            startPromise = html5QrCode.start(
+                { facingMode: "environment" },
+                config, 
+                onScanSuccess, 
+                onScanError
+            );
+        }
 
-        await html5QrCode.start(
-            cameraConfig, // SEULEMENT facingMode
-            config,
-            onScanSuccess,
-            onScanError
-        );
+        await startPromise;
 
+        // Succès du démarrage
+        console.log('✅ Scanner démarré avec succès');
         document.getElementById('startScanBtn').classList.add('hidden');
         document.getElementById('stopScanBtn').classList.remove('hidden');
-        showMessage('scanResult', '📱 Scanner activé! Approchez le QR code à 10-15 cm', 'success');
+        
+        showMessage('scanResult', 
+            '📱 Scanner activé!<br>Scannez le QR Code d\'un adhérent', 
+            'success'
+        );
+
+        // Ajouter une classe pour l'animation
+        document.getElementById('reader').classList.add('scanning-active');
 
     } catch (error) {
-        console.error('❌ Erreur démarrage:', error);
+        console.error('❌ Erreur démarrage scanner:', error);
         
         let errorMessage = '❌ ';
-        if (error.message.includes('cameraIdOrConfig')) {
-            errorMessage += 'Erreur configuration caméra. ';
-        }
-        if (error.name === 'NotAllowedError') {
-            errorMessage += 'Permission caméra refusée.';
-        } else if (error.name === 'NotFoundError') {
-            errorMessage += 'Aucune caméra détectée.';
+        let errorType = 'danger';
+        
+        // Gestion spécifique des erreurs
+        if (error.name === 'NotReadableError' || error.message.includes('NotReadableError') || error.message.includes('couldn\'t start video source')) {
+            errorMessage += 'Caméra déjà utilisée par une autre application.<br><br>';
+            errorMessage += '🔧 <strong>Solutions:</strong><br>';
+            errorMessage += '• Fermez les autres applications utilisant la caméra<br>';
+            errorMessage += '• Redémarrez votre navigateur<br>';
+            errorMessage += '• Essayez avec la caméra avant<br>';
+            errorMessage += '• Vérifiez les permissions caméra';
+            
+            // Proposer d'essayer la caméra avant
+            setTimeout(() => {
+                if (confirm('La caméra arrière ne fonctionne pas. Voulez-vous essayer avec la caméra avant ?')) {
+                    startWithUserCamera();
+                }
+            }, 1000);
+            
+        } else if (error.name === 'NotAllowedError' || error.message.includes('Permission denied')) {
+            errorMessage += 'Permission caméra refusée.<br>Veuillez autoriser l\'accès à la caméra dans les paramètres de votre navigateur.';
+        } else if (error.name === 'NotFoundError' || error.message.includes('No camera found')) {
+            errorMessage += 'Aucune caméra détectée sur cet appareil.';
+        } else if (error.message.includes('No MultiFormat Readers')) {
+            errorMessage += 'Lecteur QR Code non supporté. Essayez avec Chrome ou Firefox.';
         } else {
-            errorMessage += error.message;
+            errorMessage += 'Erreur inattendue: ' + (error.message || error);
         }
         
-        showMessage('scanResult', errorMessage, 'danger');
+        showMessage('scanResult', errorMessage, errorType);
+        
+        // Réinitialiser l'état
         document.getElementById('startScanBtn').classList.remove('hidden');
         document.getElementById('stopScanBtn').classList.add('hidden');
+        
+        // Nettoyer
+        if (html5QrCode) {
+            try {
+                await html5QrCode.clear();
+            } catch (clearError) {
+                console.log('Nettoyage scanner:', clearError);
+            }
+        }
     }
 }
 // Variables globales pour les compétitions
 let selectedParticipants = [];
 let competitionData = [];
-// Ajoutez cette fonction pour zoomer sur la zone de scan
-function enableScannerZoom() {
-    const videoElement = document.querySelector('#reader video');
-    if (videoElement) {
-        videoElement.style.transform = 'scale(1.5)'; // Zoom 150%
-        videoElement.style.transformOrigin = 'center center';
-    }
-}
 
-// Appelez-la après le démarrage du scanner
-setTimeout(enableScannerZoom, 1000);
 // Charger les membres pour la sélection
 async function loadMembersForCompetition() {
     try {
@@ -4490,28 +4528,92 @@ async function validateAttendanceFromScan(memberId) {
     }
 }
 // Fonction pour essayer avec la caméra avant
-
+async function startWithUserCamera() {
+    try {
+        showMessage('scanResult', '🔄 Essai avec la caméra avant...', 'info');
+        
+        if (html5QrCode && html5QrCode.isScanning) {
+            await html5QrCode.stop();
+        }
+        
+        // Réinitialiser l'instance
+        html5QrCode = new Html5Qrcode("reader");
+        
+        // Démarrer avec caméra avant
+        await html5QrCode.start(
+            { facingMode: "user" }, // Caméra avant
+            { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            },
+            onScanSuccess,
+            onScanError
+        );
+        
+        document.getElementById('startScanBtn').classList.add('hidden');
+        document.getElementById('stopScanBtn').classList.remove('hidden');
+        showMessage('scanResult', '📱 Scanner activé (caméra avant)', 'success');
+        
+    } catch (error) {
+        console.error('Erreur caméra avant:', error);
+        showMessage('scanResult', 
+            '❌ Impossible de démarrer avec la caméra avant.<br>Veuillez vérifier les permissions et réessayer.', 
+            'danger'
+        );
+    }
+}
 
 // Fonction pour vérifier le support
-
+function isScannerSupported() {
+    const hasGetUserMedia = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+    const hasHtml5Qrcode = typeof Html5Qrcode !== 'undefined';
+    
+    console.log('Support caméra:', hasGetUserMedia);
+    console.log('Support Html5Qrcode:', hasHtml5Qrcode);
+    
+    return hasGetUserMedia && hasHtml5Qrcode;
+}
 
 // Fonction d'arrêt améliorée
 async function stopScanner() {
-    if (html5QrCode && html5QrCode.isScanning) {
+    if (html5QrCode) {
         try {
-            await html5QrCode.stop();
-            console.log('Scanner arrêté avec succès');
+            if (html5QrCode.isScanning) {
+                await html5QrCode.stop();
+                console.log('Scanner arrêté avec succès');
+            }
+            
+            await html5QrCode.clear();
+            
         } catch (error) {
-            console.error('Erreur arrêt scanner:', error);
+            console.error('Erreur lors de l\'arrêt:', error);
+        } finally {
+            html5QrCode = null;
         }
     }
     
     document.getElementById('startScanBtn').classList.remove('hidden');
     document.getElementById('stopScanBtn').classList.add('hidden');
     document.getElementById('reader').classList.remove('scanning-active');
+    
     showMessage('scanResult', '⏹️ Scanner arrêté', 'info');
 }
+
 // Fonction pour réinitialiser complètement le scanner
+function resetScanner() {
+    if (html5QrCode) {
+        html5QrCode.clear().catch(() => {});
+        html5QrCode = null;
+    }
+    
+    const readerElement = document.getElementById('reader');
+    readerElement.innerHTML = '';
+    readerElement.classList.remove('scanning-active');
+    
+    document.getElementById('startScanBtn').classList.remove('hidden');
+    document.getElementById('stopScanBtn').classList.add('hidden');
+}
 
 // Ajouter un bouton de réinitialisation dans votre HTML ou créer dynamiquement
 function addScannerResetButton() {
@@ -4568,46 +4670,40 @@ async function onScanSuccess(decodedText) {
 }
 
 // Fonction pour extraire l'ID du texte complet du QR code
-// Modifiez la fonction extractMemberIdFromQR pour mieux gérer l'URL
 function extractMemberIdFromQR(qrText) {
     try {
-        console.log('📝 Texte QR reçu:', qrText);
-        
-        // Méthode 1: Extraction depuis l'URL
-        if (qrText.includes('adherent.html?id=')) {
-            const urlObj = new URL(qrText);
-            const memberId = urlObj.searchParams.get('id');
-            if (memberId && memberId.match(/^KYO\d+$/i)) {
-                console.log('✅ ID extrait depuis URL:', memberId);
-                return memberId.toUpperCase();
-            }
+        // Méthode 1: Chercher la ligne qui commence par "ID: "
+        const idLine = qrText.split('\n').find(line => line.startsWith('ID:'));
+        if (idLine) {
+            return idLine.replace('ID:', '').trim();
         }
         
-        // Méthode 2: ID direct (au cas où)
-        const cleanText = qrText.trim().toUpperCase();
-        if (cleanText.match(/^KYO\d+$/)) {
-            console.log('✅ ID direct:', cleanText);
-            return cleanText;
-        }
-        
-        // Méthode 3: Pattern flexible
+        // Méthode 2: Chercher un pattern KYO suivi de chiffres
         const idMatch = qrText.match(/(KYO\d+)/i);
         if (idMatch) {
-            console.log('✅ ID trouvé par pattern:', idMatch[1]);
-            return idMatch[1].toUpperCase();
+            return idMatch[1];
         }
         
-        console.log('❌ Aucun ID valide trouvé');
+        // Méthode 3: Si le texte est court, c'est probablement juste l'ID
+        if (qrText.length <= 10 && qrText.match(/[A-Za-z0-9]{3,10}/)) {
+            return qrText.trim();
+        }
+        
         return null;
         
     } catch (error) {
-        console.error('❌ Erreur extraction:', error);
-        // En cas d'erreur URL, essayer de trouver KYO dans le texte
-        const idMatch = qrText.match(/(KYO\d+)/i);
-        return idMatch ? idMatch[1].toUpperCase() : null;
+        console.error('Erreur extraction ID:', error);
+        return null;
     }
 }
 
+function onScanError(error) {
+    // Erreurs silencieuses pendant le scan - pas besoin d'afficher chaque erreur
+    // Seulement les erreurs critiques
+    if (error && !error.includes('NotFoundException')) {
+        console.log('Erreur scan (normal):', error);
+    }
+}
 
 function stopScanner() {
     if (html5QrCode && html5QrCode.isScanning) {
@@ -5084,45 +5180,46 @@ contentDiv.appendChild(infoContainer);
      const { status, endDate, badgeClass } = calculateMemberStatus(member);
 
     // QR Code positionné précisément
-    <!-- Dans generateCard(), gardez la même taille mais optimisez : -->
+    const qrContainer = document.createElement("div");
+    qrContainer.style.cssText = `
+        position: absolute;
+        left: 245px;
+        top: 780px;
+        width: 145px;
+        height: 145px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    `;
 
-// QR Code optimisé pour 1.2cm × 1.2cm
-const qrContainer = document.createElement("div");
-qrContainer.style.cssText = `
-    position: absolute;
-    left: 245px;
-    top: 780px;
-    width: 142px; /* Exactement pour 1.2cm à 300 DPI */
-    height: 142px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: white;
-    padding: 1px;
-    border: 1px solid #000000; /* Contour pour mieux le délimiter */
-`;
+    const qrDiv = document.createElement("div");
+    qrDiv.style.cssText = `
+        background: white;
+        padding: 8px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        border: 1px solid #ddd;
+        width: 145px;
+        height: 145px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    `;
+    const memberURL = `https://zakibnss.github.io/gestion-clubs/adherent.html?id=${member.id}`;
 
-const qrDiv = document.createElement("div");
-qrDiv.style.cssText = `
-    width: 140px;
-    height: 140px;
-`;
+    
 
-const memberURL = `https://zakibnss.github.io/gestion-clubs/adherent.html?id=${member.id}`;
+    new QRCode(qrDiv, { 
+        text: memberURL,
+        width: 130,
+        height: 130,
+        colorDark: "#000000",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+    });
 
-new QRCode(qrDiv, { 
-    text: memberURL,
-    width: 138,   /* Légèrement réduit pour la bordure */
-    height: 138,
-    colorDark: "#000000",   /* Noir absolu */
-    colorLight: "#FFFFFF",  /* Blanc absolu */
-    correctLevel: QRCode.CorrectLevel.L, /* Niveau bas - crucial pour petite taille */
-    margin: 0,    /* Pas de marge - essentiel */
-    useSVG: false
-});
-
-qrContainer.appendChild(qrDiv);
-contentDiv.appendChild(qrContainer);
+    qrContainer.appendChild(qrDiv);
+    contentDiv.appendChild(qrContainer);
 
     // Ajouter le contenu à la carte
     cardDiv.appendChild(contentDiv);
