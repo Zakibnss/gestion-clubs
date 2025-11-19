@@ -751,6 +751,41 @@
     pointer-events: none;
     font-size: 0.8rem;
 }
+/* Styles pour le champ de recherche */
+.filter-container .form-control {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    transition: var(--transition);
+    min-width: 200px;
+}
+
+.filter-container .form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.1);
+}
+
+.filter-container .form-control:hover {
+    border-color: var(--primary-color);
+}
+
+/* Responsive pour les filtres */
+@media (max-width: 768px) {
+    .filter-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    
+    .filter-container .form-control {
+        min-width: auto;
+        width: 100%;
+    }
+}
         /* QR Code Display */
         .qr-display {
             text-align: center;
@@ -1379,36 +1414,46 @@
             </div>
 
             <!-- Members List Section -->
-            <div id="membersListSection" class="content-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">👥 Liste des Adhérents</h2>
-                        <div class="filter-container">
-                            <div class="filter-select-wrapper" style="flex: 1;">
-                                <label class="filter-label">
-                                    📊 Filtrer par statut :
-                                </label>
-                                <select id="filterStatus" class="filter-select">
-                                    <option value="all">📋 Tous les adhérents</option>
-                                    <option value="active">✅ Actifs uniquement</option>
-                                    <option value="expired">❌ Expirés uniquement</option>
-                                </select>
-                            </div>
-                            <div class="filter-stats">
-                                <span class="filter-badge" id="memberCount">0</span>
-                                <span style="font-size: 0.85rem; color: var(--text-secondary);">
-                                    adhérent(s)
-                                </span>
-                            </div>
-                        </div>
-                          
-                        <button class="btn btn-primary" onclick="loadMembers()">🔄 Actualiser</button>
-                    </div>
-                    <div id="membersGrid" class="grid grid-3"></div>
-                    <div id="cardsGrid" class="grid grid-3" style="margin-top: 20px;"></div>
-                    <div id="cardsPreview" style="margin-top: 20px;"></div>
+            <!-- Members List Section -->
+<div id="membersListSection" class="content-section">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">👥 Liste des Adhérents</h2>
+            <div class="filter-container">
+                <div class="filter-select-wrapper" style="flex: 1;">
+                    <label class="filter-label">
+                        📊 Filtrer par statut :
+                    </label>
+                    <select id="filterStatus" class="filter-select">
+                        <option value="all">📋 Tous les adhérents</option>
+                        <option value="active">✅ Actifs uniquement</option>
+                        <option value="expired">❌ Expirés uniquement</option>
+                    </select>
+                </div>
+                
+                <!-- AJOUT: Champ de recherche par nom -->
+                <div class="filter-select-wrapper" style="flex: 1;">
+                    <label class="filter-label">
+                        🔍 Rechercher par nom :
+                    </label>
+                    <input type="text" id="searchName" class="form-control" 
+                           placeholder="Nom ou prénom..." 
+                           style="padding: 8px 12px; min-width: 200px;">
+                </div>
+               
+                <div class="filter-stats">
+                    <span class="filter-badge" id="memberCount">0</span>
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">
+                        adhérent(s)
+                    </span>
                 </div>
             </div>
+              
+            <button class="btn btn-primary" onclick="loadMembers()">🔄 Actualiser</button>
+        </div>
+        <div id="membersGrid" class="grid grid-3"></div>
+    </div>
+</div>
 
             <!-- Import/Export Section -->
             <div id="importExportSection" class="content-section">
@@ -2121,7 +2166,20 @@ function notifyAttendance(member) {
             document.getElementById('startScanBtn').addEventListener('click', startScanner);
             document.getElementById('stopScanBtn').addEventListener('click', stopScanner);
             document.getElementById('loadMembersForCardsBtn')?.addEventListener('click', loadMembersForCards);
-        
+            document.getElementById('searchName').addEventListener('input', function() {
+        // Délai de 300ms pour éviter trop de requêtes
+        clearTimeout(this.searchTimeout);
+        this.searchTimeout = setTimeout(() => {
+            loadMembers();
+        }, 300);
+    });
+    
+    // Recherche avec la touche Entrée
+    document.getElementById('searchName').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            loadMembers();
+        }
+    });
 }
 
         function setupTheme() {
@@ -2650,50 +2708,9 @@ function startSubscriptionMonitoring() {
             throw new Error(`Erreur de base de données: ${error.message}`);
         }
 
-        const filter = document.getElementById('filterStatus').value;
-        let filteredMembers = [];
-
-        if (members && members.length > 0) {
-            filteredMembers = members.filter(member => {
-                try {
-                    const start = new Date(member.start_date);
-                    const end = new Date(start);
-                    
-                    switch (member.subscription) {
-                        case "monthly": 
-                            end.setMonth(end.getMonth() + 1); 
-                            break;
-                        case "quarterly": 
-                            end.setMonth(end.getMonth() + 3); 
-                            break;
-                        case "biannual": 
-                            end.setMonth(end.getMonth() + 6); 
-                            break;
-                        case "annual": 
-                            end.setFullYear(end.getFullYear() + 1); 
-                            break;
-                        default:
-                            end.setMonth(end.getMonth() + 1); // Valeur par défaut
-                    }
-                    
-                    const isActive = new Date() <= end;
-                    
-                    switch (filter) {
-                        case "active":
-                            return isActive;
-                        case "expired":
-                            return !isActive;
-                        case "all":
-                        default:
-                            return true;
-                    }
-                } catch (dateError) {
-                    console.error('Erreur de date pour le membre:', member.id, dateError);
-                    return filter === "all"; // Inclure dans "tous" si erreur de date
-                }
-            });
-        }
-
+        // Appliquer les filtres
+        const filteredMembers = applyFilters(members);
+        
         // Mettre à jour le compteur
         updateMemberCount(filteredMembers.length);
         
@@ -2704,6 +2721,76 @@ function startSubscriptionMonitoring() {
         console.error('Error loading members:', error);
         showMessage('membersGrid', `❌ Erreur lors du chargement: ${error.message}`, 'danger');
     }
+}
+
+// Nouvelle fonction pour appliquer tous les filtres
+function applyFilters(members) {
+    const filter = document.getElementById('filterStatus').value;
+    const searchTerm = document.getElementById('searchName').value.toLowerCase().trim();
+    
+    let filteredMembers = [];
+
+    if (members && members.length > 0) {
+        filteredMembers = members.filter(member => {
+            try {
+                // Filtre par statut d'abonnement
+                const start = new Date(member.start_date);
+                const end = new Date(start);
+                
+                switch (member.subscription) {
+                    case "monthly": 
+                        end.setMonth(end.getMonth() + 1); 
+                        break;
+                    case "quarterly": 
+                        end.setMonth(end.getMonth() + 3); 
+                        break;
+                    case "biannual": 
+                        end.setMonth(end.getMonth() + 6); 
+                        break;
+                    case "annual": 
+                        end.setFullYear(end.getFullYear() + 1); 
+                        break;
+                    default:
+                        end.setMonth(end.getMonth() + 1);
+                }
+                
+                const isActive = new Date() <= end;
+                
+                // Appliquer le filtre de statut
+                let statusMatch = true;
+                switch (filter) {
+                    case "active":
+                        statusMatch = isActive;
+                        break;
+                    case "expired":
+                        statusMatch = !isActive;
+                        break;
+                    case "all":
+                    default:
+                        statusMatch = true;
+                }
+
+                // Appliquer le filtre de recherche
+                let searchMatch = true;
+                if (searchTerm) {
+                    const fullName = `${member.last_name} ${member.first_name}`.toLowerCase();
+                    searchMatch = fullName.includes(searchTerm) || 
+                                 member.last_name.toLowerCase().includes(searchTerm) || 
+                                 member.first_name.toLowerCase().includes(searchTerm) ||
+                                 member.id.toLowerCase().includes(searchTerm);
+                }
+
+                return statusMatch && searchMatch;
+
+            } catch (dateError) {
+                console.error('Erreur de date pour le membre:', member.id, dateError);
+                return filter === "all"; // Inclure dans "tous" si erreur de date
+            }
+        });
+    }
+
+    return filteredMembers;
+
 }
 
 // Fonction pour afficher le loading
@@ -2895,7 +2982,14 @@ function escapeHtml(text) {
 }
 
 // Message pour les états vides
+// Message pour les états vides
 function getEmptyStateMessage(filter) {
+    const searchTerm = document.getElementById('searchName').value;
+    
+    if (searchTerm) {
+        return `Aucun adhérent trouvé pour "${searchTerm}".`;
+    }
+    
     switch (filter) {
         case 'active':
             return 'Aucun adhérent avec un abonnement actif trouvé.';
@@ -2905,7 +2999,6 @@ function getEmptyStateMessage(filter) {
             return 'Aucun adhérent trouvé dans votre club. Commencez par ajouter vos premiers adhérents.';
     }
 }
-
 // Actions pour les états vides
 function getEmptyStateAction(filter) {
     const baseActions = `
@@ -4129,7 +4222,10 @@ function toggleMemberSelection(memberId) {
     
     updateSelectionCount();
 }
-
+function clearSearch() {
+    document.getElementById('searchName').value = '';
+    loadMembers();
+}
 // PAR cette version corrigée avec meilleur debug :
 function toggleMemberSelection(memberId) {
     console.log('Toggle selection pour:', memberId);
