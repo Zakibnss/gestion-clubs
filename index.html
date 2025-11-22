@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kyokushin Manager Pro</title>
@@ -1095,6 +1096,220 @@
     50% { transform: scale(1.1); }
     100% { transform: scale(1); }
 }
+/* ★★★★★ ANIMATIONS POUR NOTIFICATIONS AUTOMATIQUES */
+@keyframes slideInRight {
+    from { 
+        transform: translateX(400px); 
+        opacity: 0; 
+    }
+    to { 
+        transform: translateX(0); 
+        opacity: 1; 
+    }
+}
+
+@keyframes pulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(255, 107, 53, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 107, 53, 0); }
+}
+
+/* Style pour la notification persistante */
+#auto-reminder-notification {
+    animation: slideInRight 0.5s ease, pulseGlow 2s infinite;
+}
+
+/* Responsive pour mobile */
+@media (max-width: 768px) {
+    #auto-reminder-notification {
+        right: 10px !important;
+        left: 10px !important;
+        max-width: calc(100% - 20px) !important;
+    }
+}
+/* Styles pour la section SMS */
+.sms-tab-content {
+    display: none;
+}
+
+.sms-tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+/* Toggle switch */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 30px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-label {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.toggle-label:before {
+    position: absolute;
+    content: "";
+    height: 22px;
+    width: 22px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-label {
+    background-color: var(--success-color);
+}
+
+.toggle-switch input:checked + .toggle-label:before {
+    transform: translateX(30px);
+}
+
+.toggle-text {
+    position: absolute;
+    left: 8px;
+    top: 6px;
+    font-size: 0.7rem;
+    color: #666;
+    transition: .4s;
+}
+
+.toggle-switch input:checked + .toggle-label .toggle-text {
+    color: white;
+    left: 35px;
+}
+
+/* Styles pour les éléments SMS */
+.member-sms-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: var(--bg-primary);
+    transition: var(--transition);
+    cursor: pointer;
+}
+
+.member-sms-item:hover {
+    background: var(--bg-secondary);
+    border-color: var(--primary-color);
+}
+
+.member-sms-item.selected {
+    background: rgba(200, 16, 46, 0.1);
+    border-color: var(--primary-color);
+}
+
+.recipients-actions {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.variables-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.message-preview {
+    margin-top: 15px;
+}
+
+.preview-container {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 15px;
+    min-height: 80px;
+    margin-top: 8px;
+    white-space: pre-wrap;
+}
+
+.auto-message-config {
+    background: var(--bg-secondary);
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-color);
+}
+
+.auto-message-config h4 {
+    color: var(--primary-color);
+    margin-bottom: 10px;
+}
+
+.toggle-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .recipients-actions {
+        flex-direction: column;
+    }
+    
+    .variables-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+/* ★★★★★ ANIMATIONS POUR NOTIFICATIONS AUTOMATIQUES */
+@keyframes slideInRight {
+    from { 
+        transform: translateX(400px); 
+        opacity: 0; 
+    }
+    to { 
+        transform: translateX(0); 
+        opacity: 1; 
+    }
+}
+
+@keyframes pulseGlow {
+    0% { box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(255, 107, 53, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 107, 53, 0); }
+}
+
+/* Style pour la notification persistante */
+#auto-reminder-notification {
+    animation: slideInRight 0.5s ease, pulseGlow 2s infinite;
+}
+
+/* Responsive pour mobile */
+@media (max-width: 768px) {
+    #auto-reminder-notification {
+        right: 10px !important;
+        left: 10px !important;
+        max-width: calc(100% - 20px) !important;
+    }
+}
 /* Styles pour la section compétitions */
 .competition-step {
     background: var(--bg-secondary);
@@ -1415,45 +1630,48 @@
 
             <!-- Members List Section -->
             <!-- Members List Section -->
-<div id="membersListSection" class="content-section">
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">👥 Liste des Adhérents</h2>
-            <div class="filter-container">
-                <div class="filter-select-wrapper" style="flex: 1;">
-                    <label class="filter-label">
-                        📊 Filtrer par statut :
-                    </label>
-                    <select id="filterStatus" class="filter-select">
-                        <option value="all">📋 Tous les adhérents</option>
-                        <option value="active">✅ Actifs uniquement</option>
-                        <option value="expired">❌ Expirés uniquement</option>
-                    </select>
-                </div>
-                
-                <!-- AJOUT: Champ de recherche par nom -->
-                <div class="filter-select-wrapper" style="flex: 1;">
-                    <label class="filter-label">
-                        🔍 Rechercher par nom :
-                    </label>
-                    <input type="text" id="searchName" class="form-control" 
-                           placeholder="Nom ou prénom..." 
-                           style="padding: 8px 12px; min-width: 200px;">
-                </div>
-               
-                <div class="filter-stats">
-                    <span class="filter-badge" id="memberCount">0</span>
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">
-                        adhérent(s)
-                    </span>
+            <div id="membersListSection" class="content-section">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">👥 Liste des Adhérents</h2>
+                        <div class="filter-container">
+                            <!-- Filtre par statut -->
+                            <div class="filter-select-wrapper" style="flex: 1;">
+                                <label class="filter-label">📊 Filtrer par statut :</label>
+                                <select id="filterStatus" class="filter-select">
+                                    <option value="all">📋 Tous les adhérents</option>
+                                    <option value="active">✅ Actifs uniquement</option>
+                                    <option value="expired">❌ Expirés uniquement</option>
+                                </select>
+                            </div>
+            
+                            <!-- Recherche par nom -->
+                            <div class="filter-select-wrapper" style="flex: 1;">
+                                <label class="filter-label">🔍 Rechercher par nom :</label>
+                                <input type="text" id="searchName" class="form-control" placeholder="Nom ou prénom..." style="padding: 8px 12px; min-width: 200px;">
+                            </div>
+            
+                            <!-- Nouveau: tri -->
+                            <div class="filter-select-wrapper" style="flex: 1;">
+                                <label class="filter-label">🔀 Trier par :</label>
+                                <select id="sortOrder" class="filter-select">
+                                    <option value="alphabetical">🔤 Ordre alphabétique</option>
+                                    <option value="birthdateAsc">🎂 Date de naissance (âgé → jeune)</option>
+                                    <option value="birthdateDesc">🎂 Date de naissance (jeune → âgé)</option>
+                                </select>
+                            </div>
+            
+                            <div class="filter-stats">
+                                <span class="filter-badge" id="memberCount">0</span>
+                                <span style="font-size: 0.85rem; color: var(--text-secondary);">adhérent(s)</span>
+                            </div>
+                        </div>
+                        
+                        <button class="btn btn-primary" onclick="loadMembers()">🔄 Actualiser</button>
+                    </div>
+                    <div id="membersGrid" class="grid grid-3"></div>
                 </div>
             </div>
-              
-            <button class="btn btn-primary" onclick="loadMembers()">🔄 Actualiser</button>
-        </div>
-        <div id="membersGrid" class="grid grid-3"></div>
-    </div>
-</div>
 
             <!-- Import/Export Section -->
             <div id="importExportSection" class="content-section">
@@ -1715,6 +1933,180 @@
         📱 Veuillez autoriser l'accès à la caméra pour utiliser le scanner
     </div>
 </div>
+<!-- SMS Section -->
+<!-- SMS Section Corrigée -->
+<div id="smsSection" class="content-section">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">💬 Messagerie WhatsApp</h2>
+        </div>
+
+        <!-- Navigation par onglets SMS -->
+        <div class="nav-tabs" style="margin-bottom: 20px;">
+            <button class="nav-tab active" data-sms-tab="personal-sms">✍️ SMS Personnalisés</button>
+            <button class="nav-tab" data-sms-tab="subscription-sms">🔄 SMS d'Abonnement</button>
+        </div>
+
+        <!-- Onglet SMS Personnalisés -->
+        <div id="personal-sms" class="sms-tab-content active">
+            <!-- Configuration du message personnalisé -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📝 Nouveau Message Personnalisé</h3>
+                </div>
+                
+                <!-- Composition du message -->
+                <div class="form-group">
+                    <label>💬 Message WhatsApp</label>
+                    <textarea id="whatsappMessage" class="form-control" rows="6" 
+                              placeholder="Tapez votre message ici... (sera envoyé via WhatsApp)"
+                              oninput="updateMessagePreview()"></textarea>
+                    
+                    <!-- Variables personnalisées -->
+                    <div class="variables-section" style="margin: 15px 0;">
+                        <label>Variables disponibles :</label>
+                        <div class="variables-grid">
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{PRENOM}')">
+                                {PRENOM}
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{NOM}')">
+                                {NOM}
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{ID}')">
+                                {ID}
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{CLUB}')">
+                                {CLUB}
+                            </button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{FIN_ABONNEMENT}')">
+                                {FIN_ABONNEMENT}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Aperçu du message -->
+                    <div class="message-preview">
+                        <label>Aperçu :</label>
+                        <div class="preview-container" id="messagePreview">
+                            Le message apparaîtra ici...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sélection des destinataires -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">👥 Sélection des Destinataires</h3>
+                </div>
+                
+                <div class="form-group">
+                    <div class="recipients-actions">
+                        <button type="button" class="btn btn-primary btn-sm" onclick="selectAllMembersForSMS()">
+                            ✅ Tous les adhérents
+                        </button>
+                        <button type="button" class="btn btn-success btn-sm" onclick="selectActiveMembersForSMS()">
+                            ✅ Adhérents actifs uniquement
+                        </button>
+                        <button type="button" class="btn btn-warning btn-sm" onclick="selectExpiredMembersForSMS()">
+                            ⚠️ Adhérents expirés uniquement
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="clearSMSSelection()">
+                            🗑️ Effacer la sélection
+                        </button>
+                    </div>
+                    
+                    <!-- Liste des adhérents -->
+                    <div class="members-selection-list" id="membersSMSList" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                        <div class="text-center" style="padding: 20px; color: var(--text-secondary);">
+                            <div class="spinner"></div>
+                            <p>Chargement des adhérents...</p>
+                        </div>
+                    </div>
+                    
+                    <div id="selectedCount" class="badge badge-info" style="margin-top: 15px; padding: 10px;">
+                        0 adhérent(s) sélectionné(s)
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bouton d'envoi -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🚀 Envoi du Message</h3>
+                </div>
+                <div class="form-group">
+                    <button class="btn btn-success btn-lg" onclick="sendBulkWhatsAppMessages()" id="sendPersonalSMSBtn" disabled style="width: 100%; padding: 15px;">
+                        📤 Envoyer les messages WhatsApp (0 destinataires)
+                    </button>
+                    <small class="form-text text-muted" style="display: block; margin-top: 10px;">
+                        <strong>Fonctionnement :</strong> Le système ouvrira tous les messages WhatsApp dans de nouveaux onglets. 
+                        Il vous suffira de confirmer l'envoi pour chaque conversation.
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Onglet SMS d'Abonnement -->
+        <div id="subscription-sms" class="sms-tab-content">
+            <!-- Configuration des rappels automatiques -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">⚙️ Configuration des Rappels Automatiques</h3>
+                </div>
+                
+                <div class="form-group">
+                    <div class="toggle-section">
+                        <label>Activer les rappels automatiques :</label>
+                        <div class="toggle-switch">
+                            <input type="checkbox" id="autoSMSEnabled" onchange="toggleAutoSMS()">
+                            <label for="autoSMSEnabled" class="toggle-label">
+                                <span class="toggle-text">OFF</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div id="autoSMSConfig" style="margin-top: 20px;">
+                        <div class="auto-message-config">
+                            <h4>🔔 Rappel avant expiration</h4>
+                            <div class="grid grid-2">
+                                <div class="form-group">
+                                    <label>Jours avant expiration</label>
+                                    <input type="number" id="reminderDays" class="form-control" value="7" min="1" max="30">
+                                </div>
+                                <div class="form-group">
+                                    <label>Heure d'envoi</label>
+                                    <input type="time" id="reminderTime" class="form-control" value="10:00">
+                                </div>
+                            </div>
+                            <textarea id="reminderMessage" class="form-control" rows="3">
+Bonjour {PRENOM}, votre abonnement au club {CLUB} expire dans {JOURS} jours. Pensez à le renouveler !</textarea>
+                        </div>
+
+                        <button class="btn btn-primary" onclick="saveAutoSMSConfig()" style="margin-top: 15px;">
+                            💾 Sauvegarder la configuration
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bouton pour tester les rappels -->
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🧪 Test des Rappels</h3>
+                </div>
+                <div class="form-group">
+                    <button class="btn btn-info" onclick="testReminderSystem()">
+                        🔍 Tester les rappels maintenant
+                    </button>
+                    <small class="form-text text-muted">
+                        Ceci vérifiera les abonnements expirant bientôt et préparera les messages.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 <!-- Compétitions Section -->
 <div id="competitionsSection" class="content-section">
     <div class="card">
@@ -1784,16 +2176,878 @@
         
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         //fffff
+// ============================================
+// SYSTÈME DE MESSAGERIE AUTOMATIQUE WHATSAPP
+// ============================================
 
-        // ============================================
+// ★★★★★ SYSTÈME DE DÉTECTION AUTOMATIQUE
+// ★★★★★ SYSTÈME DE DÉTECTION AUTOMATIQUE (CORRIGÉ)
+class AutoDetectionSystem {
+    constructor() {
+        this.checkedToday = false;
+        this.pendingReminders = [];
+    }
+
+    // Vérifier quotidiennement
+    startDailyCheck() {
+        // Vérifier maintenant
+        this.checkExpiringSubscriptions();
+        
+        // Vérifier toutes les heures
+        setInterval(() => {
+            const now = new Date();
+            if (now.getHours() === 9 && now.getMinutes() === 0 && !this.checkedToday) {
+                this.checkExpiringSubscriptions();
+                this.checkedToday = true;
+            }
+            
+            // Réinitialiser à minuit
+            if (now.getHours() === 0) {
+                this.checkedToday = false;
+            }
+        }, 60000);
+    }
+
+    // Vérifier les abonnements expirants (SANS MESSAGE DE BIENVENUE)
+    async checkExpiringSubscriptions() {
+        try {
+            console.log('🔍 Scan automatique des abonnements...');
+            
+            let query = supabase.from('members').select('*');
+            if (currentUser !== 'admin') {
+                query = query.eq('club_id', currentClub.id);
+            }
+
+            const { data: members, error } = await query;
+            if (error) throw error;
+
+            const now = new Date();
+            this.pendingReminders = [];
+
+            members.forEach(member => {
+                if (!member.phone_number) return;
+                
+                const endDate = computeEndDate(member);
+                const daysLeft = Math.ceil((endDate - now) / (1000 * 3600 * 24));
+                
+                // Détecter SEULEMENT les rappels d'expiration
+                if (daysLeft === autoSMSConfig.reminderDays) {
+                    this.pendingReminders.push({
+                        member: member,
+                        daysLeft: daysLeft,
+                        type: 'reminder'
+                    });
+                    console.log(`🔔 Rappel détecté: ${member.first_name} - ${daysLeft} jours`);
+                }
+            });
+
+            // Sauvegarder et notifier si des rappels
+            if (this.pendingReminders.length > 0) {
+                this.savePendingReminders();
+                this.showNotification();
+            }
+
+        } catch (error) {
+            console.error('❌ Erreur détection automatique:', error);
+        }
+    }
+
+    // Afficher notification intelligente
+    showNotification() {
+    // SAUVEGARDER les rappels immédiatement
+    this.savePendingReminders();
+    
+    console.log('🔍 DEBUG - Pending reminders:', this.pendingReminders);
+    console.log('🔍 DEBUG - Reminder count:', this.pendingReminders.filter(r => r.type === 'reminder').length);
+
+    if (this.pendingReminders.length === 0) {
+        console.log('🔔 Aucun rappel - Notification non affichée');
+        return;
+    }
+
+    const reminderCount = this.pendingReminders.filter(r => r.type === 'reminder').length;
+    
+    if (reminderCount === 0) {
+        console.log('🔔 0 rappel - Notification non affichée');
+        return;
+    }
+    
+    let message = '';
+    if (reminderCount > 0) {
+        message += `🔔 ${reminderCount} rappel(s) d'abonnement\n`;
+    }
+    message += '\nCliquez pour envoyer maintenant →';
+    
+    // Créer notification persistante
+    this.createPersistentNotification(message);
+}
+
+createPersistentNotification(message) {
+    // Vérifier s'il y a vraiment des messages à envoyer
+    const hasReminders = this.pendingReminders && this.pendingReminders.length > 0;
+    if (!hasReminders) {
+        console.log('🔔 Aucun message à envoyer - Notification non affichée');
+        return;
+    }
+    
+    // Compter les rappels réels
+    const reminderCount = this.pendingReminders.filter(r => r.type === 'reminder').length;
+    
+    // DOUBLE VÉRIFICATION : NE PAS AFFICHER si 0 message
+    if (reminderCount === 0) {
+        console.log('🔔 0 message à envoyer - Notification non affichée');
+        return;
+    }
+    
+    if (persistentNotificationShown) return;
+    persistentNotificationShown = true;
+    
+    // Supprimer toute notification existante
+    const existingNotification = document.getElementById('auto-reminder-notification');
+    if (existingNotification) existingNotification.remove();
+
+    const notification = document.createElement('div');
+    notification.id = 'auto-reminder-notification';
+    notification.innerHTML = `
+        <div style="position: fixed; top: 100px; right: 20px; z-index: 10000; 
+            background: linear-gradient(135deg, #ff6b35, #c8102e); 
+            color: white; padding: 20px; border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); max-width: 350px;
+            border-left: 5px solid #ffd700;">
+            <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+                <div style="font-size: 2rem;">📱</div>
+                <div>
+                    <h4 style="margin: 0; color: white;">Messages Prêts à Envoyer</h4>
+                    <p style="margin: 5px 0 0 0; opacity: 0.9; font-size: 0.9rem; white-space: pre-line;">
+                        ${message}
+                    </p>
+                </div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="autoDetectionSystem.launchBulkSend()" 
+                        style="flex: 1; background: #ffd700; color: #000; border: none; 
+                            padding: 10px; border-radius: 8px; font-weight: bold; 
+                            cursor: pointer;">
+                    🚀 Envoyer Maintenant (${reminderCount})
+                </button>
+                <button onclick="autoDetectionSystem.hideNotification()" 
+                        style="background: rgba(255,255,255,0.2); color: white; 
+                            border: none; padding: 10px; border-radius: 8px; 
+                            cursor: pointer;">
+                    📅 Plus Tard
+                </button>
+            </div>
+        </div>
+    `;
+    console.log('Pending reminders:', this.pendingReminders);
+console.log('Reminder count:', this.pendingReminders.filter(r => r.type === 'reminder').length);
+    document.body.appendChild(notification);
+}
+
+    hideNotification() {
+        const notification = document.getElementById('auto-reminder-notification');
+        if (notification) notification.remove();
+    }
+
+    savePendingReminders() {
+        localStorage.setItem('kyokushin_pending_reminders', JSON.stringify(this.pendingReminders));
+    }
+
+    loadPendingReminders() {
+        const saved = localStorage.getItem('kyokushin_pending_reminders');
+        if (saved) {
+            this.pendingReminders = JSON.parse(saved);
+            if (this.pendingReminders.length > 0) {
+                this.showNotification();
+            }
+        }
+    }
+
+    // Lancer l'envoi groupé
+    launchBulkSend() {
+    // CHARGER les rappels depuis le stockage
+    this.loadPendingReminders();
+    
+    console.log('🔍 DEBUG launchBulkSend - Pending reminders:', this.pendingReminders);
+    
+    // VÉRIFIER qu'il y a vraiment des messages à envoyer
+    if (!this.pendingReminders || this.pendingReminders.length === 0) {
+        console.log('❌ Aucun message à envoyer - pendingReminders est vide');
+        showNotification('Aucun message', 'Il n\'y a aucun message à envoyer pour le moment', 'warning');
+        this.hideNotification();
+        return;
+    }
+
+    const reminderCount = this.pendingReminders.filter(r => r.type === 'reminder').length;
+    
+    if (reminderCount === 0) {
+        console.log('❌ 0 rappel à envoyer');
+        showNotification('Aucun rappel', 'Aucun rappel d\'abonnement à envoyer', 'warning');
+        this.hideNotification();
+        return;
+    }
+
+    console.log('🚀 Lancement envoi de', reminderCount, 'rappels');
+    
+    // Préparer tous les messages
+    bulkPreparationSystem.prepareAllMessages();
+    
+    // VÉRIFIER que la préparation a fonctionné
+    if (!bulkPreparationSystem.preparedMessages || bulkPreparationSystem.preparedMessages.length === 0) {
+        console.log('❌ Erreur préparation messages');
+        showNotification('Erreur', 'Erreur lors de la préparation des messages', 'danger');
+        return;
+    }
+
+    console.log('✅ Messages préparés:', bulkPreparationSystem.preparedMessages.length);
+    
+    // Ouvrir le dashboard d'envoi groupé
+    this.showBulkSendDashboard();
+}
+
+// S'assurer que loadPendingReminders() est appelée
+loadPendingReminders() {
+    try {
+        const saved = localStorage.getItem('kyokushin_pending_reminders');
+        if (saved) {
+            this.pendingReminders = JSON.parse(saved);
+            console.log('📥 Rappels chargés:', this.pendingReminders.length);
+        } else {
+            console.log('📥 Aucun rappel sauvegardé');
+            this.pendingReminders = [];
+        }
+    } catch (error) {
+        console.error('❌ Erreur chargement rappels:', error);
+        this.pendingReminders = [];
+    }
+}
+
+    showBulkSendDashboard() {
+        const messages = bulkPreparationSystem.preparedMessages;
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 90%; max-height: 90vh;">
+                <div class="modal-header">
+                    <h2>🚀 Envoi Groupé WhatsApp</h2>
+                    <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; height: 70vh;">
+                    <!-- Colonne gauche : Liste des messages -->
+                    <div style="background: var(--bg-secondary); padding: 20px; border-radius: 10px; overflow-y: auto;">
+                        <h3>📋 Messages à Envoyer (${messages.length})</h3>
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <button class="btn btn-success" onclick="bulkSendManager.startGuidedSend()">
+                                🚀 Lancer l'Envoi Guidé
+                            </button>
+                            <button class="btn btn-info" onclick="bulkPreparationSystem.downloadInstructions()">
+                                📄 Télécharger Instructions
+                            </button>
+                        </div>
+                        
+                        <div id="messagesList">
+                            ${messages.map((msg, index) => `
+                                <div class="message-item" style="padding: 15px; border: 1px solid var(--border-color); 
+                                      border-radius: 8px; margin-bottom: 10px; background: var(--bg-primary);">
+                                    <div style="display: flex; justify-content: space-between; align-items: start;">
+                                        <div>
+                                            <strong>${msg.member.first_name} ${msg.member.last_name}</strong>
+                                            <div style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 5px;">
+                                                📞 ${msg.member.phone_number} • 
+                                                ${msg.type === 'reminder' ? '🔔 Rappel' : '🎉 Bienvenue'}
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-primary btn-sm" 
+                                                onclick="bulkSendManager.sendSingleMessage(${index})">
+                                            📤 Envoyer
+                                        </button>
+                                    </div>
+                                    <div style="margin-top: 10px; padding: 10px; background: var(--bg-tertiary); 
+                                          border-radius: 5px; font-size: 0.9rem;">
+                                        ${msg.preparedMessage}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <!-- Colonne droite : Instructions -->
+                    <div style="background: var(--bg-secondary); padding: 20px; border-radius: 10px;">
+                        <h3>📝 Instructions d'Envoi</h3>
+                        <div style="background: var(--bg-primary); padding: 15px; border-radius: 8px; margin-bottom: 15px;">
+                            <h4 style="color: var(--primary-color); margin-bottom: 10px;">🚀 Mode Guidé (Recommandé)</h4>
+                            <ol style="margin: 0; padding-left: 20px;">
+                                <li>Cliquez sur "Lancer l'Envoi Guidé"</li>
+                                <li>Le système ouvrira WhatsApp automatiquement</li>
+                                <li>Confirmez l'envoi du message</li>
+                                <li>Passez au suivant automatiquement</li>
+                            </ol>
+                        </div>
+                        
+                        <div style="background: var(--bg-primary); padding: 15px; border-radius: 8px;">
+                            <h4 style="color: var(--primary-color); margin-bottom: 10px;">📊 Mode Manuel</h4>
+                            <ul style="margin: 0; padding-left: 20px;">
+                                <li>Cliquez sur "Envoyer" pour chaque message</li>
+                                <li>Ou téléchargez le fichier d'instructions</li>
+                                <li>Envoyez les messages à votre rythme</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+}
+// ★★★★★ SYSTÈME DE PRÉPARATION GROUPÉE
+// ★★★★★ SYSTÈME DE PRÉPARATION GROUPÉE (CORRIGÉ)
+class BulkPreparationSystem {
+    constructor() {
+        this.preparedMessages = [];
+    }
+
+    // Préparer tous les messages en attente
+    async prepareAllMessages() {
+        this.preparedMessages = [];
+        
+        for (const reminder of autoDetectionSystem.pendingReminders) {
+            const message = this.createMessage(reminder);
+            this.preparedMessages.push({
+    member: reminder.member,
+    type: 'reminder',
+    preparedMessage: message,
+    whatsappUrl: this.createWhatsAppUrl(reminder.member.phone_number, message)
+});
+
+        }
+        
+        return this.preparedMessages;
+    }
+
+    // Créer le message personnalisé (SEULEMENT RAPPEL)
+    createMessage(reminder) {
+        if (reminder.type === 'reminder') {
+            const template = autoSMSConfig.messages?.reminder || 
+                "Bonjour {PRENOM}, votre abonnement au club {CLUB} expire dans {JOURS} jours. Pensez à le renouveler !";
+            
+            return template
+                .replace(/{PRENOM}/g, reminder.member.first_name)
+                .replace(/{NOM}/g, reminder.member.last_name)
+                .replace(/{ID}/g, reminder.member.id)
+                .replace(/{CLUB}/g, currentClub?.name || 'Club Kyokushin')
+                .replace(/{JOURS}/g, reminder.daysLeft.toString())
+                .replace(/{FIN_ABONNEMENT}/g, computeEndDate(reminder.member).toLocaleDateString('fr-FR'));
+        }
+        
+        return ""; // Pas de message de bienvenue
+    }
+
+    // ★★★★★ CORRECTION : Créer l'URL WhatsApp FONCTIONNEL
+   // ★★★★★ CORRECTION : Créer l'URL WhatsApp FONCTIONNEL
+   createWhatsAppUrl(phone, message) {
+    if (!phone) return "#";
+
+    // 1. Nettoyer le numéro (supprimer tout sauf chiffres)
+    let cleanPhone = phone.toString().trim().replace(/\D/g, "");
+
+    // 2. Gérer le cas du numéro local commençant par 0
+    if (cleanPhone.startsWith("0")) {
+        cleanPhone = "213" + cleanPhone.substring(1);
+    }
+
+    // 3. S'assurer qu'il commence par 213
+    if (!cleanPhone.startsWith("213")) {
+        cleanPhone = "213" + cleanPhone;
+    }
+
+    // ⚠️ IMPORTANT : wa.me n'accepte PAS les "+"
+    // Donc on ne met PAS +213 (sinon message ne s'affiche pas)
+
+    // 4. Encoder le message
+    const encodedMessage = encodeURIComponent(message);
+
+    // 5. Construire l’URL WhatsApp correcte
+    const whatsappUrl = `https://wa.me/${cleanPhone}?text=${encodedMessage}`;
+
+    console.log("📱 URL WhatsApp générée:", whatsappUrl);
+    return whatsappUrl;
+}
+
+
+    // Générer un fichier d'instructions
+    generateInstructionsFile() {
+        let content = "📱 MESSAGES WHATSAPP - CLUB KYOKUSHIN\n\n";
+        content += `Date: ${new Date().toLocaleDateString('fr-FR')}\n`;
+        content += `Total: ${this.preparedMessages.length} message(s)\n\n`;
+        
+        this.preparedMessages.forEach((msg, index) => {
+            content += `=== Message ${index + 1} ===\n`;
+            content += `👤 Destinataire: ${msg.member.first_name} ${msg.member.last_name}\n`;
+            content += `📞 Téléphone: ${msg.member.phone_number}\n`;
+            content += `📝 Type: ${msg.type === 'reminder' ? '🔔 Rappel' : '🎉 Bienvenue'}\n`;
+            content += `💬 Message:\n${msg.preparedMessage}\n\n`;
+            content += `🔗 Lien WhatsApp: ${msg.whatsappUrl}\n\n`;
+            content += "─".repeat(50) + "\n\n";
+        });
+        
+        content += "📝 INSTRUCTIONS:\n";
+        content += "1. Cliquez sur chaque lien WhatsApp\n";
+        content += "2. Confirmez l'envoi du message\n";
+        content += "3. Passez au lien suivant\n";
+        content += "4. Les messages sont pré-remplis automatiquement\n";
+        
+        return content;
+    }
+
+    // Télécharger le fichier d'instructions
+    downloadInstructions() {
+        const content = this.generateInstructionsFile();
+        const blob = new Blob([content], { type: 'text/plain; charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `messages_whatsapp_${new Date().toISOString().split('T')[0]}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+}
+
+// ★★★★★ GESTIONNAIRE D'ENVOI GROUPÉ
+class BulkSendManager {
+    constructor() {
+        this.currentIndex = 0;
+        this.isSending = false;
+        this.messages = [];
+    }
+
+    // Démarrer l'envoi guidé
+    async startGuidedSend() {
+        this.messages = bulkPreparationSystem.preparedMessages;
+        this.currentIndex = 0;
+        this.isSending = true;
+        
+        if (this.messages.length === 0) {
+            alert('❌ Aucun message à envoyer');
+            return;
+        }
+
+        // Fermer la modal
+        document.querySelector('.modal.active')?.remove();
+        
+        // Démarrer le processus
+        this.sendNextMessage();
+    }
+
+    // Envoyer le message suivant
+    async sendNextMessage() {
+        if (!this.isSending || this.currentIndex >= this.messages.length) {
+            this.isSending = false;
+            this.showCompletionMessage();
+            return;
+        }
+
+        const currentMessage = this.messages[this.currentIndex];
+        
+        // Afficher la confirmation
+        const confirmed = await this.showSendConfirmation(currentMessage);
+        
+        if (confirmed) {
+            // Ouvrir WhatsApp
+            const link = document.createElement('a');
+link.href = currentMessage.whatsappUrl;
+link.target = "_blank";
+link.click();
+            
+            // Passer au suivant après délai
+            setTimeout(() => {
+                this.currentIndex++;
+                this.sendNextMessage();
+            }, 2000);
+        } else {
+            this.isSending = false;
+        }
+    }
+
+    // Confirmation d'envoi
+    showSendConfirmation(message) {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'modal active';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 500px; text-align: center;">
+                    <div class="modal-header">
+                        <h2>📱 Envoi Guidé</h2>
+                    </div>
+                    <div style="padding: 20px;">
+                        <div style="font-size: 3rem; margin-bottom: 20px;">🚀</div>
+                        <h3 style="color: var(--primary-color); margin-bottom: 15px;">
+                            Message ${this.currentIndex + 1}/${this.messages.length}
+                        </h3>
+                        
+                        <div style="background: var(--bg-secondary); padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                            <div style="font-weight: bold; margin-bottom: 10px;">
+                                👤 ${message.member.first_name} ${message.member.last_name}
+                            </div>
+                            <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                                ${message.preparedMessage}
+                            </div>
+                        </div>
+<button 
+    onclick="this.closest('.modal').remove(); bulkSendManager.sendAllMessages();" 
+    style="
+        width: 100%;
+        padding: 14px 18px;
+        background: #25d366;
+        color: white;
+        font-size: 1.05rem;
+        font-weight: 600;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: 0.2s ease-in-out;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    "
+    onmouseover="this.style.background='#1ebe5c'"
+    onmouseout="this.style.background='#25d366'"
+>
+    <span style="font-size: 1.3rem;">📤</span>
+    Ouvrir WhatsApp (Envoyer à tous)
+</button>
+
+
+
+
+                        
+                        <div style="margin-top: 15px; font-size: 0.9rem; color: var(--text-secondary);">
+                            WhatsApp va s'ouvrir automatiquement...
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+        });
+    }
+
+    // Envoyer un message unique
+   // Dans la classe BulkSendManager - CORRECTION de sendSingleMessage
+// Dans la classe BulkSendManager - CORRECTION de sendSingleMessage
+// Dans la classe BulkSendManager - CORRECTION de sendSingleMessage
+sendSingleMessage(index) {
+    const message = bulkPreparationSystem.preparedMessages[index];
+    if (message && message.whatsappUrl && message.whatsappUrl !== '#') {
+        console.log('📤 Ouverture WhatsApp:', message.whatsappUrl);
+        
+        // Ouvrir dans un nouvel onglet avec les bonnes dimensions
+        const width = 800;
+        const height = 600;
+        const left = (screen.width - width) / 2;
+        const top = (screen.height - height) / 2;
+        
+        const newWindow = window.open(
+            message.whatsappUrl, 
+            '_blank',
+            `width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+        );
+        
+        if (!newWindow) {
+            alert('❌ Popup bloqué! Veuillez autoriser les popups pour WhatsApp.');
+            // Alternative: rediriger dans le même onglet
+            if (confirm('Voulez-vous être redirigé vers WhatsApp dans cet onglet ?')) {
+                window.location.href = message.whatsappUrl;
+            }
+        }
+    } else {
+        alert('❌ URL WhatsApp invalide ou numéro manquant');
+    }
+}
+// Amélioration de la fonction d'envoi groupé
+async sendAllMessages() {
+    const messages = bulkPreparationSystem.preparedMessages;
+    
+    for (let i = 0; i < messages.length; i++) {
+        // Attendre un court délai entre chaque envoi
+        if (i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+        
+        this.sendSingleMessage(i);
+        
+        // Afficher la progression
+        this.showProgress(i + 1, messages.length);
+    }
+}
+
+// Fonction pour afficher la progression
+showProgress(current, total) {
+    console.log(`📤 Progression: ${current}/${total} messages envoyés`);
+    
+    // Mettre à jour l'interface si nécessaire
+    const progressElement = document.getElementById('sendProgress');
+    if (progressElement) {
+        progressElement.textContent = `Progression: ${current}/${total}`;
+    }
+}
+showClickableStep(index, url) {
+    const container = document.querySelector('#whatsapp-progress-steps');
+    if (!container) return;
+
+    const step = document.createElement("div");
+    step.innerHTML = `
+        <button 
+            style="
+                margin-top: 10px;
+                padding: 8px 12px;
+                background: #25d366;
+                border: none;
+                border-radius: 8px;
+                color: white;
+                cursor: pointer;
+            "
+            onclick="window.open('${url}', '_blank')"
+        >
+            ➤ Envoyer message #${index + 1}
+        </button>
+    `;
+    
+    container.appendChild(step);
+}
+
+
+// Fonction pour afficher la progression
+showProgress(current, total) {
+    console.log(`📤 Progression: ${current}/${total} messages envoyés`);
+    
+    // Mettre à jour l'interface si nécessaire
+    const progressElement = document.getElementById('sendProgress');
+    if (progressElement) {
+        progressElement.textContent = `Progression: ${current}/${total}`;
+    }
+}
+    // Message de completion
+    showCompletionMessage() {
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 400px; text-align: center;">
+                <div style="padding: 30px;">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">🎉</div>
+                    <h2 style="color: var(--success-color); margin-bottom: 15px;">
+                        Envoi Terminé !
+                    </h2>
+                    <p style="margin-bottom: 25px; color: var(--text-secondary);">
+                        ✅ ${this.messages.length} message(s) préparés<br>
+                        📱 Tous les liens WhatsApp ont été ouverts
+                    </p>
+                    <button class="btn btn-primary" onclick="this.closest('.modal').remove()">
+                        👍 Compris
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Nettoyer les rappels envoyés
+        autoDetectionSystem.pendingReminders = [];
+        autoDetectionSystem.savePendingReminders();
+        autoDetectionSystem.hideNotification();
+    }
+}
+ // AFFICHER LA PROGRESSION DE L'ENVOI
+function showSendingProgress(total) {
+    // Créer le modal de progression
+    const progressModal = document.createElement('div');
+    progressModal.id = 'sendingProgressModal';
+    progressModal.innerHTML = `
+        <div class="modal active">
+            <div class="modal-content" style="max-width: 500px; text-align: center;">
+                <div class="modal-header">
+                    <h2>🚀 Envoi en cours</h2>
+                </div>
+                <div style="padding: 20px;">
+                    <div class="spinner" style="margin: 20px auto;"></div>
+                    <h3 id="progressTitle">Préparation des messages...</h3>
+                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 10px; margin: 15px 0;">
+                        <div id="progressText" style="font-size: 0.9rem; color: var(--text-secondary);">
+                            Initialisation...
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 15px 0; font-size: 0.9rem;">
+                        <span>Progression:</span>
+                        <span id="progressCount">0/${total}</span>
+                    </div>
+                    <div class="progress-bar" style="width: 100%; height: 10px; background: var(--bg-tertiary); border-radius: 5px; overflow: hidden;">
+                        <div id="progressBarFill" style="height: 100%; background: var(--primary-color); width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <button class="btn btn-warning" onclick="cancelSending()" style="margin-top: 20px;">
+                        ❌ Annuler l'envoi
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(progressModal);
+}
+
+// METTRE À JOUR LA PROGRESSION
+function updateSendingProgress(current, total, currentMember) {
+    const progressTitle = document.getElementById('progressTitle');
+    const progressText = document.getElementById('progressText');
+    const progressCount = document.getElementById('progressCount');
+    const progressBarFill = document.getElementById('progressBarFill');
+    
+    if (progressTitle) {
+        progressTitle.textContent = `Envoi ${current}/${total}`;
+    }
+    
+    if (progressText && currentMember) {
+        progressText.innerHTML = `
+            <strong>${currentMember.first_name} ${currentMember.last_name}</strong><br>
+            <small>📞 ${currentMember.phone_number}</small>
+        `;
+    }
+    
+    if (progressCount) {
+        progressCount.textContent = `${current}/${total}`;
+    }
+    
+    if (progressBarFill) {
+        const percentage = (current / total) * 100;
+        progressBarFill.style.width = `${percentage}%`;
+    }
+}
+
+// CACHER LA PROGRESSION
+function hideSendingProgress() {
+    const progressModal = document.getElementById('sendingProgressModal');
+    if (progressModal) {
+        progressModal.remove();
+    }
+}
+
+// ANNULER L'ENVOI
+function cancelSending() {
+    hideSendingProgress();
+    showNotification('Envoi annulé', 'L\'envoi des messages a été annulé', 'warning');
+}
+
+// AFFICHER LE RÉSULTAT FINAL
+function showFinalResult(success, error, total) {
+    let message, type;
+    
+    if (success === total) {
+        message = `✅ Succès complet ! ${success} message(s) préparé(s)`;
+        type = 'success';
+    } else if (success > 0) {
+        message = `⚠️ Succès partiel : ${success} message(s) préparé(s), ${error} erreur(s)`;
+        type = 'warning';
+    } else {
+        message = `❌ Échec : Aucun message n'a pu être préparé`;
+        type = 'danger';
+    }
+    
+    // Modal de résultat détaillé
+    const resultModal = document.createElement('div');
+    resultModal.innerHTML = `
+        <div class="modal active">
+            <div class="modal-content" style="max-width: 500px; text-align: center;">
+                <div class="modal-header">
+                    <h2>📊 Résultat de l'envoi</h2>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">
+                        ${success === total ? '🎉' : success > 0 ? '⚠️' : '❌'}
+                    </div>
+                    <h3 style="color: ${success === total ? 'var(--success-color)' : success > 0 ? 'var(--warning-color)' : 'var(--danger-color)'}; margin-bottom: 15px;">
+                        ${message}
+                    </h3>
+                    
+                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 10px; margin: 15px 0;">
+                        <div style="display: flex; justify-content: space-around; text-align: center;">
+                            <div>
+                                <div style="font-size: 2rem; color: var(--success-color);">${success}</div>
+                                <div style="font-size: 0.8rem;">Succès</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 2rem; color: var(--danger-color);">${error}</div>
+                                <div style="font-size: 0.8rem;">Erreurs</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 2rem; color: var(--primary-color);">${total}</div>
+                                <div style="font-size: 0.8rem;">Total</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; font-size: 0.9rem; color: var(--text-secondary);">
+                        <strong>Instructions :</strong><br>
+                        1. WhatsApp s'ouvre avec le message pré-rempli<br>
+                        2. Vérifiez le message dans la zone de texte<br>
+                        3. Appuyez sur ENTRER pour envoyer<br>
+                        4. Fermez l'onglet et passez au suivant
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="this.closest('.modal').remove()" style="margin-top: 20px;">
+                        👍 Compris
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(resultModal);
+}       // ============================================
         // STATE MANAGEMENT
-        // ============================================
-        let currentUser = null;
-        let currentClub = null;
-        let selectedMemberForPhoto = null;
-        let html5QrCode = null;
-        let notificationContainer = null;
+    // ============================================
+// STATE MANAGEMENT
+// ============================================
+let currentUser = null;
+let currentClub = null;
+let selectedMemberForPhoto = null;
+let html5QrCode = null;
+let notificationContainer = null;
+let allSMSMembers = [];
 
+let selectedMembersForSMS = [];
+let personalSMSHistory = JSON.parse(localStorage.getItem('kyokushinPersonalSMSHistory')) || [];
+let autoSMSHistory = JSON.parse(localStorage.getItem('kyokushinAutoSMSHistory')) || [];
+let autoSMSConfig = JSON.parse(localStorage.getItem('kyokushinAutoSMSConfig')) || {
+    enabled: false,
+    reminderDays: 7,
+    reminderTime: "10:00",
+    messages: {
+        reminder: "Bonjour {PRENOM}, votre abonnement au club {CLUB} expire dans {JOURS} jours. Pensez à le renouveler !",
+        welcome: "Bienvenue {PRENOM} au club {CLUB} ! Votre abonnement commence aujourd'hui. Bon entraînement !"
+    }
+};
+
+// ★★★★★ INITIALISATION DES SYSTÈMES AUTOMATIQUES
+const autoDetectionSystem = new AutoDetectionSystem();
+const bulkPreparationSystem = new BulkPreparationSystem();
+const bulkSendManager = new BulkSendManager();
+
+// Fonction de démarrage
+function startAutoSystems() {
+    // Démarrer la surveillance automatique si configurée
+    if (autoSMSConfig.enabled) {
+        console.log('🚀 Démarrage des systèmes automatiques...');
+        autoDetectionSystem.startDailyCheck();
+    }
+    
+    // Charger les rappels en attente
+    autoDetectionSystem.loadPendingReminders();
+}
 // ============================================
 // NOTIFICATION MANAGEMENT
 // ============================================
@@ -2248,21 +3502,26 @@ function notifyAttendance(member) {
             }
             startSubscriptionMonitoring();
         }
-
         function showMainApp() {
-            document.getElementById('loginPage').classList.add('hidden');
-            document.getElementById('mainApp').classList.remove('hidden');
-            
-            document.getElementById('userDisplay').textContent = currentUser;
-            document.getElementById('clubNameDisplay').textContent = currentClub.name;
+    document.getElementById('loginPage').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    
+    document.getElementById('userDisplay').textContent = currentUser;
+    document.getElementById('clubNameDisplay').textContent = currentClub.name;
 
-            setupNavigation();
-            loadDashboard();
-            // Vérifier les abonnements expirés après la connexion
-setTimeout(() => {
-    checkExpiredSubscriptions();
-}, 2000);
-        }
+    setupNavigation();
+    loadDashboard();
+    
+    // ★★★★★ DÉMARRER LES SYSTÈMES AUTOMATIQUES
+    startAutoSystems();
+
+    // Vérifier les abonnements expirés après la connexion
+    setTimeout(() => {
+        checkExpiredSubscriptions();
+    }, 2000);
+}
+
+// ★★★★★ FONCTION DE DÉMARRAGE DES SYSTÈMES
 
         function logout() {
             sessionStorage.clear();
@@ -2279,7 +3538,783 @@ setTimeout(() => {
 // ============================================
 // SUBSCRIPTION MONITORING
 // ============================================
+// ============================================
+// SYSTÈME SMS COMPLET
+// ============================================
 
+// Variables globales
+
+
+// Initialisation de la section SMS
+// ============================================
+// SYSTÈME SMS/WHATSAPP CORRIGÉ
+// ============================================
+
+// Variables globales pour SMS
+
+
+// Initialisation de la section SMS
+function initSMSSection() {
+    console.log('📱 Initialisation section SMS...');
+    setupSMSNavigation();
+    loadMembersForSMS();
+    loadAutoSMSConfig();
+}
+
+// Navigation par onglets SMS
+function setupSMSNavigation() {
+    const smsTabs = document.querySelectorAll('[data-sms-tab]');
+    
+    smsTabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            // Désactiver tous les onglets SMS
+            document.querySelectorAll('[data-sms-tab]').forEach(t => {
+                t.classList.remove('active');
+            });
+            document.querySelectorAll('.sms-tab-content').forEach(c => {
+                c.classList.remove('active');
+            });
+            
+            // Activer l'onglet courant
+            this.classList.add('active');
+            const tabId = this.getAttribute('data-sms-tab');
+            const content = document.getElementById(tabId);
+            if (content) {
+                content.classList.add('active');
+            }
+        });
+    });
+}
+
+// Charger les membres pour la sélection SMS
+async function loadMembersForSMS() {
+    try {
+        const container = document.getElementById('membersSMSList');
+        container.innerHTML = '<div class="spinner"></div><p style="text-align: center;">Chargement des adhérents...</p>';
+
+        let query = supabase.from('members').select('*');
+        if (currentUser !== 'admin') {
+            query = query.eq('club_id', currentClub.id);
+        }
+
+        const { data: members, error } = await query;
+
+        if (error) throw error;
+
+        if (!members || members.length === 0) {
+            container.innerHTML = `
+                <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">👥</div>
+                    <h4>Aucun adhérent trouvé</h4>
+                    <p>Ajoutez des adhérents pour pouvoir envoyer des messages.</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Trier les membres par ordre alphabétique (nom puis prénom)
+        const sortedMembers = members.sort((a, b) => {
+            // Comparaison par nom de famille
+            const lastNameComparison = a.last_name.localeCompare(b.last_name);
+            if (lastNameComparison !== 0) {
+                return lastNameComparison;
+            }
+            // Si même nom, comparer par prénom
+            return a.first_name.localeCompare(b.first_name);
+        });
+
+        // Sauvegarder tous les membres triés
+        allSMSMembers = sortedMembers;
+
+        // Afficher la liste des membres triés
+        container.innerHTML = sortedMembers.map(member => {
+            const isActive = isSubscriptionActive(member);
+            const isSelected = selectedMembersForSMS.some(m => m.id === member.id);
+
+            return `
+                <div class="member-sms-item ${isSelected ? 'selected' : ''}"
+                     onclick="toggleSMSMemberSelection('${member.id}')">
+                    <input type="checkbox" 
+                           ${isSelected ? 'checked' : ''}
+                           onchange="toggleSMSMemberSelection('${member.id}')"
+                           style="transform: scale(1.2); margin-right: 10px;">
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: var(--text-primary);">
+                            ${member.last_name} ${member.first_name}
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+                            <div>📱 ${member.phone_number || 'Téléphone non renseigné'}</div>
+                            <div>🆔 ${member.id} • 
+                                <span class="${isActive ? 'text-success' : 'text-danger'}">
+                                    ${isActive ? '✅ Actif' : '❌ Expiré'}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        updateSMSCounters();
+
+    } catch (error) {
+        console.error('❌ Erreur chargement membres SMS:', error);
+        const container = document.getElementById('membersSMSList');
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                ❌ Erreur lors du chargement des adhérents: ${error.message}
+            </div>
+        `;
+    }
+}
+
+// Gestion de la sélection des membres pour SMS
+function toggleSMSMemberSelection(memberId) {
+    const member = allSMSMembers.find(m => m.id === memberId);
+    if (!member) return;
+
+    const isSelected = selectedMembersForSMS.some(m => m.id === memberId);
+    
+    if (isSelected) {
+        // Retirer de la sélection
+        selectedMembersForSMS = selectedMembersForSMS.filter(m => m.id !== memberId);
+    } else {
+        // Ajouter à la sélection
+        selectedMembersForSMS.push(member);
+    }
+
+    // Mettre à jour l'affichage
+    const memberElement = document.querySelector(`.member-sms-item[onclick="toggleSMSMemberSelection('${memberId}')"]`);
+    if (memberElement) {
+        const checkbox = memberElement.querySelector('input[type="checkbox"]');
+        checkbox.checked = !isSelected;
+        memberElement.classList.toggle('selected', !isSelected);
+    }
+
+    updateSMSCounters();
+}
+
+// Sélectionner tous les membres
+function selectAllMembersForSMS() {
+    selectedMembersForSMS = [...allSMSMembers];
+    updateCheckboxes();
+    updateSMSCounters();
+    showNotification('Sélection', `${allSMSMembers.length} adhérents sélectionnés`, 'success');
+}
+
+// Sélectionner seulement les membres actifs
+function selectActiveMembersForSMS() {
+    selectedMembersForSMS = allSMSMembers.filter(member => isSubscriptionActive(member));
+    updateCheckboxes();
+    updateSMSCounters();
+    showNotification('Sélection', `${selectedMembersForSMS.length} adhérents actifs sélectionnés`, 'success');
+}
+
+// Sélectionner seulement les membres expirés
+function selectExpiredMembersForSMS() {
+    selectedMembersForSMS = allSMSMembers.filter(member => !isSubscriptionActive(member));
+    updateCheckboxes();
+    updateSMSCounters();
+    showNotification('Sélection', `${selectedMembersForSMS.length} adhérents expirés sélectionnés`, 'warning');
+}
+
+// Effacer la sélection
+function clearSMSSelection() {
+    selectedMembersForSMS = [];
+    updateCheckboxes();
+    updateSMSCounters();
+    showNotification('Sélection', 'Sélection effacée', 'info');
+}
+
+// Mettre à jour toutes les cases à cocher
+function updateCheckboxes() {
+    const checkboxes = document.querySelectorAll('#membersSMSList input[type="checkbox"]');
+    checkboxes.forEach(checkbox => {
+        const memberId = checkbox.getAttribute('onchange').split("'")[1];
+        const isSelected = selectedMembersForSMS.some(m => m.id === memberId);
+        checkbox.checked = isSelected;
+        const memberElement = checkbox.closest('.member-sms-item');
+        if (memberElement) {
+            memberElement.classList.toggle('selected', isSelected);
+        }
+    });
+}
+
+// Mettre à jour les compteurs SMS
+function updateSMSCounters() {
+    const count = selectedMembersForSMS.length;
+    const validMembers = selectedMembersForSMS.filter(m => m.phone_number && m.phone_number.trim() !== '');
+    
+    // Mettre à jour le badge de compteur
+    const selectedCountBadge = document.getElementById('selectedCount');
+    if (selectedCountBadge) {
+        selectedCountBadge.textContent = `${count} adhérent(s) sélectionné(s) (${validMembers.length} avec téléphone)`;
+        selectedCountBadge.className = `badge ${count > 0 ? 'badge-success' : 'badge-info'}`;
+    }
+    
+    // Mettre à jour le bouton d'envoi
+    const sendButton = document.getElementById('sendPersonalSMSBtn');
+    if (sendButton) {
+        sendButton.textContent = `📤 Envoyer les messages WhatsApp (${validMembers.length} destinataires)`;
+        sendButton.disabled = validMembers.length === 0;
+    }
+}
+
+// Insérer une variable dans le message
+function insertVariable(variable) {
+    const textarea = document.getElementById('whatsappMessage');
+    if (!textarea) return;
+    
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    
+    textarea.value = text.substring(0, start) + variable + text.substring(end);
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = start + variable.length;
+    
+    updateMessagePreview();
+}
+
+// Mettre à jour l'aperçu du message
+function updateMessagePreview() {
+    const message = document.getElementById('whatsappMessage')?.value || '';
+    const preview = document.getElementById('messagePreview');
+    
+    if (!preview) return;
+    
+    if (!message.trim()) {
+        preview.textContent = 'Le message apparaîtra ici...';
+        return;
+    }
+    
+    // Remplacer les variables par des exemples
+    let previewText = message
+        .replace(/{PRENOM}/g, 'Jean')
+        .replace(/{NOM}/g, 'DUPONT')
+        .replace(/{ID}/g, 'KYO001')
+        .replace(/{CLUB}/g, currentClub?.name || 'Votre Club')
+        .replace(/{FIN_ABONNEMENT}/g, '15/12/2024');
+    
+    preview.textContent = previewText;
+}
+
+// FONCTION PRINCIPALE D'ENVOI CORRIGÉE
+// FONCTION PRINCIPALE D'ENVOI CORRIGÉE - MESSAGE PRÉ-REMPLI GARANTI
+async function sendBulkWhatsAppMessages() {
+    const message = document.getElementById('whatsappMessage')?.value.trim();
+    
+    if (!message) {
+        alert('❌ Veuillez saisir un message');
+        return;
+    }
+
+    // Filtrer les membres avec numéro de téléphone valide
+    const validMembers = selectedMembersForSMS.filter(member => 
+        member.phone_number && member.phone_number.trim() !== ''
+    );
+
+    if (validMembers.length === 0) {
+        alert('❌ Aucun destinataire avec numéro de téléphone valide');
+        return;
+    }
+
+    if (!confirm(`📤 Préparer ${validMembers.length} message(s) WhatsApp ?\n\nLe système va ouvrir chaque conversation WhatsApp avec le message pré-rempli.`)) {
+        return;
+    }
+
+    let successCount = 0;
+    let errorCount = 0;
+
+    // Afficher un modal de progression
+    showSendingProgress(validMembers.length);
+
+    // Envoyer les messages avec un délai entre chaque ouverture
+    for (let i = 0; i < validMembers.length; i++) {
+        const member = validMembers[i];
+        const success = await sendSingleWhatsAppMessage(member, message, i, validMembers.length);
+        
+        if (success) {
+            successCount++;
+        } else {
+            errorCount++;
+        }
+
+        // Mettre à jour la progression
+        updateSendingProgress(i + 1, validMembers.length, member);
+        
+        // Délai plus long entre les envois pour laisser le temps à WhatsApp de charger
+        if (i < validMembers.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+    }
+
+    // Cacher la progression
+    hideSendingProgress();
+
+    // Afficher le résultat final
+    showFinalResult(successCount, errorCount, validMembers.length);
+
+    // Sauvegarder dans l'historique
+    saveToSMSHistory(message, validMembers.length, successCount, errorCount);
+}
+// Envoyer un seul message WhatsApp
+// ENVOYER UN SEUL MESSAGE WHATSAPP - VERSION CORRIGÉE POUR MESSAGE PRÉ-REMPLI
+async function sendSingleWhatsAppMessage(member, template, index, total) {
+    return new Promise((resolve) => {
+        try {
+            // Personnaliser le message
+            const personalizedMessage = personalizeMessage(template, member);
+            
+            // Nettoyer le numéro de téléphone - VERSION CORRIGÉE
+            const cleanPhone = cleanPhoneNumberForWhatsApp(member.phone_number);
+            
+            if (!cleanPhone) {
+                console.error(`❌ Numéro invalide pour ${member.first_name}: ${member.phone_number}`);
+                resolve(false);
+                return;
+            }
+
+            // CRÉATION DE L'URL WHATSAPP - VERSION CORRIGÉE POUR MESSAGE PRÉ-REMPLI
+            const encodedMessage = encodeURIComponent(personalizedMessage);
+            
+            // ⚠️ IMPORTANT : Format d'URL qui fonctionne pour le message pré-rempli
+            const whatsappUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodedMessage}&app_absent=0`;
+            
+            console.log(`📱 Préparation message ${index + 1}/${total}: ${member.first_name} ${member.last_name}`);
+            console.log(`📞 Numéro: ${cleanPhone}`);
+            console.log(`💬 Message: ${personalizedMessage.substring(0, 50)}...`);
+            console.log(`🔗 URL: ${whatsappUrl.substring(0, 100)}...`);
+            
+            // Essayer d'abord avec web.whatsapp.com (version desktop)
+            attemptSendWithDesktopVersion(cleanPhone, encodedMessage, member, index, total)
+                .then(success => {
+                    if (success) {
+                        resolve(true);
+                    } else {
+                        // Fallback: version standard
+                        attemptSendWithStandardVersion(cleanPhone, encodedMessage, member)
+                            .then(fallbackSuccess => {
+                                resolve(fallbackSuccess);
+                            });
+                    }
+                });
+
+        } catch (error) {
+            console.error(`❌ Erreur envoi à ${member.first_name}:`, error);
+            resolve(false);
+        }
+    });
+}
+
+// TENTATIVE AVEC VERSION DESKTOP (web.whatsapp.com)
+function attemptSendWithDesktopVersion(phone, encodedMessage, member, index, total) {
+    return new Promise((resolve) => {
+        const desktopUrl = `https://web.whatsapp.com/send?phone=${phone}&text=${encodedMessage}&app_absent=0`;
+        
+        const desktopWindow = window.open(desktopUrl, `whatsapp_desktop_${member.id}`, 
+            'width=1200,height=800,scrollbars=yes,resizable=yes');
+        
+        if (desktopWindow) {
+            console.log(`✅ Version desktop ouverte pour ${member.first_name}`);
+            
+            // Vérifier après un délai si la fenêtre est toujours ouverte
+            setTimeout(() => {
+                if (!desktopWindow.closed) {
+                    resolve(true);
+                } else {
+                    resolve(false);
+                }
+            }, 3000);
+            
+        } else {
+            console.log(`❌ Version desktop bloquée pour ${member.first_name}`);
+            resolve(false);
+        }
+    });
+}
+
+// FALLBACK: VERSION STANDARD (wa.me)
+function attemptSendWithStandardVersion(phone, encodedMessage, member) {
+    return new Promise((resolve) => {
+        const standardUrl = `https://wa.me/${phone}?text=${encodedMessage}`;
+        
+        const standardWindow = window.open(standardUrl, `whatsapp_std_${member.id}`, 
+            'width=800,height=600,scrollbars=yes,resizable=yes');
+        
+        if (standardWindow) {
+            console.log(`✅ Version standard ouverte pour ${member.first_name}`);
+            
+            setTimeout(() => {
+                if (!standardWindow.closed) {
+                    resolve(true);
+                } else {
+                    resolve(false);
+                }
+            }, 2000);
+            
+        } else {
+            console.log(`❌ Version standard bloquée pour ${member.first_name}`);
+            
+            // Dernier recours: ouvrir dans le même onglet
+            if (confirm(`Les popups sont bloqués pour ${member.first_name}. Voulez-vous ouvrir WhatsApp dans cet onglet ? (Vous devrez revenir manuellement)`)) {
+                window.location.href = standardUrl;
+                resolve(true);
+            } else {
+                resolve(false);
+            }
+        }
+    });
+}
+
+// Nettoyer le numéro de téléphone
+// NETTOYAGE DU NUMÉRO POUR WHATSAPP - VERSION CORRIGÉE
+function cleanPhoneNumberForWhatsApp(phone) {
+    if (!phone) {
+        console.error('❌ Numéro vide');
+        return null;
+    }
+    
+    // Supprimer tous les caractères non numériques
+    let cleanPhone = phone.toString().replace(/\D/g, '');
+    
+    console.log(`🔧 Nettoyage numéro: "${phone}" -> "${cleanPhone}"`);
+    
+    // Vérifier la longueur minimale
+    if (cleanPhone.length < 8) {
+        console.error('❌ Numéro trop court:', cleanPhone);
+        return null;
+    }
+    
+    // GESTION DES FORMATS DE NUMÉRO
+    
+    // Format international avec +
+    if (phone.includes('+')) {
+        // Garder seulement les chiffres après le +
+        cleanPhone = phone.replace(/\D/g, '');
+        console.log(`🌍 Format international détecté: ${cleanPhone}`);
+    }
+    // Format local commençant par 0
+    else if (cleanPhone.startsWith('0')) {
+        // Convertir en format international pour l'Algérie
+        cleanPhone = '213' + cleanPhone.substring(1);
+        console.log(`🇩🇿 Format local converti: ${cleanPhone}`);
+    }
+    // Numéro sans indicatif
+    else if (cleanPhone.length >= 9 && cleanPhone.length <= 10) {
+        // Ajouter l'indicatif Algérie
+        cleanPhone = '213' + cleanPhone;
+        console.log(`📞 Indicatif ajouté: ${cleanPhone}`);
+    }
+    
+    // Vérification finale
+    if (!cleanPhone.startsWith('213')) {
+        console.warn(`⚠️ Numéro ne commence pas par 213: ${cleanPhone}`);
+        // On essaye quand même, WhatsApp peut gérer d'autres formats
+    }
+    
+    // Vérifier la longueur finale
+    if (cleanPhone.length < 9 || cleanPhone.length > 15) {
+        console.error(`❌ Longueur invalide: ${cleanPhone.length} chiffres`);
+        return null;
+    }
+    
+    console.log(`✅ Numéro final: ${cleanPhone}`);
+    return cleanPhone;
+}
+// AFFICHER LA PROGRESSION DE L'ENVOI
+function showSendingProgress(total) {
+    // Créer le modal de progression
+    const progressModal = document.createElement('div');
+    progressModal.id = 'sendingProgressModal';
+    progressModal.innerHTML = `
+        <div class="modal active">
+            <div class="modal-content" style="max-width: 500px; text-align: center;">
+                <div class="modal-header">
+                    <h2>🚀 Envoi en cours</h2>
+                </div>
+                <div style="padding: 20px;">
+                    <div class="spinner" style="margin: 20px auto;"></div>
+                    <h3 id="progressTitle">Préparation des messages...</h3>
+                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 10px; margin: 15px 0;">
+                        <div id="progressText" style="font-size: 0.9rem; color: var(--text-secondary);">
+                            Initialisation...
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin: 15px 0; font-size: 0.9rem;">
+                        <span>Progression:</span>
+                        <span id="progressCount">0/${total}</span>
+                    </div>
+                    <div class="progress-bar" style="width: 100%; height: 10px; background: var(--bg-tertiary); border-radius: 5px; overflow: hidden;">
+                        <div id="progressBarFill" style="height: 100%; background: var(--primary-color); width: 0%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <button class="btn btn-warning" onclick="cancelSending()" style="margin-top: 20px;">
+                        ❌ Annuler l'envoi
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(progressModal);
+}
+
+// METTRE À JOUR LA PROGRESSION
+function updateSendingProgress(current, total, currentMember) {
+    const progressTitle = document.getElementById('progressTitle');
+    const progressText = document.getElementById('progressText');
+    const progressCount = document.getElementById('progressCount');
+    const progressBarFill = document.getElementById('progressBarFill');
+    
+    if (progressTitle) {
+        progressTitle.textContent = `Envoi ${current}/${total}`;
+    }
+    
+    if (progressText && currentMember) {
+        progressText.innerHTML = `
+            <strong>${currentMember.first_name} ${currentMember.last_name}</strong><br>
+            <small>📞 ${currentMember.phone_number}</small>
+        `;
+    }
+    
+    if (progressCount) {
+        progressCount.textContent = `${current}/${total}`;
+    }
+    
+    if (progressBarFill) {
+        const percentage = (current / total) * 100;
+        progressBarFill.style.width = `${percentage}%`;
+    }
+}
+
+// CACHER LA PROGRESSION
+function hideSendingProgress() {
+    const progressModal = document.getElementById('sendingProgressModal');
+    if (progressModal) {
+        progressModal.remove();
+    }
+}
+
+// ANNULER L'ENVOI
+function cancelSending() {
+    hideSendingProgress();
+    showNotification('Envoi annulé', 'L\'envoi des messages a été annulé', 'warning');
+}
+
+// AFFICHER LE RÉSULTAT FINAL
+function showFinalResult(success, error, total) {
+    let message, type;
+    
+    
+    // Modal de résultat détaillé
+    const resultModal = document.createElement('div');
+    resultModal.innerHTML = `
+        <div class="modal active">
+            <div class="modal-content" style="max-width: 500px; text-align: center;">
+                <div class="modal-header">
+                    <h2>📊 Résultat de l'envoi</h2>
+                </div>
+                <div style="padding: 20px;">
+                    <div style="font-size: 4rem; margin-bottom: 20px;">
+                        ${success === total ? '🎉' : success > 0 ? '⚠️' : '❌'}
+                    </div>
+                    <h3 style="color: ${success === total ? 'var(--success-color)' : success > 0 ? 'var(--warning-color)' : 'var(--danger-color)'}; margin-bottom: 15px;">
+                        ${message}
+                    </h3>
+                    
+                    <div style="background: var(--bg-secondary); padding: 15px; border-radius: 10px; margin: 15px 0;">
+                        <div style="display: flex; justify-content: space-around; text-align: center;">
+                            <div>
+                                <div style="font-size: 2rem; color: var(--success-color);">${success}</div>
+                                <div style="font-size: 0.8rem;">Succès</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 2rem; color: var(--danger-color);">${error}</div>
+                                <div style="font-size: 0.8rem;">Erreurs</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 2rem; color: var(--primary-color);">${total}</div>
+                                <div style="font-size: 0.8rem;">Total</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div style="margin-top: 20px; font-size: 0.9rem; color: var(--text-secondary);">
+                        <strong>Instructions :</strong><br>
+                        1. WhatsApp s'ouvre avec le message pré-rempli<br>
+                        2. Vérifiez le message dans la zone de texte<br>
+                        3. Appuyez sur ENTRER pour envoyer<br>
+                        4. Fermez l'onglet et passez au suivant
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="this.closest('.modal').remove()" style="margin-top: 20px;">
+                        👍 Compris
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(resultModal);
+}
+
+// Personnaliser le message avec les variables
+function personalizeMessage(template, member) {
+    const endDate = computeEndDate(member);
+    const daysLeft = Math.ceil((endDate - new Date()) / (1000 * 3600 * 24));
+    
+    return template
+        .replace(/{PRENOM}/g, member.first_name || '')
+        .replace(/{NOM}/g, member.last_name || '')
+        .replace(/{ID}/g, member.id || '')
+        .replace(/{CLUB}/g, currentClub?.name || 'Club Kyokushin')
+        .replace(/{FIN_ABONNEMENT}/g, endDate ? endDate.toLocaleDateString('fr-FR') : 'N/A')
+        .replace(/{JOURS}/g, daysLeft > 0 ? daysLeft.toString() : '0');
+}
+
+// Sauvegarder dans l'historique
+function saveToSMSHistory(message, total, success, error) {
+    const historyEntry = {
+        date: new Date().toISOString(),
+        message: message,
+        total: total,
+        success: success,
+        error: error
+    };
+    
+    let history = JSON.parse(localStorage.getItem('kyokushinSMSHistory') || '[]');
+    history.unshift(historyEntry);
+    
+    // Garder seulement les 50 derniers messages
+    if (history.length > 50) {
+        history = history.slice(0, 50);
+    }
+    
+    localStorage.setItem('kyokushinSMSHistory', JSON.stringify(history));
+}
+
+// ============================================
+// SYSTÈME DE RAPPELS AUTOMATIQUES
+// ============================================
+
+
+// Activer/désactiver les SMS automatiques
+function toggleAutoSMS() {
+    const enabled = document.getElementById('autoSMSEnabled')?.checked || false;
+    const configSection = document.getElementById('autoSMSConfig');
+    
+    if (configSection) {
+        configSection.style.display = enabled ? 'block' : 'none';
+    }
+    
+    autoSMSConfig.enabled = enabled;
+    saveAutoSMSConfig();
+    
+    if (enabled) {
+        showNotification('SMS Automatiques', '✅ Service activé', 'success');
+    } else {
+        showNotification('SMS Automatiques', '❌ Service désactivé', 'warning');
+    }
+}
+
+// Charger la configuration
+function loadAutoSMSConfig() {
+    const enabledCheckbox = document.getElementById('autoSMSEnabled');
+    const reminderDays = document.getElementById('reminderDays');
+    const reminderTime = document.getElementById('reminderTime');
+    const reminderMessage = document.getElementById('reminderMessage');
+    
+    if (enabledCheckbox) enabledCheckbox.checked = autoSMSConfig.enabled;
+    if (reminderDays) reminderDays.value = autoSMSConfig.reminderDays || 7;
+    if (reminderTime) reminderTime.value = autoSMSConfig.reminderTime || "10:00";
+    if (reminderMessage) reminderMessage.value = autoSMSConfig.messages?.reminder || "";
+    
+    toggleAutoSMS();
+}
+
+// Sauvegarder la configuration
+function saveAutoSMSConfig() {
+    const enabled = document.getElementById('autoSMSEnabled')?.checked || false;
+    const reminderDays = parseInt(document.getElementById('reminderDays')?.value) || 7;
+    const reminderTime = document.getElementById('reminderTime')?.value || "10:00";
+    const reminderMessage = document.getElementById('reminderMessage')?.value || "";
+    
+    autoSMSConfig = {
+        enabled: enabled,
+        reminderDays: reminderDays,
+        reminderTime: reminderTime,
+        messages: {
+            reminder: reminderMessage
+        }
+    };
+    
+    localStorage.setItem('kyokushinAutoSMSConfig', JSON.stringify(autoSMSConfig));
+    showNotification('Configuration sauvegardée', 'Les paramètres des rappels automatiques ont été sauvegardés', 'success');
+}
+
+// Tester le système de rappels
+async function testReminderSystem() {
+    try {
+        showNotification('Test', '🔍 Recherche des abonnements expirant bientôt...', 'info');
+        
+        let query = supabase.from('members').select('*');
+        if (currentUser !== 'admin') {
+            query = query.eq('club_id', currentClub.id);
+        }
+
+        const { data: members, error } = await query;
+        if (error) throw error;
+
+        const now = new Date();
+        const expiringMembers = [];
+
+        members.forEach(member => {
+            if (!member.phone_number) return;
+            
+            const endDate = computeEndDate(member);
+            const daysLeft = Math.ceil((endDate - now) / (1000 * 3600 * 24));
+            
+            if (daysLeft === autoSMSConfig.reminderDays) {
+                expiringMembers.push({
+                    member: member,
+                    daysLeft: daysLeft
+                });
+            }
+        });
+
+        if (expiringMembers.length === 0) {
+            showNotification('Test', '✅ Aucun rappel à envoyer pour le moment', 'success');
+            return;
+        }
+
+        // Préparer l'envoi des rappels
+        selectedMembersForSMS = expiringMembers.map(item => item.member);
+        
+        // Utiliser le message de rappel automatique
+        document.getElementById('whatsappMessage').value = autoSMSConfig.messages.reminder;
+        updateMessagePreview();
+        
+        // Basculer vers l'onglet personnalisé
+        document.querySelector('[data-sms-tab="personal-sms"]').click();
+        
+        // Mettre à jour l'interface
+        updateCheckboxes();
+        updateSMSCounters();
+        
+        showNotification(
+            'Rappels préparés',
+            `📋 ${expiringMembers.length} rappel(s) d'abonnement préparé(s)\n\nCliquez sur "Envoyer les messages WhatsApp" pour les ouvrir`,
+            'success'
+        );
+
+    } catch (error) {
+        console.error('Erreur test rappels:', error);
+        showNotification('Erreur', '❌ Impossible de tester les rappels', 'danger');
+    }
+}
+
+// N'oubliez pas d'ajouter dans setupNavigation() :
+// if (section === 'smsSection') initSMSSection();
 function computeEndDate(member) {
     const start = new Date(member.start_date);
     const end = new Date(start);
@@ -2446,7 +4481,7 @@ function startSubscriptionMonitoring() {
                 { id: 'validation', label: '✅ Validation', section: 'validationSection' },
                 { id: 'attendance', label: '📋 Présences', section: 'attendanceListSection' },
                 { id: 'cards', label: '🎫 Cartes', section: 'cardsSection' },
-               
+                { id: 'sms', label: '💬 SMS', section: 'smsSection' },
 { id: 'competitions', label: '🏆 Compétitions', section: 'competitionsSection' }
             ];
 
@@ -2473,9 +4508,19 @@ function startSubscriptionMonitoring() {
                     if (section === 'preferencesSection') loadPreferences();
                     if (section === 'addMemberSection') loadClubsForMember();
                     if (section === 'competitionsSection') loadMembersForCompetition();
+                    if (section === 'smsSection') {
+    initSMSSection();
+    
+    // ★★★★★ AJOUT IMPORTANT : Recharger les notifications quand on revient sur l'onglet SMS
+    setTimeout(() => {
+        autoDetectionSystem.loadPendingReminders();
+    }, 500);
+}
+                
                 });
             });
         }
+// ★★★★★ FONCTION À AJOUTER - Démarrage des systèmes automatiques
 
         // ============================================
         // DASHBOARD
@@ -2724,10 +4769,12 @@ function startSubscriptionMonitoring() {
 }
 
 // Nouvelle fonction pour appliquer tous les filtres
+// Nouvelle fonction pour appliquer tous les filtres
 function applyFilters(members) {
     const filter = document.getElementById('filterStatus').value;
     const searchTerm = document.getElementById('searchName').value.toLowerCase().trim();
-    
+    const sortOrder = document.getElementById('sortOrder')?.value || 'alphabetical';
+
     let filteredMembers = [];
 
     if (members && members.length > 0) {
@@ -2787,10 +4834,36 @@ function applyFilters(members) {
                 return filter === "all"; // Inclure dans "tous" si erreur de date
             }
         });
+
+        // Appliquer le tri après le filtrage
+        filteredMembers.sort((a, b) => {
+            if (sortOrder === 'alphabetical') {
+                // Tri alphabétique par nom puis prénom
+                let lastCompare = a.last_name.localeCompare(b.last_name);
+                if (lastCompare !== 0) return lastCompare;
+                return a.first_name.localeCompare(b.first_name);
+            } else if (sortOrder === 'birthdateAsc') {
+                // Plus jeune → plus âgé (dates de naissance les plus récentes en premier)
+                const da = a.dob ? new Date(a.dob) : null;
+                const db = b.dob ? new Date(b.dob) : null;
+                if (!da && !db) return 0;
+                if (!da) return 1;
+                if (!db) return -1;
+                return da - db;
+            } else if (sortOrder === 'birthdateDesc') {
+                // Plus âgé → plus jeune (dates de naissance les plus anciennes en premier)
+                const da = a.dob ? new Date(a.dob) : null;
+                const db = b.dob ? new Date(b.dob) : null;
+                if (!da && !db) return 0;
+                if (!da) return 1;
+                if (!db) return -1;
+                return db - da;
+            }
+            return 0;
+        });
     }
 
     return filteredMembers;
-
 }
 
 // Fonction pour afficher le loading
@@ -3209,24 +5282,28 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 document.getElementById('filterStatus').addEventListener('change', loadMembers);
-function checkExpiredMembers(members) {
-  const now = new Date();
-  const expiredToday = members.filter(member => {
-    const start = new Date(member.start_date);
-    const end = new Date(start);
-    switch (member.subscription) {
-      case "monthly": end.setMonth(end.getMonth() + 1); break;
-      case "quarterly": end.setMonth(end.getMonth() + 3); break;
-      case "biannual": end.setMonth(end.getMonth() + 6); break;
-      case "annual": end.setFullYear(end.getFullYear() + 1); break;
-    }
-    // Compare la date de fin à aujourd’hui
-    return end.toDateString() === now.toDateString();
-  });
+let expirationNotificationShown = false;
+let persistentNotificationShown = false;
 
-  if (expiredToday.length > 0) {
-    alert(`⚠️ ${expiredToday.length} adhérent(s) ont expiré aujourd’hui !`);
-  }
+function checkExpiredMembers(members) {
+    const now = new Date();
+    const expiredToday = members.filter(member => {
+        const start = new Date(member.start_date);
+        const end = new Date(start);
+        switch (member.subscription) {
+            case "monthly": end.setMonth(end.getMonth() + 1); break;
+            case "quarterly": end.setMonth(end.getMonth() + 3); break;
+            case "biannual": end.setMonth(end.getMonth() + 6); break;
+            case "annual": end.setFullYear(end.getFullYear() + 1); break;
+        }
+        return end.toDateString() === now.toDateString();
+    });
+
+    // N’affiche qu’une fois par session
+    if (expiredToday.length > 0 && !expirationNotificationShown) {
+        alert(`⚠️ ${expiredToday.length} adhérent(s) ont expiré aujourd’hui !`);
+        expirationNotificationShown = true;
+    }
 }
 
 // Appelle cette fonction après avoir chargé les membres
