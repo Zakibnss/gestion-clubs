@@ -1772,6 +1772,8 @@
             </div>
 
            <!-- Dans la section Cards Generation -->
+<!-- Dans la section Cards Generation -->
+<!-- Dans la section Cards Generation -->
 <div id="cardsSection" class="content-section">
     <div class="card">
         <div class="card-header">
@@ -1789,7 +1791,15 @@
                 <small class="form-text text-muted">Image pour la face arrière de la carte</small>
             </div>
         </div>
-        <button class="btn btn-primary" id="loadMembersForCardsBtn">📋 Charger les adhérents</button>
+        <button class="btn btn-primary" onclick="loadMembersForCards()" id="loadMembersForCardsBtn" style="margin: 20px 0;">
+            📋 Charger les adhérents
+        </button>
+        
+        <!-- Conteneur pour la sélection des membres -->
+        <div id="cardsGrid" style="margin-top: 20px;"></div>
+        
+        <!-- Conteneur pour la prévisualisation des cartes -->
+        <div id="cardsPreview" style="margin-top: 30px; display: flex; flex-direction: column; align-items: center;"></div>
     </div>
 </div>
 
@@ -7137,16 +7147,25 @@ function stopScanner() {
 // ============================================
 async function loadMembersForCards() {
     try {
-        // Construire la requête de base
+        console.log('🔄 Chargement des membres pour les cartes...');
+        
+        // Vérifier que l'élément existe
+        const grid = document.getElementById('cardsGrid');
+        if (!grid) {
+            console.error('❌ Élément cardsGrid non trouvé');
+            return;
+        }
+
+        // Afficher un indicateur de chargement
+        grid.innerHTML = '<div class="spinner"></div><p style="text-align: center;">Chargement des adhérents...</p>';
+
+        // Construire la requête
         let query = supabase.from('members').select('*');
         
-        // Appliquer le filtre par club seulement si l'utilisateur n'est pas admin ET si le club existe
         if (currentUser !== 'admin') {
             if (currentClub && currentClub.id) {
                 query = query.eq('club_id', currentClub.id);
             } else {
-                // Afficher l'erreur directement dans le conteneur des cartes
-                const grid = document.getElementById('cardsGrid');
                 grid.innerHTML = `
                     <div class="alert alert-danger">
                         ❌ Erreur: Club non trouvé. Veuillez vous reconnecter.
@@ -7155,15 +7174,13 @@ async function loadMembersForCards() {
                 return;
             }
         }
-        
-        // Exécuter la requête
+
         const { data: members, error } = await query;
 
         if (error) throw error;
 
         // Vérifier si des membres ont été trouvés
         if (!members || members.length === 0) {
-            const grid = document.getElementById('cardsGrid');
             grid.innerHTML = `
                 <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--text-secondary);">
                     <h3>📋 Aucun adhérent trouvé</h3>
@@ -7177,81 +7194,62 @@ async function loadMembersForCards() {
         }
 
         // Afficher la liste des membres avec cases à cocher
-        const grid = document.getElementById('cardsGrid');
-        grid.innerHTML = `
-            <div style="grid-column: 1/-1; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                    <h3>Sélectionnez les adhérents pour générer les cartes</h3>
-                    <div>
-                        <button class="btn btn-info btn-sm" onclick="selectAllMembers()">✓ Tout sélectionner</button>
-                        <button class="btn btn-secondary btn-sm" onclick="deselectAllMembers()">✗ Tout désélectionner</button>
+       // Afficher la liste des membres avec cases à cocher
+grid.innerHTML = `
+    <div style="grid-column: 1/-1; margin-bottom: 20px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <h3>Sélectionnez les adhérents pour générer les cartes</h3>
+            <div>
+                <button class="btn btn-info btn-sm" onclick="selectAllMembers()">✓ Tout sélectionner</button>
+                <button class="btn btn-secondary btn-sm" onclick="deselectAllMembers()">✗ Tout désélectionner</button>
+            </div>
+        </div>
+        <button class="btn btn-success" onclick="generateSelectedCards()" style="margin-top: 15px; width: 100%;">
+            🎫 Générer les cartes sélectionnées (${members.length} adhérent(s) disponible(s))
+        </button>
+    </div>
+    ${members.map(member => `
+        <div class="member-selection-card" style="cursor: pointer;">
+            <div class="member-selection-item" onclick="toggleMemberSelection('${member.id}')" 
+                 style="display: flex; align-items: center; gap: 12px; padding: 15px; background: var(--bg-secondary); border-radius: 12px; transition: var(--transition); border: 2px solid var(--border-color);">
+                <input type="checkbox" value="${member.id}" name="cardMember" class="member-checkbox" 
+                       onclick="event.stopPropagation(); toggleMemberSelection('${member.id}')"
+                       style="transform: scale(1.2);">
+                <div style="flex: 1;">
+                    <div style="font-weight: 600; color: var(--text-primary);">${member.last_name} ${member.first_name}</div>
+                    <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
+                        <div>ID: ${member.id}</div>
+                        <div>Date naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
+                        ${member.blood_type ? `<div>Groupe sanguin: ${member.blood_type}</div>` : ''}
                     </div>
                 </div>
-                <button class="btn btn-success" onclick="generateSelectedCards()" style="margin-top: 15px; width: 100%;">
-                    🎫 Générer les cartes sélectionnées (${members.length} adhérent(s) disponible(s))
-                </button>
+                ${member.photo_url ? 
+                    `<img src="${member.photo_url}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 2px solid var(--primary-color);" 
+                          onerror="this.style.display='none';">` : 
+                    '<div style="width: 50px; height: 50px; border-radius: 8px; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; color: var(--text-secondary);">📷</div>'
+                }
             </div>
-            ${members.map(member => `
-                <div class="member-selection-card">
-                    <label style="display: flex; align-items: center; gap: 12px; padding: 15px; background: var(--bg-secondary); border-radius: 12px; cursor: pointer; transition: var(--transition); border: 2px solid var(--border-color);">
-                        <input type="checkbox" value="${member.id}" name="cardMember" class="member-checkbox">
-                        <div style="flex: 1;">
-                            <div style="font-weight: 600; color: var(--text-primary);">${member.last_name} ${member.first_name}</div>
-                            <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 4px;">
-                                <div>ID: ${member.id}</div>
-                                <div>Date naissance: ${new Date(member.dob).toLocaleDateString('fr-FR')}</div>
-                                ${member.blood_type ? `<div>Groupe sanguin: ${member.blood_type}</div>` : ''}
-                            </div>
-                        </div>
-                        ${member.photo_url ? 
-                            `<img src="${member.photo_url}" style="width: 50px; height: 50px; border-radius: 8px; object-fit: cover; border: 2px solid var(--primary-color);" 
-                                  onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` : 
-                            ''
-                        }
-                        <div style="width: 50px; height: 50px; border-radius: 8px; background: var(--bg-tertiary); display: flex; align-items: center; justify-content: center; color: var(--text-secondary); ${member.photo_url ? 'display: none;' : ''}">📷</div>
-                    </label>
-                </div>
-            `).join('')}
-            
-            <div style="grid-column: 1/-1; margin-top: 20px;">
-                <div class="alert alert-info">
-                    <strong>📝 Instructions :</strong><br>
-                    1. Sélectionnez les adhérents pour lesquels vous souhaitez générer des cartes<br>
-                    2. Uploader une image d'arrière-plan si nécessaire<br>
-                    3. Cliquez sur "Générer les cartes sélectionnées"<br>
-                    4. Téléchargez chaque carte individuellement avec le bouton "💾 Télécharger PNG"
-                </div>
-            </div>
-        `;
+        </div>
+    `).join('')}
+`;
+         
 
-        // Ajouter le style pour l'effet hover
-        if (!document.getElementById('card-selection-styles')) {
-            const style = document.createElement('style');
-            style.id = 'card-selection-styles';
-            style.textContent = `
-                .member-selection-card label:hover {
-                    background: var(--bg-tertiary) !important;
-                    border-color: var(--primary-color) !important;
-                    transform: translateY(-2px);
-                }
-                .member-checkbox:checked + div {
-                    background: rgba(200, 16, 46, 0.1);
-                }
-            `;
-            document.head.appendChild(style);
-        }
+        console.log('✅ Membres chargés avec succès pour la génération de cartes');
 
     } catch (error) {
         console.error('Error loading members for cards:', error);
         const grid = document.getElementById('cardsGrid');
-        grid.innerHTML = `
-            <div class="alert alert-danger">
-                ❌ Erreur lors du chargement des membres: ${error.message}
-            </div>
-        `;
+        if (grid) {
+            grid.innerHTML = `
+                <div class="alert alert-danger">
+                    ❌ Erreur lors du chargement des membres: ${error.message}
+                </div>
+            `;
+        }
     }
 }
 
+// Fonctions utilitaires pour la sélection
 // Fonctions utilitaires pour la sélection
 function selectAllMembers() {
     const checkboxes = document.querySelectorAll('.member-checkbox');
@@ -7283,7 +7281,79 @@ document.addEventListener('click', function(e) {
         updateGenerateButton();
     }
 });
-      
+// Fonction pour basculer la sélection d'un membre
+function toggleMemberSelection(memberId) {
+    const checkbox = document.querySelector(`input[value="${memberId}"]`);
+    if (checkbox) {
+        checkbox.checked = !checkbox.checked;
+        updateMemberSelectionStyle(memberId, checkbox.checked);
+        updateGenerateButton();
+    }
+}
+
+// Fonction pour mettre à jour le style visuel de sélection
+function updateMemberSelectionStyle(memberId, isSelected) {
+    const memberItem = document.querySelector(`input[value="${memberId}"]`).closest('.member-selection-item');
+    if (memberItem) {
+        if (isSelected) {
+            memberItem.style.background = 'rgba(200, 16, 46, 0.1)';
+            memberItem.style.borderColor = 'var(--primary-color)';
+        } else {
+            memberItem.style.background = 'var(--bg-secondary)';
+            memberItem.style.borderColor = 'var(--border-color)';
+        }
+    }
+}
+
+// Fonctions utilitaires pour la sélection
+function selectAllMembers() {
+    const checkboxes = document.querySelectorAll('.member-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        updateMemberSelectionStyle(checkbox.value, true);
+    });
+    updateGenerateButton();
+}
+
+function deselectAllMembers() {
+    const checkboxes = document.querySelectorAll('.member-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        updateMemberSelectionStyle(checkbox.value, false);
+    });
+    updateGenerateButton();
+}
+
+function updateGenerateButton() {
+    const selectedCount = document.querySelectorAll('.member-checkbox:checked').length;
+    const button = document.querySelector('.btn-success');
+    if (button) {
+        button.textContent = `🎫 Générer les cartes sélectionnées (${selectedCount} adhérent(s) sélectionné(s))`;
+        button.disabled = selectedCount === 0;
+    }
+}
+// Ajouter cette fonction pour injecter les styles
+function addCardSelectionStyles() {
+    if (!document.getElementById('card-selection-styles')) {
+        const style = document.createElement('style');
+        style.id = 'card-selection-styles';
+        style.textContent = `
+            .member-selection-card label:hover {
+                background: var(--bg-tertiary) !important;
+                border-color: var(--primary-color) !important;
+                transform: translateY(-2px);
+            }
+            .member-checkbox:checked + div {
+                background: rgba(200, 16, 46, 0.1);
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+// Appelez cette fonction dans loadMembersForCards()
+// Ajoutez cette ligne après grid.innerHTML = ... dans loadMembersForCards()
+
 
 
 async function generateSelectedCards() {
@@ -7584,7 +7654,7 @@ async function generateCard(member, frontImageUrl, backImageUrl) {
     const qrContainer = document.createElement("div");
     qrContainer.style.cssText = `
         position: absolute;
-        left: 200px;
+        left: 180px;
         top: 550px;
         width: 300px;
         height: 300px;
@@ -7619,20 +7689,9 @@ async function generateCard(member, frontImageUrl, backImageUrl) {
         correctLevel: QRCode.CorrectLevel.H
     });
     const qrText = document.createElement("div");
-qrText.textContent = `ID: ${member.id}`;
-qrText.style.cssText = `
-    width: 300px;
-    background: #000;
-    color: #fff;
-    font-size: 20px;
-    font-weight: bold;
-    text-align: center;
-    padding:0 8px ;
-    border-radius: 0 0 12px 12px;
-    margin-top: 0px;
-`;
+
     qrContainer.appendChild(qrDiv);
-    qrContainer.appendChild(qrText);
+   
     backContentDiv.appendChild(qrContainer);
 
     // Ajouter le contenu à la carte verso
