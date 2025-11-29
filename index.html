@@ -7562,38 +7562,41 @@ async function generateCard(member, frontImageUrl, backImageUrl) {
     photoContainer.appendChild(photo);
     frontContentDiv.appendChild(photoContainer);
 
-    // Nom complet avec plus d'espace et plus grand
-  const nameDiv = document.createElement("div");
+    
+    const nameDiv = document.createElement("div");
 nameDiv.style.cssText = `
     position: absolute;
     left: 140px;
     top: 600px;
     width: 350px;
     text-align: center;
-`; 
-
-// Séparer les différentes parties du nom
-const lastName = member.last_name.toUpperCase();
-const firstName = member.first_name.toUpperCase();
-
-
-nameDiv.innerHTML = `
-    <div style="
-        font-size: 36px; 
-        font-weight: 890; 
-        color: #a81a10; 
-        line-height: 1.2; 
-        font-family: 'Poppins', sans-serif; 
-        text-align: center;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-        word-wrap: break-word;
-    ">
-        ${lastName} ${firstName}
-    </div>
+    font-weight: 890;
+    color: #a81a10;
+    font-family: 'Poppins', sans-serif;
+    line-height: 1.2;
+    word-break: break-word;
+    font-size: 36px;
 `;
+
+nameDiv.innerText = `${member.last_name.toUpperCase()} ${member.first_name.toUpperCase()}`;
+document.body.appendChild(nameDiv);
+
+let fontSize = 36;
+const minFontSize = 18; // taille minimale
+const lineHeightFactor = 1.2;
+
+let lineHeightPx = fontSize * lineHeightFactor;
+let numLines = Math.round(nameDiv.scrollHeight / lineHeightPx);
+
+// Réduction progressive douce
+while (numLines > 2 && fontSize > minFontSize) {
+    fontSize -= 1; // réduction 1px à la fois
+    nameDiv.style.fontSize = fontSize + "px";
+    lineHeightPx = fontSize * lineHeightFactor;
+    numLines = Math.round(nameDiv.scrollHeight / lineHeightPx);
+}
+
+
 
 
 
