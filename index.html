@@ -7575,15 +7575,24 @@ nameDiv.style.cssText = `
 // Séparer les différentes parties du nom
 const lastName = member.last_name.toUpperCase();
 const firstName = member.first_name.toUpperCase();
-const idText = `ID : ${member.id || ''}`; // Ajouter l'ID si disponible
+
 
 nameDiv.innerHTML = `
-    <div style="font-size: 36px; font-weight: 890; color: #a81a10; line-height: 1.2; font-family: 'Poppins', sans-serif;">
-        <div>${lastName}</div>
-        <div>${firstName}</div>
-        <div style="font-size: 28px; margin-top: 8px;">${idText}</div>
+    <div style="
+        font-size: 36px; 
+        font-weight: 890; 
+        color: #a81a10; 
+        line-height: 1.2; 
+        font-family: 'Poppins', sans-serif; 
+        white-space: nowrap; 
+        overflow: hidden; 
+        text-overflow: ellipsis;
+        text-align: center;
+    ">
+        ${lastName} ${firstName}
     </div>
-`; 
+`;
+
 
 frontContentDiv.appendChild(nameDiv);
 
