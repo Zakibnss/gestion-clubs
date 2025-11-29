@@ -7584,14 +7584,17 @@ nameDiv.innerHTML = `
         color: #a81a10; 
         line-height: 1.2; 
         font-family: 'Poppins', sans-serif; 
-        white-space: nowrap; 
-        overflow: hidden; 
-        text-overflow: ellipsis;
         text-align: center;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        word-wrap: break-word;
     ">
         ${lastName} ${firstName}
     </div>
 `;
+
 
 
 frontContentDiv.appendChild(nameDiv);
