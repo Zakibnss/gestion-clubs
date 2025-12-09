@@ -10070,114 +10070,136 @@ async function generateCard(member, frontImageUrl, backImageUrl) {
     `;
 
     // Photo en cercle positionnée précisément
-    const photoContainer = document.createElement("div");
+     const photoContainer = document.createElement("div");
     photoContainer.style.cssText = `
-        position: absolute;
-        left: 169px;
-        top: 255px;
-        width: 295px;
-        height: 295px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    `;
+    position: absolute;
+    left: 169px;
+    top: 255px;
+    width: 295px;
+    height: 295px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;  // Added to contain the image properly
+    border-radius: 50%; // Added to match the circular photo
+    background: white;  // Added background for better contrast
+    box-shadow: 0 4px 15px rgba(0,0,0,0.15); // Subtle shadow for depth
+`;
 
-    let photo;
-    if (member.photo_url) {
-        photo = document.createElement("img");
-        photo.crossOrigin = "anonymous";
-        photo.alt = member.first_name;
-        try {
-            const blob = await fetch(member.photo_url).then(r => r.blob());
+let photo;
+if (member.photo_url) {
+    photo = document.createElement("img");
+    photo.crossOrigin = "anonymous";
+    photo.alt = `${member.first_name} ${member.last_name}`;
+    
+    // Try to load the photo with error handling
+    try {
+        const response = await fetch(member.photo_url);
+        if (response.ok) {
+            const blob = await response.blob();
             const reader = new FileReader();
-            await new Promise(resolve => {
-                reader.onloadend = () => {
+            await new Promise((resolve, reject) => {
+                reader.onload = () => {
                     photo.src = reader.result;
                     resolve();
                 };
+                reader.onerror = reject;
                 reader.readAsDataURL(blob);
             });
-        } catch (err) {
-            console.error("Erreur chargement photo:", err);
-            photo = createPlaceholderPhoto();
+        } else {
+            throw new Error('Failed to fetch photo');
         }
-        photo.style.cssText = `
-            width: 300px;
-            height: 300px;
-            object-fit: cover;
-            border-radius: 50%;
-        `;
-    } else {
+    } catch (err) {
+        console.warn("Using placeholder photo:", err.message);
         photo = createPlaceholderPhoto();
-        photo.style.cssText = `
-            width: 316px;
-            height: 316px;
-            object-fit: cover;
-            border-radius: 50%;
-            border: 4px solid white;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        `;
     }
-    photoContainer.appendChild(photo);
+    
+    photo.style.cssText = `
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        border-radius: 50%;
+        border: 3px solid white;  // Added border for better definition
+        box-sizing: border-box;   // Ensure border doesn't overflow
+        image-rendering: auto;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: crisp-edges;
+        filter: brightness(1.05); // Slight brightness for better appearance
+    `;
+} else {
+    photo = createPlaceholderPhoto();
+    photo.style.cssText = `
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 50%;
+        border: 4px solid white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        image-rendering: auto;
+        image-rendering: -webkit-optimize-contrast;
+        box-sizing: border-box;
+        background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%); // Subtle gradient for placeholder
+    `;
+}
+
+photoContainer.appendChild(photo);
     frontContentDiv.appendChild(photoContainer);
-
-    // Nom complet avec plus d'espace et plus grand
-    const nameDiv = document.createElement("div"); 
-    nameDiv.style.cssText = `
-        position: absolute;
-        left: 140px;
-        top: 600px;
-        width: 350px;
-        text-align: center;
-    `; 
-    const fullName = `${member.last_name.toUpperCase()} ${member.first_name.toUpperCase()}`; 
-    nameDiv.innerHTML = `
-        <div style="font-size: 36px; font-weight: 890; color: #a81a10; line-height: 1.2; font-family: 'Poppins', sans-serif;">
-            ${fullName}
-        </div>
-    `; 
-    frontContentDiv.appendChild(nameDiv);
-
-    // Informations (ID, DDN, GS) positionnées avec plus d'espace
     const infoContainer = document.createElement("div");
-    infoContainer.style.cssText = `
-        position: absolute;
-        left: 150px;
-        top: 700px;
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-    `;
+infoContainer.style.cssText = `
+    position: absolute;
+    left: 150px;
+    top: 580px;  // Removed space between 580 and px
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+`;
 
-    // ID
-    const idDiv = document.createElement("div");
-    idDiv.innerHTML = `
-        <div style="font-size: 35px; font-weight: 700; color: black; font-family: 'Poppins', sans-serif;">
-            ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${member.id}
-        </div>
-    `;
+// Nom complet avec plus d'espace et plus grand
+const nameDiv = document.createElement("div"); 
+nameDiv.style.cssText = `
+    width: 300px;
+    text-align: center;
+    margin-bottom: 10px;  // Added margin instead of absolute positioning
+`; 
 
-    // Date de naissance
-    const dobDiv = document.createElement("div");
-    const formattedDob = new Date(member.dob).toLocaleDateString('fr-FR');
-    dobDiv.innerHTML = `
-        <div style="font-size: 35px; font-weight: 700; color: black; font-family: 'Poppins', sans-serif;">
-            DDN&nbsp;&nbsp;: ${formattedDob}
-        </div>
-    `;
+const fullName = `${member.last_name.toUpperCase()} ${member.first_name.toUpperCase()}`; 
+nameDiv.innerHTML = `
+    <div style="font-size: 33px; font-weight: 800; color: #a81a10; line-height: 1.2; font-family: 'Poppins', sans-serif;">
+        ${fullName}
+    </div>
+`; 
 
-    // Groupe sanguin
-    const bloodDiv = document.createElement("div");
-    bloodDiv.innerHTML = `
-        <div style="font-size: 35px; font-weight: 700; color: black; font-family: 'Poppins', sans-serif;">
-            G.S&nbsp;&nbsp;&nbsp;: ${member.blood_type || 'N/A'}
-        </div>
-    `;
+// ID
+const idDiv = document.createElement("div");
+idDiv.innerHTML = `
+    <div style="font-size: 35px; font-weight: 700; color: black; font-family: 'Poppins', sans-serif;">
+        ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${member.id}
+    </div>
+`;
 
-    infoContainer.appendChild(idDiv);
-    infoContainer.appendChild(dobDiv);
-    infoContainer.appendChild(bloodDiv);
-    frontContentDiv.appendChild(infoContainer);
+// Date de naissance
+const dobDiv = document.createElement("div");
+const formattedDob = new Date(member.dob).toLocaleDateString('fr-FR');
+dobDiv.innerHTML = `
+    <div style="font-size: 35px; font-weight: 700; color: black; font-family: 'Poppins', sans-serif;">
+        DDN&nbsp;&nbsp;: ${formattedDob}
+    </div>
+`;
+
+// Groupe sanguin
+const bloodDiv = document.createElement("div");
+bloodDiv.innerHTML = `
+    <div style="font-size: 35px; font-weight: 700; color: black; font-family: 'Poppins', sans-serif;">
+        G.S&nbsp;&nbsp;&nbsp;: ${member.blood_type || 'N/A'}
+    </div>
+`;
+
+infoContainer.appendChild(nameDiv);
+infoContainer.appendChild(idDiv);
+infoContainer.appendChild(dobDiv);
+infoContainer.appendChild(bloodDiv);
+frontContentDiv.appendChild(infoContainer);
 
     // Ajouter le contenu à la carte recto
     frontCardDiv.appendChild(frontContentDiv);
