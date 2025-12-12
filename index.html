@@ -2819,10 +2819,10 @@ function displayEligibleMembers(members) {
         
         return `
             <div class="member-selection-item ${isSelected ? 'selected' : ''} ${isAlreadySent ? 'already-sent' : ''}" 
-                 onclick="toggleMemberSelection('${member.id}')"
+                 onclick="toggleMemberSelectionforcompetition('${member.id}')"
                  data-member-id="${member.id}">
                 <input type="checkbox" ${isSelected ? 'checked' : ''} ${isAlreadySent ? 'disabled' : ''}
-                       onchange="toggleMemberSelection('${member.id}')"
+                       onchange="toggleMemberSelectionforcompetition('${member.id}')"
                        style="transform: scale(1.2);">
                 <div class="member-selection-info">
                     <div class="member-selection-name">
@@ -2840,7 +2840,7 @@ function displayEligibleMembers(members) {
 }
 
 // Toggle sélection membre - CORRIGÉ
-function toggleMemberSelection(memberId) {
+function toggleMemberSelectionforcompetition(memberId) {
     const member = allEligibleMembers.find(m => m.id === memberId);
     if (!member) return;
     
@@ -10070,7 +10070,7 @@ async function generateCard(member, frontImageUrl, backImageUrl) {
     `;
 
     // Photo en cercle positionnée précisément
-     const photoContainer = document.createElement("div");
+    const photoContainer = document.createElement("div");
     photoContainer.style.cssText = `
     position: absolute;
     left: 169px;
