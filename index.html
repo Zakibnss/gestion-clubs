@@ -1054,7 +1054,103 @@
 #reader video {
     border-radius: 12px;
 }
+/* Styles pour les poules */
+.competition-tab-content {
+    display: none;
+}
 
+.competition-tab-content.active {
+    display: block;
+    animation: fadeIn 0.3s ease;
+}
+
+.poule-item {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+    transition: var(--transition);
+}
+
+.poule-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-sm);
+}
+
+.poule-image {
+    width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+    border-radius: 8px;
+    margin-top: 10px;
+    background: var(--bg-secondary);
+}
+
+.poule-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 15px;
+}
+
+.poule-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.poule-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+}
+
+.poule-preview {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 8px;
+    margin: 10px 0;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+}
+
+.poule-preview:hover {
+    transform: scale(1.05);
+}
+
+.poule-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.9);
+    z-index: 10000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.poule-modal.active {
+    display: flex;
+}
+
+.poule-modal-content {
+    max-width: 90%;
+    max-height: 90%;
+    background: var(--bg-primary);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.poule-modal-img {
+    max-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+}
 #scanResult {
     min-height: 80px;
     padding: 15px;
@@ -1669,30 +1765,326 @@
                     </div>
                 </div>
             </div>
-
+<!-- Manage Clubs Section (Admin Only) -->
+<div id="manageClubsSection" class="content-section">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🏢 Gestion des Clubs</h2>
+            <button class="btn btn-success" onclick="openModal('addClubModal')">
+                ➕ Ajouter un Club
+            </button>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Nom du Club</th>
+                        <th>Username</th>
+                        <th>Wilaya</th>
+                        <th>Logo</th>
+                        <th>Date création</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="clubsList"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
             <!-- Manage Clubs Section (Admin Only) -->
-            <div id="manageClubsSection" class="content-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">🏢 Gestion des Clubs</h2>
-                        <button class="btn btn-primary" id="addClubBtn">+ Ajouter un club</button>
+           <!-- Add Club Modal -->
+           <div id="addClubModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.5rem;">➕</span>
+                        <span>Ajouter un Nouveau Club</span>
+                    </h2>
+                    <button class="modal-close" onclick="closeModal('addClubModal')">&times;</button>
+                </div>
+                
+                <form id="addClubForm">
+                    <!-- Informations de base -->
+                    <div class="card" style="margin-bottom: 20px; background: var(--bg-secondary);">
+                        <div class="card-header">
+                            <h3 style="color: var(--primary-color); font-size: 1.2rem;">
+                                📋 Informations de base
+                            </h3>
+                        </div>
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label>
+                                    <span style="color: var(--danger-color);">*</span> 
+                                    Nom du club
+                                </label>
+                                <input type="text" id="clubName" class="form-control" 
+                                       placeholder="Ex: Club Karaté Flamme"
+                                       required
+                                       oninput="validateClubName()">
+                                <small class="form-text text-muted">
+                                    Nom officiel du club
+                                </small>
+                                <div id="clubNameError" class="text-danger" style="font-size: 0.85rem; margin-top: 5px; display: none;"></div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    <span style="color: var(--danger-color);">*</span> 
+                                    Username
+                                </label>
+                                <input type="text" id="clubUsername" class="form-control" 
+                                       placeholder="ex: flame_karate"
+                                       required
+                                       oninput="checkUsernameAvailability()">
+                                <small class="form-text text-muted">
+                                    Identifiant unique pour la connexion
+                                </small>
+                                <div id="usernameAvailability" style="font-size: 0.85rem; margin-top: 5px;"></div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Nom du club</th>
-                                    <th>Username</th>
-                                    <th>Logo</th>
-                                    <th>Date création</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="clubsList"></tbody>
-                        </table>
+                    
+                    <!-- Sécurité et localisation -->
+                    <div class="card" style="margin-bottom: 20px; background: var(--bg-secondary);">
+                        <div class="card-header">
+                            <h3 style="color: var(--primary-color); font-size: 1.2rem;">
+                                🔐 Sécurité et Localisation
+                            </h3>
+                        </div>
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label>
+                                    <span style="color: var(--danger-color);">*</span> 
+                                    Mot de passe
+                                </label>
+                                <div style="position: relative;">
+                                    <input type="password" id="clubPassword" class="form-control" 
+                                           placeholder="Minimum 6 caractères"
+                                           required
+                                           minlength="6"
+                                           oninput="validatePassword()">
+                                    <button type="button" class="toggle-password" 
+                                            onclick="togglePasswordVisibility('clubPassword', this)"
+                                            style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); 
+                                                   background: none; border: none; color: var(--text-secondary); cursor: pointer;">
+                                        👁️
+                                    </button>
+                                </div>
+                                <small class="form-text text-muted">
+                                    Minimum 6 caractères
+                                </small>
+                                <div id="passwordStrength" style="font-size: 0.85rem; margin-top: 5px;"></div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    <span style="color: var(--danger-color);">*</span> 
+                                    Confirmer le mot de passe
+                                </label>
+                                <input type="password" id="clubPasswordConfirm" class="form-control" 
+                                       placeholder="Retapez le mot de passe"
+                                       required
+                                       oninput="validatePasswordConfirm()">
+                                <div id="passwordConfirmError" class="text-danger" style="font-size: 0.85rem; margin-top: 5px; display: none;"></div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    📍 Wilaya
+                                </label>
+                                <select id="clubWilaya" class="form-control" style="height: 45px;">
+                                    <option value="">-- Sélectionner une wilaya --</option>
+                                    <option value="Adrar">Adrar</option>
+                                    <option value="Chlef">Chlef</option>
+                                    <option value="Laghouat">Laghouat</option>
+                                    <option value="Oum El Bouaghi">Oum El Bouaghi</option>
+                                    <option value="Batna">Batna</option>
+                                    <option value="Béjaïa">Béjaïa</option>
+                                    <option value="Biskra">Biskra</option>
+                                    <option value="Béchar">Béchar</option>
+                                    <option value="Blida">Blida</option>
+                                    <option value="Bouira">Bouira</option>
+                                    <option value="Tamanrasset">Tamanrasset</option>
+                                    <option value="Tébessa">Tébessa</option>
+                                    <option value="Tlemcen">Tlemcen</option>
+                                    <option value="Tiaret">Tiaret</option>
+                                    <option value="Tizi Ouzou">Tizi Ouzou</option>
+                                    <option value="Alger">Alger</option>
+                                    <option value="Djelfa">Djelfa</option>
+                                    <option value="Jijel">Jijel</option>
+                                    <option value="Sétif">Sétif</option>
+                                    <option value="Saïda">Saïda</option>
+                                    <option value="Skikda">Skikda</option>
+                                    <option value="Sidi Bel Abbès">Sidi Bel Abbès</option>
+                                    <option value="Annaba">Annaba</option>
+                                    <option value="Guelma">Guelma</option>
+                                    <option value="Constantine">Constantine</option>
+                                    <option value="Médéa">Médéa</option>
+                                    <option value="Mostaganem">Mostaganem</option>
+                                    <option value="M'Sila">M'Sila</option>
+                                    <option value="Mascara">Mascara</option>
+                                    <option value="Ouargla">Ouargla</option>
+                                    <option value="Oran">Oran</option>
+                                    <option value="El Bayadh">El Bayadh</option>
+                                    <option value="Illizi">Illizi</option>
+                                    <option value="Bordj Bou Arréridj">Bordj Bou Arréridj</option>
+                                    <option value="Boumerdès">Boumerdès</option>
+                                    <option value="El Tarf">El Tarf</option>
+                                    <option value="Tindouf">Tindouf</option>
+                                    <option value="Tissemsilt">Tissemsilt</option>
+                                    <option value="El Oued">El Oued</option>
+                                    <option value="Khenchela">Khenchela</option>
+                                    <option value="Souk Ahras">Souk Ahras</option>
+                                    <option value="Tipaza">Tipaza</option>
+                                    <option value="Mila">Mila</option>
+                                    <option value="Aïn Defla">Aïn Defla</option>
+                                    <option value="Naâma">Naâma</option>
+                                    <option value="Aïn Témouchent">Aïn Témouchent</option>
+                                    <option value="Ghardaïa">Ghardaïa</option>
+                                    <option value="Relizane">Relizane</option>
+                                </select>
+                                <small class="form-text text-muted">
+                                    Sélectionnez la wilaya du club
+                                </small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    🏙️ Ville/Commune
+                                </label>
+                                <input type="text" id="clubCity" class="form-control" 
+                                       placeholder="Ex: Bab Ezzouar, Sidi M'Hamed...">
+                                <small class="form-text text-muted">
+                                    Facultatif - Ville ou commune précise
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Logo et informations supplémentaires -->
+                    <div class="card" style="margin-bottom: 20px; background: var(--bg-secondary);">
+                        <div class="card-header">
+                            <h3 style="color: var(--primary-color); font-size: 1.2rem;">
+                                🖼️ Logo et Présentation
+                            </h3>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                🖼️ Logo du club
+                            </label>
+                            <div class="file-upload">
+                                <input type="file" id="clubLogoFile" class="form-control" 
+                                       accept="image/*" 
+                                       onchange="previewClubLogo()"
+                                       style="display: none;">
+                                <label for="clubLogoFile" class="file-upload-label">
+                                    <span style="font-size: 1.2rem;">📁</span>
+                                    <span>Télécharger un logo</span>
+                                </label>
+                            </div>
+                            <small class="form-text text-muted">
+                                Formats acceptés: JPG, PNG, SVG (Max: 2MB)
+                            </small>
+                            
+                            <!-- Prévisualisation du logo -->
+                            <div id="logoPreviewContainer" style="display: none; margin-top: 15px;">
+                                <div style="text-align: center;">
+                                    <img id="logoPreview" style="max-width: 150px; max-height: 150px; 
+                                         border-radius: 10px; border: 2px solid var(--border-color);">
+                                    <button type="button" class="btn btn-danger btn-sm" 
+                                            onclick="removeLogoPreview()"
+                                            style="margin-top: 10px; display: block; margin-left: auto; margin-right: auto;">
+                                        ❌ Supprimer
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <!-- OU URL du logo -->
+                            <div style="margin-top: 15px;">
+                                <div style="text-align: center; margin: 10px 0; color: var(--text-secondary);">
+                                    <span>OU</span>
+                                </div>
+                                <label>URL du logo (alternative)</label>
+                                <input type="url" id="clubLogoUrl" class="form-control" 
+                                       placeholder="https://votre-site.com/logo.png">
+                                <small class="form-text text-muted">
+                                    Lien direct vers l'image du logo
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                📝 Description du club
+                            </label>
+                            <textarea id="clubDescription" class="form-control" 
+                                      rows="3"
+                                      placeholder="Brève description du club, spécialités, horaires..."></textarea>
+                            <small class="form-text text-muted">
+                                Facultatif - Maximum 500 caractères
+                                <span id="descriptionCount" style="float: right;">0/500</span>
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <!-- Contact -->
+                    <div class="card" style="margin-bottom: 20px; background: var(--bg-secondary);">
+                        <div class="card-header">
+                            <h3 style="color: var(--primary-color); font-size: 1.2rem;">
+                                📞 Informations de contact
+                            </h3>
+                        </div>
+                        <div class="grid grid-2">
+                            <div class="form-group">
+                                <label>
+                                    📧 Email du responsable
+                                </label>
+                                <input type="email" id="clubEmail" class="form-control" 
+                                       placeholder="responsable@club.com">
+                                <small class="form-text text-muted">
+                                    Pour les communications importantes
+                                </small>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>
+                                    📞 Téléphone
+                                </label>
+                                <input type="tel" id="clubPhone" class="form-control" 
+                                       placeholder="05XX XX XX XX">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Boutons d'action -->
+                    <div style="display: flex; gap: 10px; margin-top: 20px;">
+                        <button type="submit" class="btn btn-success" id="submitClubBtn" style="flex: 1;">
+                            <span style="margin-right: 8px;">✅</span>
+                            Créer le club
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="closeModal('addClubModal')" style="flex: 1;">
+                            <span style="margin-right: 8px;">❌</span>
+                            Annuler
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Messages -->
+                <div id="addClubMessage" style="margin-top: 20px;"></div>
+                
+                <!-- Prévisualisation du club -->
+                <div id="clubPreview" style="margin-top: 20px; padding: 15px; border: 1px solid var(--border-color); 
+                     border-radius: 10px; background: var(--bg-secondary); display: none;">
+                    <h4 style="color: var(--primary-color); margin-bottom: 15px;">
+                        👁️ Aperçu du club
+                    </h4>
+                    <div id="previewContent">
+                        <!-- Contenu généré dynamiquement -->
                     </div>
                 </div>
             </div>
+        </div>
 
             <!-- Preferences Section (Club Only) -->
             <div id="preferencesSection" class="content-section">
@@ -1725,6 +2117,61 @@
                             <label>Uploader un logo</label>
                             <input type="file" id="prefLogoUpload" class="form-control" accept="image/*">
                             <small class="form-text text-muted">Veuillez sélectionner une image à utiliser comme logo du club.</small>
+                        </div>
+                        <div class="form-group">
+                            <label>Wilaya</label>
+                            <select id="prefWilaya" class="form-control">
+                                <option value="">Sélectionner une wilaya</option>
+                                <option value="Adrar">Adrar</option>
+                                <option value="Chlef">Chlef</option>
+                                <option value="Laghouat">Laghouat</option>
+                                <option value="Oum El Bouaghi">Oum El Bouaghi</option>
+                                <option value="Batna">Batna</option>
+                                <option value="Béjaïa">Béjaïa</option>
+                                <option value="Biskra">Biskra</option>
+                                <option value="Béchar">Béchar</option>
+                                <option value="Blida">Blida</option>
+                                <option value="Bouira">Bouira</option>
+                                <option value="Tamanrasset">Tamanrasset</option>
+                                <option value="Tébessa">Tébessa</option>
+                                <option value="Tlemcen">Tlemcen</option>
+                                <option value="Tiaret">Tiaret</option>
+                                <option value="Tizi Ouzou">Tizi Ouzou</option>
+                                <option value="Alger">Alger</option>
+                                <option value="Djelfa">Djelfa</option>
+                                <option value="Jijel">Jijel</option>
+                                <option value="Sétif">Sétif</option>
+                                <option value="Saïda">Saïda</option>
+                                <option value="Skikda">Skikda</option>
+                                <option value="Sidi Bel Abbès">Sidi Bel Abbès</option>
+                                <option value="Annaba">Annaba</option>
+                                <option value="Guelma">Guelma</option>
+                                <option value="Constantine">Constantine</option>
+                                <option value="Médéa">Médéa</option>
+                                <option value="Mostaganem">Mostaganem</option>
+                                <option value="M'Sila">M'Sila</option>
+                                <option value="Mascara">Mascara</option>
+                                <option value="Ouargla">Ouargla</option>
+                                <option value="Oran">Oran</option>
+                                <option value="El Bayadh">El Bayadh</option>
+                                <option value="Illizi">Illizi</option>
+                                <option value="Bordj Bou Arréridj">Bordj Bou Arréridj</option>
+                                <option value="Boumerdès">Boumerdès</option>
+                                <option value="El Tarf">El Tarf</option>
+                                <option value="Tindouf">Tindouf</option>
+                                <option value="Tissemsilt">Tissemsilt</option>
+                                <option value="El Oued">El Oued</option>
+                                <option value="Khenchela">Khenchela</option>
+                                <option value="Souk Ahras">Souk Ahras</option>
+                                <option value="Tipaza">Tipaza</option>
+                                <option value="Mila">Mila</option>
+                                <option value="Aïn Defla">Aïn Defla</option>
+                                <option value="Naâma">Naâma</option>
+                                <option value="Aïn Témouchent">Aïn Témouchent</option>
+                                <option value="Ghardaïa">Ghardaïa</option>
+                                <option value="Relizane">Relizane</option>
+                            </select>
+                            <small class="form-text text-muted">Sélectionnez la wilaya où se trouve votre club</small>
                         </div>
                         <button type="submit" class="btn btn-success">💾 Enregistrer les modifications</button>
                     </form>
@@ -1982,35 +2429,7 @@
 
     <!-- Modals -->
     <!-- Add Club Modal -->
-    <div id="addClubModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>➕ Ajouter un Club</h2>
-                <button class="modal-close" onclick="closeModal('addClubModal')">&times;</button>
-            </div>
-            <form id="addClubForm">
-                <div class="form-group">
-                    <label>Nom du club *</label>
-                    <input type="text" id="clubName" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label>Username *</label>
-                    <input type="text" id="clubUsername" class="form-control" placeholder="ex: flame_club" required>
-                </div>
-                <div class="form-group">
-                    <label>Mot de passe *</label>
-                    <input type="password" id="clubPassword" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label>URL du logo</label>
-                    <input type="url" id="clubLogo" class="form-control" placeholder="https://...">
-                </div>
-                <button type="submit" class="btn btn-success">💾 Créer le club</button>
-            </form>
-            <div id="addClubMessage" style="margin-top: 15px;"></div>
-        </div>
-    </div>
-
+    
     <!-- Photo Upload Modal -->
     <div id="photoModal" class="modal">
         <div class="modal-content">
@@ -2306,187 +2725,261 @@ Bonjour {PRENOM}, votre abonnement au club {CLUB} expire dans {JOURS} jours. Pen
                 </button>
             </div>
         </div>
-
-        <!-- Gestionnaire de compétitions (Admin seulement) -->
-        <div id="competitionManager" class="hidden">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">🎯 Création de Compétition (Admin)</h3>
-                </div>
-                
-                <!-- Competition creation form -->
-                <div class="grid grid-2">
-                    <div class="form-group">
-                        <label>Nom de la compétition *</label>
-                        <input type="text" id="competitionName" class="form-control" placeholder="Championnat Régional 2024">
+        
+        <!-- Navigation par onglets - UNIQUEMENT ICI -->
+       
+        <!-- Section Gestion des Compétitions -->
+        <div id="competition-management" class="competition-tab-content active">
+            <!-- Gestionnaire de compétitions (Admin seulement) -->
+            <div id="competitionManager" class="hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🎯 Création de Compétition (Admin)</h3>
                     </div>
-                    <div class="form-group">
-                        <label>Date limite d'inscription *</label>
-                        <input type="datetime-local" id="competitionDeadline" class="form-control">
+                    
+                    <!-- Competition creation form -->
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label>Nom de la compétition *</label>
+                            <input type="text" id="competitionName" class="form-control" placeholder="Championnat Régional 2024">
+                        </div>
+                        <div class="form-group">
+                            <label>Date limite d'inscription *</label>
+                            <input type="datetime-local" id="competitionDeadline" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Catégorie d'âge minimum</label>
+                            <input type="number" id="minAge" class="form-control" placeholder="8" min="6" max="60">
+                        </div>
+                        <div class="form-group">
+                            <label>Catégorie d'âge maximum</label>
+                            <input type="number" id="maxAge" class="form-control" placeholder="17" min="6" max="60">
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>Catégorie d'âge minimum</label>
-                        <input type="number" id="minAge" class="form-control" placeholder="8" min="6" max="60">
-                    </div>
-                    <div class="form-group">
-                        <label>Catégorie d'âge maximum</label>
-                        <input type="number" id="maxAge" class="form-control" placeholder="17" min="6" max="60">
-                    </div>
-                </div>
-                
-                <button class="btn btn-success" onclick="createCompetition()">
-                    🚀 Créer la compétition
-                </button>
-                <button class="btn btn-secondary" onclick="closeCompetitionManager()" style="margin-left: 10px;">
-                    ❌ Annuler
-                </button>
-                
-                <!-- Liste des compétitions existantes -->
-                <div style="margin-top: 30px;">
-                    <h4>📋 Compétitions existantes</h4>
-                    <div id="competitionsList" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
-                        <!-- Competitions will be loaded here -->
+                    
+                    <button class="btn btn-success" onclick="createCompetition()">
+                        🚀 Créer la compétition
+                    </button>
+                    <button class="btn btn-secondary" onclick="closeCompetitionManager()" style="margin-left: 10px;">
+                        ❌ Annuler
+                    </button>
+                    
+                    <!-- Liste des compétitions existantes -->
+                    <div style="margin-top: 30px;">
+                        <h4>📋 Compétitions existantes</h4>
+                        <div id="competitionsList" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                            <!-- Competitions will be loaded here -->
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Informations sur la compétition active -->
-        <div id="activeCompetitionInfo" class="alert alert-info hidden" style="margin: 15px 0;">
             <!-- Informations sur la compétition active -->
-        </div>
+            <div id="activeCompetitionInfo" class="alert alert-info hidden" style="margin: 15px 0;">
+                <!-- Informations sur la compétition active -->
+            </div>
 
-        <!-- Sélection de compétition (Clubs) -->
-        <div id="competitionSelection" class="card">
-            <div class="card-header">
-                <h3 class="card-title">🏆 Sélectionner une Compétition</h3>
-            </div>
-            <div class="form-group">
-                <label>Choisir une compétition :</label>
-                <select id="availableCompetitions" class="form-control" onchange="selectCompetitionForClub(this.value)">
-                    <option value="">-- Sélectionnez une compétition --</option>
-                </select>
-            </div>
-            <div id="selectedCompetitionInfo" class="alert alert-info hidden">
-                <!-- Informations sur la compétition sélectionnée -->
-            </div>
-        </div>
-
-        <!-- Étape 1: Sélection des participants -->
-        <div class="competition-step hidden" id="step1">
-            <h3>📋 Étape 1: Sélection des participants</h3>
-            
-            <div class="alert alert-info" id="competitionStatus">
-                ℹ️ Sélectionnez les participants éligibles pour la compétition
-            </div>
-            
-            <div class="filter-container">
-                <div class="filter-select-wrapper">
-                    <label class="filter-label">Filtrer par âge:</label>
-                    <select id="ageFilter" class="filter-select" onchange="filterMembersByAge()">
-                        <option value="all">Tous les âges</option>
-                        <option value="eligible">Éligibles seulement</option>
+            <!-- Sélection de compétition (Clubs) -->
+            <div id="competitionSelection" class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🏆 Sélectionner une Compétition</h3>
+                </div>
+                <div class="form-group">
+                    <label>Choisir une compétition :</label>
+                    <select id="availableCompetitions" class="form-control" onchange="selectCompetitionForClub(this.value)">
+                        <option value="">-- Sélectionnez une compétition --</option>
                     </select>
                 </div>
-                <div class="filter-stats">
-                    <span class="filter-badge" id="eligibleCount">0</span>
-                    <span style="font-size: 0.85rem; color: var(--text-secondary);">adhérent(s) éligibles</span>
+                <div id="selectedCompetitionInfo" class="alert alert-info hidden">
+                    <!-- Informations sur la compétition sélectionnée -->
                 </div>
             </div>
-            
-            <div class="form-group">
-                <label>Adhérents éligibles pour la compétition:</label>
-                <div class="members-selection-grid" id="membersSelectionGrid" 
-                     style="max-height: 400px; overflow-y: auto; margin-top: 15px; border: 1px solid var(--border-color); border-radius: 10px; padding: 15px;">
-                    <!-- Les membres éligibles seront chargés ici -->
-                </div>
-            </div>
-            
-            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <button class="btn btn-primary" onclick="proceedToWeights()" id="proceedBtn" disabled>
-                    ✅ Confirmer la sélection (<span id="selectedCount">0</span> adhérents)
-                </button>
+
+            <!-- Étape 1: Sélection des participants -->
+            <div class="competition-step hidden" id="step1">
+                <h3>📋 Étape 1: Sélection des participants</h3>
                 
-                <button class="btn btn-info" onclick="loadEligibleMembers()">
-                    🔄 Actualiser la liste
-                </button>
+                <div class="alert alert-info" id="competitionStatus">
+                    ℹ️ Sélectionnez les participants éligibles pour la compétition
+                </div>
                 
-                <span id="selectionStats" style="color: var(--text-secondary); font-size: 0.9rem;"></span>
-            </div>
-        </div>
-
-        <!-- Étape 2: Saisie des poids -->
-        <div class="competition-step hidden" id="step2">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3>⚖️ Étape 2: Saisie des poids</h3>
-                <div>
-                    <button class="btn btn-secondary" onclick="backToSelection()">
-                        ⬅️ Retour à la sélection
+                <div class="filter-container">
+                    <div class="filter-select-wrapper">
+                        <label class="filter-label">Filtrer par âge:</label>
+                        <select id="ageFilter" class="filter-select" onchange="filterMembersByAge()">
+                            <option value="all">Tous les âges</option>
+                            <option value="eligible">Éligibles seulement</option>
+                        </select>
+                    </div>
+                    <div class="filter-stats">
+                        <span class="filter-badge" id="eligibleCount">0</span>
+                        <span style="font-size: 0.85rem; color: var(--text-secondary);">adhérent(s) éligibles</span>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Adhérents éligibles pour la compétition:</label>
+                    <div class="members-selection-grid" id="membersSelectionGrid" 
+                         style="max-height: 400px; overflow-y: auto; margin-top: 15px; border: 1px solid var(--border-color); border-radius: 10px; padding: 15px;">
+                        <!-- Les membres éligibles seront chargés ici -->
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <button class="btn btn-primary" onclick="proceedToWeights()" id="proceedBtn" disabled>
+                        ✅ Confirmer la sélection (<span id="selectedCount">0</span> adhérents)
                     </button>
-                    <button class="btn btn-info" onclick="showCompetitionInfo()" style="margin-left: 10px;">
-                        ℹ️ Infos Compétition
+                    
+                    <button class="btn btn-info" onclick="loadEligibleMembers()">
+                        🔄 Actualiser la liste
+                    </button>
+                    
+                    <span id="selectionStats" style="color: var(--text-secondary); font-size: 0.9rem;"></span>
+                </div>
+            </div>
+
+            <!-- Étape 2: Saisie des poids -->
+            <div class="competition-step hidden" id="step2">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3>⚖️ Étape 2: Saisie des poids</h3>
+                    <div>
+                        <button class="btn btn-secondary" onclick="backToSelection()">
+                            ⬅️ Retour à la sélection
+                        </button>
+                        <button class="btn btn-info" onclick="showCompetitionInfo()" style="margin-left: 10px;">
+                            ℹ️ Infos Compétition
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning" id="deadlineWarning" style="display: none;">
+                    ⚠️ <strong>Attention:</strong> La date limite d'inscription est le 
+                    <span id="deadlineDate"></span>. Après cette date, les modifications ne seront plus possibles.
+                </div>
+                
+                <div class="weights-table-container">
+                    <table style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Nom</th>
+                                <th>Prénom</th>
+                                <th>Date de naissance</th>
+                                <th>Âge</th>
+                                <th>Sexe</th>
+                                <th>Poids (kg)</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="weightsTableBody">
+                            <!-- Les participants avec champs poids seront ajoutés ici -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button class="btn btn-success" onclick="validateWeights()" id="validateWeightsBtn">
+                        ✅ Valider tous les poids
+                    </button>
+                    <button class="btn btn-primary" onclick="exportCompetitionData()" id="exportBtn" disabled>
+                        📊 Exporter en Excel
+                    </button>
+                    <button class="btn btn-info" onclick="sendToCompetition()" id="sendToCompetitionBtn" disabled>
+                        📤 Envoyer à la Compétition
                     </button>
                 </div>
             </div>
-            
-            <div class="alert alert-warning" id="deadlineWarning" style="display: none;">
-                ⚠️ <strong>Attention:</strong> La date limite d'inscription est le 
-                <span id="deadlineDate"></span>. Après cette date, les modifications ne seront plus possibles.
-            </div>
-            
-            <div class="weights-table-container">
-                <table style="width: 100%;">
-                    <thead>
-                        <tr>
-                            <th>Nom</th>
-                            <th>Prénom</th>
-                            <th>Date de naissance</th>
-                            <th>Âge</th>
-                            <th>Sexe</th>
-                            <th>Poids (kg)</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="weightsTableBody">
-                        <!-- Les participants avec champs poids seront ajoutés ici -->
-                    </tbody>
-                </table>
-            </div>
-            
-            <div style="margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap;">
-                <button class="btn btn-success" onclick="validateWeights()" id="validateWeightsBtn">
-                    ✅ Valider tous les poids
-                </button>
-                <button class="btn btn-primary" onclick="exportCompetitionData()" id="exportBtn" disabled>
-                    📊 Exporter en Excel
-                </button>
-                <button class="btn btn-info" onclick="sendToCompetition()" id="sendToCompetitionBtn" disabled>
-                    📤 Envoyer à la Compétition
-                </button>
-            </div>
-        </div>
 
-        <!-- Participants envoyés à la compétition -->
-        <div class="card hidden" id="sentParticipantsCard" style="margin-top: 20px;">
-            <div class="card-header">
-                <h3 class="card-title">📨 Participants Inscrits</h3>
-                <button class="btn btn-warning btn-sm" onclick="editSentParticipants()" id="editParticipantsBtn">
-                    ✏️ Modifier
-                </button>
-            </div>
-            <div id="sentParticipantsList">
-                <!-- Liste des participants déjà inscrits -->
-            </div>
-        </div>
-
-        <!-- Section Admin - Vue globale des compétitions -->
-        <div id="adminCompetitionsSection" class="hidden">
-            <div class="card">
+            <!-- Participants envoyés à la compétition -->
+            <div class="card hidden" id="sentParticipantsCard" style="margin-top: 20px;">
                 <div class="card-header">
-                    <h3 class="card-title">👁️ Vue d'ensemble des Compétitions (Admin)</h3>
+                    <h3 class="card-title">📨 Participants Inscrits</h3>
+                    <button class="btn btn-warning btn-sm" onclick="editSentParticipants()" id="editParticipantsBtn">
+                        ✏️ Modifier
+                    </button>
                 </div>
-                <div id="adminCompetitionsList">
-                    <!-- Liste des compétitions avec statistiques -->
+                <div id="sentParticipantsList">
+                    <!-- Liste des participants déjà inscrits -->
+                </div>
+            </div>
+
+            <!-- Section Admin - Vue globale des compétitions -->
+            <div id="adminCompetitionsSection" class="hidden">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">👁️ Vue d'ensemble des Compétitions (Admin)</h3>
+                    </div>
+                    <div id="adminCompetitionsList">
+                        <!-- Liste des compétitions avec statistiques -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section Partage des Poules -->
+        <div id="poule-sharing" class="competition-tab-content">
+            <div class="card">
+                
+                <!-- Pour Admin -->
+                <div id="adminPouleSection" class="hidden">
+                    <div class="grid grid-2">
+                        <div class="form-group">
+                            <label>🎯 Sélectionner une compétition</label>
+                            <select id="pouleCompetitionSelect" class="form-control" onchange="loadPoulesForCompetition()">
+                                <option value="">-- Choisir une compétition --</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>📊 Nombre de poules créées</label>
+                            <div id="pouleCount" style="font-size: 2rem; color: var(--primary-color); text-align: center;">
+                                0
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Upload de poules -->
+                    <div class="card" style="margin-top: 20px;">
+                        <div class="card-header">
+                            <h3 class="card-title">📷 Uploader des Poules</h3>
+                        </div>
+                        <div class="form-group">
+                            <label>Nom de la poule</label>
+                            <input type="text" id="pouleName" class="form-control" placeholder="Ex: Poule A -60kg">
+                        </div>
+                        <div class="form-group">
+                            <label>Uploader l'image de la poule</label>
+                            <input type="file" id="pouleImage" class="form-control" accept="image/*">
+                            <small class="form-text text-muted">Formats acceptés: JPG, PNG, PDF (Max: 5MB)</small>
+                        </div>
+                        <button class="btn btn-success" onclick="uploadPoule()" style="margin-top: 15px;">
+                            📤 Uploader la Poule
+                        </button>
+                    </div>
+
+                    <!-- Liste des poules uploadées -->
+                    <div class="card" style="margin-top: 20px;">
+                        <div class="card-header">
+                            <h3 class="card-title">📋 Poules Uploadées</h3>
+                        </div>
+                        <div id="poulesList" style="max-height: 400px; overflow-y: auto;"></div>
+                    </div>
+                </div>
+
+                <!-- Pour les Clubs -->
+                <div id="clubPouleSection" class="hidden">
+                    <div class="form-group">
+                        <label>🏆 Sélectionner une compétition</label>
+                        <select id="clubPouleCompetitionSelect" class="form-control" onchange="loadClubPoules()">
+                            <option value="">-- Choisir une compétition --</option>
+                        </select>
+                    </div>
+
+                    <!-- Liste des poules disponibles -->
+                    <div id="clubPoulesContainer" style="margin-top: 20px;">
+                        <div class="alert alert-info" id="noPoulesMessage">
+                            Sélectionnez une compétition pour voir les poules disponibles
+                        </div>
+                        <div id="clubPoulesList" style="display: none;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2518,18 +3011,197 @@ let allEligibleMembers = [];
 
 // Initialisation de la section compétitions
 function initCompetitionsSection() {
+    console.log('🎯 Initialisation section compétitions...');
+    
+    // Initialiser les onglets
+    setupCompetitionTabs();
+    
     if (currentUser === 'admin') {
+        console.log('👑 Mode administrateur');
         document.getElementById('adminCompetitionControls').classList.remove('hidden');
-        loadCompetitionsList();
+        loadEnhancedCompetitionsList();
         document.getElementById('adminCompetitionsSection').classList.remove('hidden');
+        
+        // Cacher les sections pour les clubs
+        document.getElementById('competitionSelection').classList.add('hidden');
+        document.getElementById('step1').classList.add('hidden');
+        document.getElementById('step2').classList.add('hidden');
+        document.getElementById('sentParticipantsCard').classList.add('hidden');
     } else {
+        console.log('🏢 Mode club');
         document.getElementById('adminCompetitionControls').classList.add('hidden');
         document.getElementById('adminCompetitionsSection').classList.add('hidden');
         loadAvailableCompetitionsForClub();
     }
+    
     updateCompetitionDisplay();
 }
+// Initialiser la section poules
+function initPoulesSection() {
+    console.log('📊 Initialisation section poules...');
+    
+    if (currentUser === 'admin') {
+        document.getElementById('adminPouleSection').classList.remove('hidden');
+        document.getElementById('clubPouleSection').classList.add('hidden');
+        loadCompetitionsForPoules();
+    } else {
+        document.getElementById('adminPouleSection').classList.add('hidden');
+        document.getElementById('clubPouleSection').classList.remove('hidden');
+        loadCompetitionsForClubPoules();
+    }
+}
+// Variables globales pour les poules
+let poulesData = JSON.parse(localStorage.getItem('kyokushin_poules')) || {};
+let currentCompetitionForPoules = null;
 
+// Charger les compétitions pour l'admin (poules)
+function loadCompetitionsForPoules() {
+    const select = document.getElementById('pouleCompetitionSelect');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">-- Choisir une compétition --</option>';
+    
+    if (!competitionsList || competitionsList.length === 0) {
+        select.innerHTML += '<option value="" disabled>Aucune compétition disponible</option>';
+        return;
+    }
+    
+    competitionsList.forEach(comp => {
+        const option = document.createElement('option');
+        option.value = comp.id;
+        option.textContent = `${comp.name} (${new Date(comp.deadline).toLocaleDateString('fr-FR')})`;
+        select.appendChild(option);
+    });
+}
+
+// Charger les poules pour une compétition
+function loadPoulesForCompetition() {
+    const competitionId = document.getElementById('pouleCompetitionSelect').value;
+    const poulesContainer = document.getElementById('poulesList');
+    
+    if (!poulesContainer) return;
+    
+    if (!competitionId) {
+        poulesContainer.innerHTML = '<div class="alert alert-info">Sélectionnez une compétition</div>';
+        if (document.getElementById('pouleCount')) {
+            document.getElementById('pouleCount').textContent = '0';
+        }
+        return;
+    }
+    
+    currentCompetitionForPoules = competitionId;
+    const poules = poulesData[competitionId] || [];
+    
+    // Mettre à jour le compteur
+    if (document.getElementById('pouleCount')) {
+        document.getElementById('pouleCount').textContent = poules.length;
+    }
+    
+    if (poules.length === 0) {
+        poulesContainer.innerHTML = `
+            <div class="alert alert-info">
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">📤</div>
+                    <h4>Aucune poule uploadée</h4>
+                    <p>Uploader votre première poule pour cette compétition</p>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    // Afficher la liste des poules
+    poulesContainer.innerHTML = poules.map((poule, index) => `
+        <div class="poule-item" style="background: var(--bg-primary); padding: 15px; border-radius: 10px; margin-bottom: 15px; border: 1px solid var(--border-color);">
+            <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div>
+                    <h4 style="margin: 0 0 10px 0; color: var(--primary-color);">
+                        ${poule.name}
+                    </h4>
+                    <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                        <div>📅 Uploadé le: ${new Date(poule.uploadDate).toLocaleString('fr-FR')}</div>
+                        <div>📏 Taille: ${formatFileSize(poule.size)}</div>
+                        ${poule.uploadedBy ? `<div>👤 Par: ${poule.uploadedBy}</div>` : ''}
+                    </div>
+                </div>
+                <div>
+                    <button class="btn btn-danger btn-sm" onclick="deletePoule('${competitionId}', ${index})">
+                        🗑️ Supprimer
+                    </button>
+                </div>
+            </div>
+            
+            ${poule.imageUrl ? `
+                <div style="margin-top: 15px;">
+                    <img src="${poule.imageUrl}" 
+                         style="width: 100%; max-height: 300px; object-fit: contain; border-radius: 8px; margin-top: 10px; cursor: pointer;"
+                         onclick="viewPouleImage('${poule.imageUrl}')"
+                         alt="Poule ${poule.name}">
+                </div>
+            ` : ''}
+            
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-primary btn-sm" onclick="downloadPoule('${poule.imageUrl}', '${poule.name}')">
+                    ⬇️ Télécharger
+                </button>
+                <button class="btn btn-info btn-sm" onclick="sharePoule('${competitionId}', ${index})">
+                    🔗 Partager
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Fonction utilitaire pour formater la taille
+function formatFileSize(bytes) {
+    if (!bytes) return '0 bytes';
+    if (bytes < 1024) return bytes + ' bytes';
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(2) + ' KB';
+    else return (bytes / 1048576).toFixed(2) + ' MB';
+}
+
+// Fonction de base pour télécharger une poule
+function downloadPoule(imageUrl, pouleName) {
+    if (!imageUrl) {
+        alert('Aucune image disponible pour téléchargement');
+        return;
+    }
+    
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `poule_${pouleName.replace(/[^a-z0-9]/gi, '_')}.png`;
+    link.click();
+}
+
+// Fonction de base pour voir une image
+function viewPouleImage(imageUrl) {
+    if (!imageUrl) return;
+    
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.9);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    `;
+    modal.innerHTML = `
+        <div style="max-width: 90%; max-height: 90%; background: white; border-radius: 10px; overflow: hidden;">
+            <img src="${imageUrl}" style="max-width: 100%; max-height: 80vh; object-fit: contain;" alt="Poule">
+            <div style="padding: 15px; text-align: center;">
+                <button class="btn btn-secondary" onclick="this.closest('div[style*=\"position: fixed\"]').remove()">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
 // Charger les compétitions disponibles pour les clubs
 function loadAvailableCompetitionsForClub() {
     const select = document.getElementById('availableCompetitions');
@@ -3610,7 +4282,27 @@ function loadSentParticipants() {
     card.classList.remove('hidden');
     updateDeadlineWarning();
 }
-
+function initCompetitionsSection() {
+    // Initialiser les onglets
+    setupCompetitionTabs();
+    
+    if (currentUser === 'admin') {
+        document.getElementById('adminCompetitionControls').classList.remove('hidden');
+        loadEnhancedCompetitionsList();
+        document.getElementById('adminCompetitionsSection').classList.remove('hidden');
+        
+        // Cacher les sections pour les clubs
+        document.getElementById('competitionSelection').classList.add('hidden');
+        document.getElementById('step1').classList.add('hidden');
+        document.getElementById('step2').classList.add('hidden');
+        document.getElementById('sentParticipantsCard').classList.add('hidden');
+    } else {
+        document.getElementById('adminCompetitionControls').classList.add('hidden');
+        document.getElementById('adminCompetitionsSection').classList.add('hidden');
+        loadAvailableCompetitionsForClub();
+    }
+    updateCompetitionDisplay();
+}
 // Modifier les participants envoyés
 function editSentParticipants() {
     if (!currentCompetition || !currentCompetition.participants || !currentCompetition.participants[currentClub.id]) {
@@ -5102,6 +5794,12 @@ function notifyAttendance(member) {
     
     document.getElementById('userDisplay').textContent = currentUser;
     document.getElementById('clubNameDisplay').textContent = currentClub.name;
+    
+    // Initialiser la wilaya si elle n'existe pas encore
+    if (!currentClub.wilaya) {
+        currentClub.wilaya = '';
+        sessionStorage.setItem('currentClub', JSON.stringify(currentClub));
+    }
 
     setupNavigation();
     loadDashboard();
@@ -5117,7 +5815,6 @@ function notifyAttendance(member) {
         checkExpiredSubscriptions();
     }, 2000);
 }
-
 // ★★★★★ FONCTION DE DÉMARRAGE DES SYSTÈMES
 
         function logout() {
@@ -6069,6 +6766,7 @@ function startSubscriptionMonitoring() {
 
     const tabs = [
         { id: 'dashboard', label: '🏠 Tableau de bord', section: 'dashboardSection' },
+        // AJOUTER CETTE LIGNE pour l'admin
         ...(isAdmin ? [{ id: 'manageClubs', label: '🏢 Gestion Clubs', section: 'manageClubsSection' }] : []),
         ...(!isAdmin ? [{ id: 'preferences', label: '⚙️ Préférences', section: 'preferencesSection' }] : []),
         { id: 'addMember', label: '➕ Ajouter Adhérent', section: 'addMemberSection' },
@@ -6105,19 +6803,994 @@ function startSubscriptionMonitoring() {
 
             // Load section-specific data
             const section = this.dataset.section;
-            if (section === 'manageClubsSection') loadClubs();
+            if (section === 'manageClubsSection') {
+                loadClubs(); // Charger la liste des clubs
+            }
             if (section === 'membersListSection') loadMembers();
             if (section === 'preferencesSection') loadPreferences();
             if (section === 'addMemberSection') loadClubsForMember();
-            if (section === 'competitionsSection') initCompetitionsSection();
-            if (section === 'smsSection') {
-                initSMSSection();
-                setTimeout(() => {
-                    autoDetectionSystem.loadPendingReminders();
-                }, 500);
-            }
+            if (section === 'competitionsSection') {
+    initCompetitionsSection();
+}
+            if (section === 'smsSection') initSMSSection();
         });
     });
+}
+// ============================================
+// CORRECTIONS POUR LE PARTAGE DES POULES
+// ============================================
+
+// Fonction pour charger les compétitions pour les clubs (poules)
+function loadCompetitionsForClubPoules() {
+    const select = document.getElementById('clubPouleCompetitionSelect');
+    if (!select) return;
+    
+    select.innerHTML = '<option value="">-- Choisir une compétition --</option>';
+    
+    const now = new Date();
+    const activeCompetitions = competitionsList.filter(comp => {
+        const deadline = new Date(comp.deadline);
+        return comp.status === 'active' && deadline > now;
+    });
+    
+    if (activeCompetitions.length === 0) {
+        select.innerHTML += '<option value="" disabled>Aucune compétition active</option>';
+        return;
+    }
+    
+    activeCompetitions.forEach(comp => {
+        const option = document.createElement('option');
+        option.value = comp.id;
+        option.textContent = `${comp.name} (${new Date(comp.deadline).toLocaleDateString('fr-FR')})`;
+        select.appendChild(option);
+    });
+}
+
+// Fonction pour charger les poules d'un club
+function loadClubPoules() {
+    const competitionId = document.getElementById('clubPouleCompetitionSelect').value;
+    const poulesContainer = document.getElementById('clubPoulesList');
+    const noPoulesMessage = document.getElementById('noPoulesMessage');
+    
+    if (!competitionId) {
+        if (poulesContainer) poulesContainer.style.display = 'none';
+        if (noPoulesMessage) noPoulesMessage.style.display = 'block';
+        return;
+    }
+    
+    const poules = poulesData[competitionId] || [];
+    
+    if (poules.length === 0) {
+        if (poulesContainer) poulesContainer.style.display = 'none';
+        if (noPoulesMessage) {
+            noPoulesMessage.innerHTML = `
+                <div style="text-align: center; padding: 30px;">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">📤</div>
+                    <h4>Aucune poule disponible</h4>
+                    <p>Les poules n'ont pas encore été uploadées pour cette compétition.</p>
+                </div>
+            `;
+            noPoulesMessage.style.display = 'block';
+        }
+        return;
+    }
+    
+    // Afficher les poules
+    if (poulesContainer) {
+        poulesContainer.innerHTML = poules.map((poule, index) => `
+            <div class="poule-item" style="background: var(--bg-primary); padding: 20px; border-radius: 12px; margin-bottom: 15px; border: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                    <div>
+                        <h4 style="margin: 0 0 10px 0; color: var(--primary-color);">
+                            ${poule.name}
+                        </h4>
+                        <div style="font-size: 0.9rem; color: var(--text-secondary);">
+                            <div>📅 Créée le: ${new Date(poule.uploadDate).toLocaleString('fr-FR')}</div>
+                            ${poule.uploadedBy ? `<div>👤 Par: ${poule.uploadedBy}</div>` : ''}
+                        </div>
+                    </div>
+                    <div class="poule-actions">
+                        <button class="btn btn-primary btn-sm" onclick="viewPouleImage('${poule.imageUrl}')">
+                            👁️ Voir
+                        </button>
+                        <button class="btn btn-success btn-sm" onclick="downloadPoule('${poule.imageUrl}', '${poule.name}')">
+                            ⬇️ Télécharger
+                        </button>
+                    </div>
+                </div>
+                
+                ${poule.imageUrl ? `
+                    <div style="margin-top: 15px;">
+                        <img src="${poule.imageUrl}" 
+                             class="poule-preview"
+                             onclick="viewPouleImage('${poule.imageUrl}')"
+                             alt="Poule ${poule.name}"
+                             style="width: 100%; max-height: 250px; object-fit: contain; border-radius: 8px; cursor: pointer;">
+                    </div>
+                ` : ''}
+            </div>
+        `).join('');
+        
+        poulesContainer.style.display = 'block';
+    }
+    
+    if (noPoulesMessage) noPoulesMessage.style.display = 'none';
+}
+
+// Fonction pour uploader une poule (Admin)
+async function uploadPoule() {
+    const competitionId = document.getElementById('pouleCompetitionSelect').value;
+    const pouleName = document.getElementById('pouleName').value.trim();
+    const imageFile = document.getElementById('pouleImage').files[0];
+    
+    if (!competitionId) {
+        alert('Veuillez sélectionner une compétition');
+        return;
+    }
+    
+    if (!pouleName) {
+        alert('Veuillez saisir un nom pour la poule');
+        return;
+    }
+    
+    if (!imageFile) {
+        alert('Veuillez sélectionner une image');
+        return;
+    }
+    
+    // Vérifier la taille du fichier (max 5MB)
+    if (imageFile.size > 5 * 1024 * 1024) {
+        alert('Le fichier est trop volumineux (max 5MB)');
+        return;
+    }
+    
+    try {
+        // Convertir l'image en base64 pour le stockage local
+        const reader = new FileReader();
+        
+        reader.onload = async function(e) {
+            const poule = {
+                id: 'poule_' + Date.now(),
+                name: pouleName,
+                imageUrl: e.target.result,
+                uploadDate: new Date().toISOString(),
+                uploadedBy: currentUser === 'admin' ? 'Admin' : currentClub.name,
+                size: imageFile.size,
+                competitionId: competitionId
+            };
+            
+            // Initialiser les données si nécessaire
+            if (!poulesData[competitionId]) {
+                poulesData[competitionId] = [];
+            }
+            
+            // Ajouter la poule
+            poulesData[competitionId].push(poule);
+            
+            // Sauvegarder
+            localStorage.setItem('kyokushin_poules', JSON.stringify(poulesData));
+            
+            // Réinitialiser le formulaire
+            document.getElementById('pouleName').value = '';
+            document.getElementById('pouleImage').value = '';
+            
+            // Recharger la liste
+            loadPoulesForCompetition();
+            
+            showNotification('Poule uploadée', `La poule "${pouleName}" a été uploadée avec succès`, 'success');
+        };
+        
+        reader.readAsDataURL(imageFile);
+        
+    } catch (error) {
+        console.error('Erreur upload poule:', error);
+        alert('Erreur lors de l\'upload: ' + error.message);
+    }
+}
+
+// Fonction pour supprimer une poule (Admin)
+function deletePoule(competitionId, index) {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette poule ?')) return;
+    
+    if (poulesData[competitionId]) {
+        poulesData[competitionId].splice(index, 1);
+        
+        // Sauvegarder
+        localStorage.setItem('kyokushin_poules', JSON.stringify(poulesData));
+        
+        // Recharger la liste
+        loadPoulesForCompetition();
+        
+        showNotification('Poule supprimée', 'La poule a été supprimée avec succès', 'success');
+    }
+}
+
+// Fonction pour partager une poule
+function sharePoule(competitionId, index) {
+    const poule = poulesData[competitionId][index];
+    
+    if (!poule || !poule.imageUrl) {
+        alert('Impossible de partager cette poule');
+        return;
+    }
+    
+    // Créer un lien de partage
+    const shareText = `🏆 Poule de compétition: ${poule.name}\n\nConsultez cette poule dans le système Kyokushin Manager Pro`;
+    
+    // Pour le web, on peut utiliser une URL de partage
+    const shareData = {
+        title: `Poule: ${poule.name}`,
+        text: shareText,
+        url: window.location.href // L'URL actuelle
+    };
+    
+    // Essayer l'API de partage Web
+    if (navigator.share) {
+        navigator.share(shareData)
+            .then(() => console.log('Poule partagée avec succès'))
+            .catch(error => console.log('Erreur partage:', error));
+    } else {
+        // Fallback: copier le lien
+        navigator.clipboard.writeText(shareText)
+            .then(() => {
+                alert('Informations de la poule copiées dans le presse-papier !');
+            })
+            .catch(err => {
+                console.error('Erreur copie:', err);
+                alert('Partage non supporté sur cet appareil');
+            });
+    }
+}
+
+// Initialisation améliorée de la section poules
+function initPoulesSection() {
+    console.log('📊 Initialisation section poules...');
+    
+    // Générer le contenu si nécessaire
+    generatePoulesSectionContent();
+    
+    if (currentUser === 'admin') {
+        document.getElementById('adminPouleSection').classList.remove('hidden');
+        document.getElementById('clubPouleSection').classList.add('hidden');
+        loadCompetitionsForPoules();
+    } else {
+        document.getElementById('adminPouleSection').classList.add('hidden');
+        document.getElementById('clubPouleSection').classList.remove('hidden');
+        loadCompetitionsForClubPoules();
+    }
+}
+
+// Modifier la fonction setupCompetitionTabs pour inclure l'initialisation des poules
+function setupCompetitionTabs() {
+    console.log('🔧 Initialisation des onglets compétitions...');
+    
+    // Attendre que le DOM soit prêt
+    setTimeout(() => {
+        const tabs = document.querySelectorAll('[data-competition-tab]');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Supprimer la classe active de tous les onglets
+                document.querySelectorAll('[data-competition-tab]').forEach(t => {
+                    t.classList.remove('active');
+                });
+                
+                // Supprimer la classe active de tous les contenus
+                document.querySelectorAll('.competition-tab-content').forEach(c => {
+                    c.classList.remove('active');
+                });
+                
+                // Ajouter la classe active à l'onglet cliqué
+                this.classList.add('active');
+                
+                // Afficher le contenu correspondant
+                const tabId = this.getAttribute('data-competition-tab');
+                const content = document.getElementById(tabId);
+                if (content) {
+                    content.classList.add('active');
+                    
+                    // Initialiser le contenu spécifique
+                    if (tabId === 'poule-sharing') {
+                        initPoulesSection();
+                    } else if (tabId === 'competition-management') {
+                        // Re-initialiser la section compétitions
+                        if (currentUser === 'admin') {
+                            loadEnhancedCompetitionsList();
+                        } else {
+                            loadAvailableCompetitionsForClub();
+                        }
+                    }
+                }
+            });
+        });
+        
+        // Initialiser par défaut
+        if (document.querySelector('[data-competition-tab="competition-management"]')) {
+            document.querySelector('[data-competition-tab="competition-management"]').click();
+        }
+        
+    }, 100);
+}
+// Fonction pour gérer la navigation par onglets dans la section compétitions
+function setupCompetitionTabs() {
+    console.log('🔧 Initialisation des onglets compétitions...');
+    
+    // Créer les onglets si ils n'existent pas
+    const competitionSection = document.getElementById('competitionsSection');
+    const existingTabs = competitionSection.querySelector('.nav-tabs[data-competition-tabs]');
+    
+    if (!existingTabs) {
+        // Créer la structure des onglets
+        const tabsHTML = `
+            <div class="nav-tabs" data-competition-tabs style="margin-bottom: 20px;">
+                <button class="nav-tab active" data-competition-tab="competition-management">🏆 Gestion Compétitions</button>
+                <button class="nav-tab" data-competition-tab="poule-sharing"> Les Poules</button>
+            </div>
+        `;
+        
+        // Insérer les onglets au début de la section compétitions
+        const cardHeader = competitionSection.querySelector('.card-header');
+        if (cardHeader) {
+            cardHeader.insertAdjacentHTML('afterend', tabsHTML);
+        }
+        
+        // Créer les conteneurs de contenu si ils n'existent pas
+        const competitionManagement = document.getElementById('competition-management');
+        if (!competitionManagement) {
+            const competitionContent = competitionSection.querySelector('.card').innerHTML;
+            competitionSection.querySelector('.card').innerHTML = `
+                <div id="competition-management" class="competition-tab-content active">
+                    ${competitionContent}
+                </div>
+                <div id="poule-sharing" class="competition-tab-content">
+                    <!-- Le contenu des poules sera généré dynamiquement -->
+                </div>
+            `;
+        }
+    }
+    
+    // Ajouter les écouteurs d'événements
+    setTimeout(() => {
+        const tabs = document.querySelectorAll('[data-competition-tab]');
+        
+        tabs.forEach(tab => {
+            tab.addEventListener('click', function() {
+                // Supprimer la classe active de tous les onglets
+                document.querySelectorAll('[data-competition-tab]').forEach(t => {
+                    t.classList.remove('active');
+                });
+                
+                // Supprimer la classe active de tous les contenus
+                document.querySelectorAll('.competition-tab-content').forEach(c => {
+                    c.classList.remove('active');
+                });
+                
+                // Ajouter la classe active à l'onglet cliqué
+                this.classList.add('active');
+                
+                // Afficher le contenu correspondant
+                const tabId = this.getAttribute('data-competition-tab');
+                const content = document.getElementById(tabId);
+                if (content) {
+                    content.classList.add('active');
+                    
+                    // Initialiser le contenu spécifique
+                    if (tabId === 'poule-sharing') {
+                        initPoulesSection();
+                    } else if (tabId === 'competition-management') {
+                        // Re-initialiser la section compétitions
+                        if (currentUser === 'admin') {
+                            loadEnhancedCompetitionsList();
+                        } else {
+                            loadAvailableCompetitionsForClub();
+                        }
+                    }
+                }
+            });
+        });
+        
+        // Générer le contenu pour la section poules si nécessaire
+        generatePoulesSectionContent();
+        
+    }, 100);
+}
+
+// Fonction pour générer le contenu de la section poules
+function generatePoulesSectionContent() {
+    const poulesSection = document.getElementById('poule-sharing');
+    if (!poulesSection || poulesSection.innerHTML.trim() !== '') {
+        return;
+    }
+    
+    poulesSection.innerHTML = `
+        <div class="card">
+            
+
+            <!-- Pour Admin -->
+            <div id="adminPouleSection" class="${currentUser === 'admin' ? '' : 'hidden'}">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label>🎯 Sélectionner une compétition</label>
+                        <select id="pouleCompetitionSelect" class="form-control" onchange="loadPoulesForCompetition()">
+                            <option value="">-- Choisir une compétition --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>📊 Nombre de poules créées</label>
+                        <div id="pouleCount" style="font-size: 2rem; color: var(--primary-color); text-align: center;">
+                            0
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Upload de poules -->
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header">
+                        <h3 class="card-title">📷 Uploader des Poules</h3>
+                    </div>
+                    <div class="form-group">
+                        <label>Nom de la poule</label>
+                        <input type="text" id="pouleName" class="form-control" placeholder="Ex: Poule A -60kg">
+                    </div>
+                    <div class="form-group">
+                        <label>Uploader l'image de la poule</label>
+                        <input type="file" id="pouleImage" class="form-control" accept="image/*,.pdf">
+                        <small class="form-text text-muted">Formats acceptés: JPG, PNG, PDF (Max: 5MB)</small>
+                    </div>
+                    <button class="btn btn-success" onclick="uploadPoule()" style="margin-top: 15px;">
+                        📤 Uploader la Poule
+                    </button>
+                </div>
+
+                <!-- Liste des poules uploadées -->
+                <div class="card" style="margin-top: 20px;">
+                    <div class="card-header">
+                        <h3 class="card-title">📋 Poules Uploadées</h3>
+                    </div>
+                    <div id="poulesList" style="max-height: 400px; overflow-y: auto; padding: 15px;"></div>
+                </div>
+            </div>
+
+            <!-- Pour les Clubs -->
+            <div id="clubPouleSection" class="${currentUser !== 'admin' ? '' : 'hidden'}">
+                <div class="form-group">
+                    <label>🏆 Sélectionner une compétition</label>
+                    <select id="clubPouleCompetitionSelect" class="form-control" onchange="loadClubPoules()">
+                        <option value="">-- Choisir une compétition --</option>
+                    </select>
+                </div>
+
+                <!-- Liste des poules disponibles -->
+                <div id="clubPoulesContainer" style="margin-top: 20px;">
+                    <div class="alert alert-info" id="noPoulesMessage">
+                        Sélectionnez une compétition pour voir les poules disponibles
+                    </div>
+                    <div id="clubPoulesList" style="display: none;"></div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+// NOUVELLE FONCTION : Charger la vue admin des compétitions
+function loadAdminCompetitionsView() {
+    if (currentUser !== 'admin') return;
+    
+    // Cacher les éléments pour les clubs
+    document.getElementById('competitionSelection').classList.add('hidden');
+    document.getElementById('step1').classList.add('hidden');
+    document.getElementById('step2').classList.add('hidden');
+    document.getElementById('sentParticipantsCard').classList.add('hidden');
+    
+    // Afficher la section admin
+    document.getElementById('adminCompetitionsSection').classList.remove('hidden');
+    
+    // Charger la liste des compétitions avec plus de détails
+    loadEnhancedCompetitionsList();
+}
+
+// Fonction améliorée pour charger les compétitions avec détails
+function loadEnhancedCompetitionsList() {
+    const container = document.getElementById('adminCompetitionsList');
+    if (!container) return;
+    
+    if (competitionsList.length === 0) {
+        container.innerHTML = `
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">🏆 Gestion des Compétitions (Admin)</h3>
+                    <button class="btn btn-primary" onclick="showCompetitionManager()">
+                        📋 Créer une Compétition
+                    </button>
+                </div>
+                <div style="text-align: center; padding: 40px; color: var(--text-secondary);">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">🏆</div>
+                    <h3>Aucune compétition créée</h3>
+                    <p>Créez votre première compétition pour commencer</p>
+                    <button class="btn btn-primary" onclick="showCompetitionManager()" style="margin-top: 15px;">
+                        ➕ Créer une compétition
+                    </button>
+                </div>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = `
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">🏆 Gestion des Compétitions (Admin)</h3>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-primary" onclick="showCompetitionManager()">
+                        📋 Créer une Compétition
+                    </button>
+                    <button class="btn btn-info" onclick="exportAllCompetitionsData()">
+                        📊 Exporter toutes les données
+                    </button>
+                </div>
+            </div>
+            <div id="enhancedCompetitionsList">
+                ${competitionsList.map(comp => `
+                    <div class="competition-admin-card" style="background: var(--bg-primary); padding: 20px; border-radius: 10px; margin-bottom: 15px; border: 1px solid var(--border-color);">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0 0 10px 0; color: var(--primary-color);">${comp.name}</h4>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; font-size: 0.9rem;">
+                                    <div><strong>Date limite:</strong> ${new Date(comp.deadline).toLocaleString('fr-FR')}</div>
+                                    <div><strong>Catégorie d'âge:</strong> ${getAgeRangeDisplay(comp.minAge, comp.maxAge)}</div>
+                                    <div><strong>Statut:</strong> <span class="badge ${comp.status === 'active' ? 'badge-success' : 'badge-secondary'}">${comp.status === 'active' ? 'Active' : 'Terminée'}</span></div>
+                                    <div><strong>Créée le:</strong> ${new Date(comp.createdAt).toLocaleString('fr-FR')}</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px; flex-direction: column;">
+                                <button class="btn btn-info btn-sm" onclick="viewCompetitionDetailsAdmin('${comp.id}')">
+                                    👁️ Voir détails
+                                </button>
+                                <button class="btn btn-success btn-sm" onclick="exportCompetitionParticipantsAdmin('${comp.id}')">
+                                    📊 Exporter participants
+                                </button>
+                                <button class="btn btn-danger btn-sm" onclick="deleteCompetition('${comp.id}')">
+                                    🗑️ Supprimer
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-top: 15px;">
+                            ${getClubsSummary(comp)}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        </div>
+    `;
+}
+
+// Fonction pour générer le résumé des clubs participants
+function getClubsSummary(competition) {
+    if (!competition.clubs || Object.keys(competition.clubs).length === 0) {
+        return `
+            <div style="grid-column: 1/-1; text-align: center; padding: 20px; color: var(--text-secondary);">
+                <p>Aucun club n'a encore inscrit de participants</p>
+            </div>
+        `;
+    }
+    
+    const clubs = Object.entries(competition.clubs);
+    
+    return clubs.map(([clubId, clubData]) => {
+        const participantCount = competition.participants && competition.participants[clubId] 
+            ? competition.participants[clubId].length 
+            : 0;
+        
+        return `
+            <div style="background: var(--bg-secondary); padding: 15px; border-radius: 8px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                    <strong>${clubData.name}</strong>
+                    <span class="badge badge-primary">${participantCount} participant(s)</span>
+                </div>
+                <div style="font-size: 0.85rem; color: var(--text-secondary);">
+                    <div>Dernière mise à jour: ${new Date(clubData.lastUpdate).toLocaleString('fr-FR')}</div>
+                    <button class="btn btn-info btn-sm" onclick="viewClubParticipants('${competition.id}', '${clubId}')" style="margin-top: 8px; width: 100%;">
+                        👥 Voir participants
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+// Fonction pour voir les détails d'une compétition (admin)
+function viewCompetitionDetailsAdmin(competitionId) {
+    const competition = competitionsList.find(c => c.id === competitionId);
+    if (!competition) return;
+    
+    const deadline = new Date(competition.deadline);
+    const now = new Date();
+    const isActive = deadline > now && competition.status === 'active';
+    
+    // Compter les participants totaux
+    let totalParticipants = 0;
+    let clubsCount = 0;
+    
+    if (competition.participants) {
+        clubsCount = Object.keys(competition.participants).length;
+        Object.values(competition.participants).forEach(participants => {
+            totalParticipants += participants.length;
+        });
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 800px;">
+            <div class="modal-header">
+                <h2>📊 Détails de la Compétition</h2>
+                <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+            </div>
+            
+            <div style="padding: 20px;">
+                <!-- En-tête de la compétition -->
+                <div style="text-align: center; margin-bottom: 25px;">
+                    <div style="font-size: 3rem; margin-bottom: 15px;">🏆</div>
+                    <h3 style="color: var(--primary-color); margin-bottom: 10px;">${competition.name}</h3>
+                    <div style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-top: 15px;">
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; font-weight: bold; color: var(--primary-color);">${clubsCount}</div>
+                            <div style="font-size: 0.9rem; color: var(--text-secondary);">Clubs</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; font-weight: bold; color: var(--success-color);">${totalParticipants}</div>
+                            <div style="font-size: 0.9rem; color: var(--text-secondary);">Participants</div>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="font-size: 2rem; font-weight: bold; color: ${isActive ? 'var(--success-color)' : 'var(--danger-color)'};">${isActive ? '🟢' : '🔴'}</div>
+                            <div style="font-size: 0.9rem; color: var(--text-secondary);">${isActive ? 'Active' : 'Terminée'}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Informations détaillées -->
+                <div style="background: var(--bg-secondary); padding: 20px; border-radius: 10px; margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 15px; color: var(--primary-color);">📋 Informations générales</h4>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div>
+                            <div style="font-weight: 600; color: var(--text-secondary); margin-bottom: 5px;">Date limite</div>
+                            <div>${deadline.toLocaleString('fr-FR')}</div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; color: var(--text-secondary); margin-bottom: 5px;">Catégorie d'âge</div>
+                            <div>${getAgeRangeDisplay(competition.minAge, competition.maxAge)}</div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; color: var(--text-secondary); margin-bottom: 5px;">Créée le</div>
+                            <div>${new Date(competition.createdAt).toLocaleString('fr-FR')}</div>
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; color: var(--text-secondary); margin-bottom: 5px;">Créée par</div>
+                            <div>${competition.createdBy || 'Admin'}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Liste des clubs participants -->
+                ${competition.clubs && Object.keys(competition.clubs).length > 0 ? `
+                    <div style="background: var(--bg-secondary); padding: 20px; border-radius: 10px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h4 style="margin: 0; color: var(--primary-color);">🏢 Clubs Participants</h4>
+                            <button class="btn btn-success btn-sm" onclick="exportCompetitionParticipantsAdmin('${competition.id}')">
+                                📊 Exporter tous les participants
+                            </button>
+                        </div>
+                        
+                        <div style="max-height: 300px; overflow-y: auto;">
+                            ${Object.entries(competition.clubs).map(([clubId, clubData]) => {
+                                const participants = competition.participants && competition.participants[clubId] 
+                                    ? competition.participants[clubId] 
+                                    : [];
+                                
+                                return `
+                                    <div style="background: var(--bg-primary); padding: 15px; border-radius: 8px; margin-bottom: 10px;">
+                                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                            <div>
+                                                <strong>${clubData.name}</strong>
+                                                <div style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 5px;">
+                                                    Dernière mise à jour: ${new Date(clubData.lastUpdate).toLocaleString('fr-FR')}
+                                                </div>
+                                            </div>
+                                            <span class="badge badge-primary">${participants.length} participant(s)</span>
+                                        </div>
+                                        
+                                        <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                            <button class="btn btn-info btn-sm" onclick="viewClubParticipants('${competition.id}', '${clubId}')" style="flex: 1;">
+                                                👥 Voir les participants
+                                            </button>
+                                            <button class="btn btn-primary btn-sm" onclick="exportClubParticipants('${competition.id}', '${clubId}')" style="flex: 1;">
+                                                📄 Exporter
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                ` : `
+                    <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                        <p>Aucun club n'a encore inscrit de participants</p>
+                    </div>
+                `}
+            </div>
+            
+            <div style="display: flex; justify-content: center; gap: 10px; padding: 20px; border-top: 1px solid var(--border-color);">
+                <button class="btn btn-primary" onclick="this.closest('.modal').remove()">
+                    Fermer
+                </button>
+                ${isActive ? `
+                    <button class="btn btn-warning" onclick="closeCompetitionAdmin('${competition.id}')">
+                        🔒 Fermer la compétition
+                    </button>
+                ` : ''}
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+// Fonction pour exporter tous les participants d'une compétition
+// Fonction pour exporter tous les participants d'une compétition
+async function exportCompetitionParticipantsAdmin(competitionId) {
+    const competition = competitionsList.find(c => c.id === competitionId);
+    if (!competition) return;
+    
+    try {
+        // Récupérer tous les participants de tous les clubs avec les données du club
+        const allParticipants = [];
+        
+        if (competition.participants) {
+            // Récupérer les informations des clubs depuis Supabase
+            const clubIds = Object.keys(competition.participants);
+            
+            if (clubIds.length > 0) {
+                // Récupérer les clubs avec leur wilaya
+                const { data: clubs, error } = await supabase
+                    .from('clubs')
+                    .select('id, name, wilaya')
+                    .in('id', clubIds);
+                
+                if (error) throw error;
+                
+                // Créer un map pour accéder rapidement aux données des clubs
+                const clubMap = {};
+                clubs.forEach(club => {
+                    clubMap[club.id] = {
+                        name: club.name,
+                        wilaya: club.wilaya
+                    };
+                });
+                
+                // Parcourir tous les participants
+                Object.entries(competition.participants).forEach(([clubId, participants]) => {
+                    const clubData = clubMap[clubId] || competition.clubs[clubId];
+                    
+                    participants.forEach(participant => {
+                        allParticipants.push({
+                            ...participant,
+                            club_name: clubData?.name || 'Inconnu',
+                            club_wilaya: clubData?.wilaya || 'N/A'
+                        });
+                    });
+                });
+            }
+        }
+        
+        if (allParticipants.length === 0) {
+            alert('Aucun participant à exporter');
+            return;
+        }
+        
+        // Préparer les données pour l'export
+        const exportData = allParticipants.map(participant => ({
+            'Nom': participant.last_name,
+            'Prénom': participant.first_name,
+            'Date de naissance': new Date(participant.dob).toLocaleDateString('fr-FR'),
+           
+            'Sexe': participant.sex === 'M' ? 'Masculin' : participant.sex === 'F' ? 'Féminin' : 'Non spécifié',
+            'Poids (kg)': participant.weight,
+            'Club': participant.club_name,
+            'Wilaya': participant.club_wilaya
+           
+        }));
+        
+        // Créer le fichier Excel
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(exportData);
+        
+        // Définir les largeurs de colonnes
+        const colWidths = [
+            { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 8 }, 
+            { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 15 },
+            { wch: 12 }, { wch: 15 }, { wch: 12 }
+        ];
+        ws['!cols'] = colWidths;
+        
+        XLSX.utils.book_append_sheet(wb, ws, 'Participants');
+        
+        // Nom du fichier
+        const compName = competition.name.replace(/[^a-z0-9]/gi, '_');
+        const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const fileName = `participants_${compName}_${date}.xlsx`;
+        
+        // Exporter
+        XLSX.writeFile(wb, fileName);
+        
+        showNotification('Export réussi', `${allParticipants.length} participants exportés`, 'success');
+        
+    } catch (error) {
+        console.error('Erreur export participants:', error);
+        alert('Erreur lors de l\'export: ' + error.message);
+    }
+}
+// Fonction pour voir les participants d'un club spécifique
+function viewClubParticipants(competitionId, clubId) {
+    const competition = competitionsList.find(c => c.id === competitionId);
+    if (!competition || !competition.participants || !competition.participants[clubId]) {
+        alert('Aucun participant trouvé pour ce club');
+        return;
+    }
+    
+    const participants = competition.participants[clubId];
+    const clubData = competition.clubs[clubId];
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal active';
+    modal.innerHTML = `
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header">
+                <h2>👥 Participants - ${clubData?.name || 'Club'}</h2>
+                <button class="modal-close" onclick="this.closest('.modal').remove()">&times;</button>
+            </div>
+            
+            <div style="padding: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <div>
+                        <h4 style="margin: 0; color: var(--primary-color);">${competition.name}</h4>
+                        <p style="margin: 5px 0 0 0; color: var(--text-secondary);">
+                            ${participants.length} participant(s) • Club: ${clubData?.name || 'Inconnu'}
+                        </p>
+                    </div>
+                    <button class="btn btn-success" onclick="exportClubParticipants('${competitionId}', '${clubId}')">
+                        📄 Exporter en Excel
+                    </button>
+                </div>
+                
+                <div style="max-height: 60vh; overflow-y: auto;">
+                    <div class="table-responsive">
+                        <table style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Nom</th>
+                                    <th>Prénom</th>
+                                    <th>Date Naissance</th>
+                                    <th>Âge</th>
+                                    <th>Sexe</th>
+                                    <th>Poids</th>
+                                    <th>ID</th>
+                                    <th>Téléphone</th>
+                                    <th>Groupe sanguin</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${participants.map(p => `
+                                    <tr>
+                                        <td>${p.last_name}</td>
+                                        <td>${p.first_name}</td>
+                                        <td>${new Date(p.dob).toLocaleDateString('fr-FR')}</td>
+                                        <td>${p.age} ans</td>
+                                        <td>${p.sex}</td>
+                                        <td>${p.weight} kg</td>
+                                        <td>${p.id}</td>
+                                        <td>${p.phone_number || 'N/A'}</td>
+                                        <td>${p.blood_type || 'N/A'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; padding: 20px; border-top: 1px solid var(--border-color);">
+                <button class="btn btn-primary" onclick="this.closest('.modal').remove()">
+                    Fermer
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+}
+
+// Fonction pour exporter les participants d'un club spécifique
+function exportClubParticipants(competitionId, clubId) {
+    const competition = competitionsList.find(c => c.id === competitionId);
+    if (!competition || !competition.participants || !competition.participants[clubId]) {
+        alert('Aucun participant à exporter');
+        return;
+    }
+    
+    const participants = competition.participants[clubId];
+    const clubData = competition.clubs[clubId];
+    
+    // Ajouter la wilaya (à adapter selon vos données)
+    const exportData = participants.map(participant => ({
+        'Nom': participant.last_name,
+        'Prénom': participant.first_name,
+        'Date de naissance': new Date(participant.dob).toLocaleDateString('fr-FR'),
+        'Âge': participant.age,
+        'Sexe': participant.sex === 'M' ? 'Masculin' : participant.sex === 'F' ? 'Féminin' : 'Non spécifié',
+        'Poids (kg)': participant.weight,
+        'Club': clubData?.name || 'Inconnu',
+        'Wilaya': getWilayaFromClub(clubData?.name) || 'N/A',
+        'ID': participant.id,
+        'Téléphone': participant.phone_number || 'N/A',
+        'Groupe sanguin': participant.blood_type || 'N/A'
+    }));
+    
+    // Créer le fichier Excel
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    
+    // Largeurs de colonnes
+    const colWidths = [
+        { wch: 15 }, { wch: 15 }, { wch: 12 }, { wch: 8 }, 
+        { wch: 10 }, { wch: 10 }, { wch: 15 }, { wch: 15 },
+        { wch: 12 }, { wch: 15 }, { wch: 12 }
+    ];
+    ws['!cols'] = colWidths;
+    
+    XLSX.utils.book_append_sheet(wb, ws, 'Participants');
+    
+    // Nom du fichier
+    const clubName = clubData?.name.replace(/[^a-z0-9]/gi, '_') || 'club';
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const fileName = `participants_${clubName}_${date}.xlsx`;
+    
+    XLSX.writeFile(wb, fileName);
+    
+    showNotification('Export réussi', `${participants.length} participants exportés`, 'success');
+}
+
+// Fonction pour extraire la wilaya du nom du club (à adapter)
+function getWilayaFromClub(clubName) {
+    if (!clubName) return 'N/A';
+    
+    // Exemple: si le nom du club contient une wilaya
+    const wilayas = [
+        'Alger', 'Oran', 'Constantine', 'Annaba', 'Blida', 'Batna', 'Sétif',
+        'Tlemcen', 'Tizi Ouzou', 'Béjaïa', 'Mostaganem', 'Tébessa'
+    ];
+    
+    for (const wilaya of wilayas) {
+        if (clubName.toLowerCase().includes(wilaya.toLowerCase())) {
+            return wilaya;
+        }
+    }
+    
+    return 'N/A';
+}
+
+// Fonction pour fermer une compétition (admin)
+function closeCompetitionAdmin(competitionId) {
+    if (!confirm('Êtes-vous sûr de vouloir fermer cette compétition ? Aucune inscription ne sera plus possible.')) {
+        return;
+    }
+    
+    const competition = competitionsList.find(c => c.id === competitionId);
+    if (competition) {
+        competition.status = 'closed';
+        competition.closedAt = new Date().toISOString();
+        saveCompetitions();
+        loadEnhancedCompetitionsList();
+        
+        showNotification('Compétition fermée', 'La compétition a été fermée avec succès', 'success');
+    }
 }
 // ★★★★★ FONCTION À AJOUTER - Démarrage des systèmes automatiques
 
@@ -6159,57 +7832,59 @@ function startSubscriptionMonitoring() {
         // CLUBS MANAGEMENT (Admin only)
         // ============================================
         async function loadClubs() {
-            try {
-                const { data: clubs, error } = await supabase
-                    .from('clubs')
-                    .select('*')
-                    .order('created_at', { ascending: false });
+    try {
+        const { data: clubs, error } = await supabase
+            .from('clubs')
+            .select('*')
+            .order('created_at', { ascending: false });
 
-                if (error) throw error;
+        if (error) throw error;
 
-                const clubsList = document.getElementById('clubsList');
-                clubsList.innerHTML = clubs.map(club => `
-                    <tr>
-                        <td>${club.name}</td>
-                        <td><strong>${club.username}</strong></td>
-                        <td>${club.logo ? `<img src="${club.logo}" style="width: 40px; height: 40px; border-radius: 50%;">` : 'N/A'}</td>
-                        <td>${new Date(club.created_at).toLocaleDateString('fr-FR')}</td>
-                        <td>
-                            <button class="btn btn-danger btn-sm" onclick="deleteClub('${club.id}')">🗑️ Supprimer</button>
-                        </td>
-                    </tr>
-                `).join('');
-            } catch (error) {
-                console.error('Error loading clubs:', error);
-            }
-        }
-
+        const clubsList = document.getElementById('clubsList');
+        clubsList.innerHTML = clubs.map(club => `
+            <tr>
+                <td>${club.name}</td>
+                <td><strong>${club.username}</strong></td>
+                <td>${club.wilaya || 'N/A'}</td>
+                <td>${club.logo ? `<img src="${club.logo}" style="width: 40px; height: 40px; border-radius: 50%;">` : 'N/A'}</td>
+                <td>${new Date(club.created_at).toLocaleDateString('fr-FR')}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="deleteClub('${club.id}')">🗑️ Supprimer</button>
+                </td>
+            </tr>
+        `).join('');
+    } catch (error) {
+        console.error('Error loading clubs:', error);
+        showMessage('clubsList', 'Erreur lors du chargement des clubs', 'danger');
+    }
+}
         async function handleAddClub(e) {
-            e.preventDefault();
-            const name = document.getElementById('clubName').value.trim();
-            const username = document.getElementById('clubUsername').value.trim();
-            const password = document.getElementById('clubPassword').value;
-            const logo = document.getElementById('clubLogo').value.trim();
+    e.preventDefault();
+    const name = document.getElementById('clubName').value.trim();
+    const username = document.getElementById('clubUsername').value.trim();
+    const password = document.getElementById('clubPassword').value;
+    const logo = document.getElementById('clubLogo').value.trim();
+    const wilaya = document.getElementById('clubWilaya').value; // NOUVEAU CHAMP
 
-            try {
-                const { data, error } = await supabase
-                    .from('clubs')
-                    .insert([{ name, username, password, logo }])
-                    .select();
+    try {
+        const { data, error } = await supabase
+            .from('clubs')
+            .insert([{ name, username, password, logo, wilaya }]) // AJOUTER WILAYA
+            .select();
 
-                if (error) throw error;
+        if (error) throw error;
 
-                showMessage('addClubMessage', 'Club créé avec succès!', 'success');
-                document.getElementById('addClubForm').reset();
-                setTimeout(() => {
-                    closeModal('addClubModal');
-                    loadClubs();
-                }, 1500);
-            } catch (error) {
-                console.error('Error adding club:', error);
-                showMessage('addClubMessage', 'Erreur: ' + error.message, 'danger');
-            }
-        }
+        showMessage('addClubMessage', 'Club créé avec succès!', 'success');
+        document.getElementById('addClubForm').reset();
+        setTimeout(() => {
+            closeModal('addClubModal');
+            loadClubs();
+        }, 1500);
+    } catch (error) {
+        console.error('Error adding club:', error);
+        showMessage('addClubMessage', 'Erreur: ' + error.message, 'danger');
+    }
+}
 
         async function deleteClub(clubId) {
             if (!confirm('Êtes-vous sûr de vouloir supprimer ce club ?')) return;
@@ -6233,50 +7908,58 @@ function startSubscriptionMonitoring() {
         // PREFERENCES (Club only)
         // ============================================
         async function loadPreferences() {
-            document.getElementById('prefClubName').value = currentClub.name;
-            document.getElementById('prefUsername').value = currentClub.username;
-            document.getElementById('prefLogo').value = currentClub.logo || '';
+    document.getElementById('prefClubName').value = currentClub.name;
+    document.getElementById('prefUsername').value = currentClub.username;
+    document.getElementById('prefLogo').value = currentClub.logo || '';
+    // Ajouter le champ wilaya
+    document.getElementById('prefWilaya').value = currentClub.wilaya || '';
+}
+
+async function handleUpdatePreferences(e) {
+    e.preventDefault();
+    const name = document.getElementById('prefClubName').value.trim();
+    const username = document.getElementById('prefUsername').value.trim();
+    const password = document.getElementById('prefPassword').value;
+    const passwordConfirm = document.getElementById('prefPasswordConfirm').value;
+    const logo = document.getElementById('prefLogo').value.trim();
+    const wilaya = document.getElementById('prefWilaya').value; // NOUVEAU CHAMP
+
+    if (password && password !== passwordConfirm) {
+        showMessage('prefMessage', 'Les mots de passe ne correspondent pas', 'danger');
+        return;
+    }
+
+    try {
+        const updateData = { 
+            name, 
+            username, 
+            logo,
+            wilaya // AJOUTER LA WILAYA AUX DONNÉES
+        };
+        if (password) {
+            updateData.password = password;
         }
 
-        async function handleUpdatePreferences(e) {
-            e.preventDefault();
-            const name = document.getElementById('prefClubName').value.trim();
-            const username = document.getElementById('prefUsername').value.trim();
-            const password = document.getElementById('prefPassword').value;
-            const passwordConfirm = document.getElementById('prefPasswordConfirm').value;
-            const logo = document.getElementById('prefLogo').value.trim();
+        const { data, error } = await supabase
+            .from('clubs')
+            .update(updateData)
+            .eq('id', currentClub.id)
+            .select();
 
-            if (password && password !== passwordConfirm) {
-                showMessage('prefMessage', 'Les mots de passe ne correspondent pas', 'danger');
-                return;
-            }
+        if (error) throw error;
 
-            try {
-                const updateData = { name, username, logo };
-                if (password) {
-                    updateData.password = password;
-                }
+        currentClub = data[0];
+        sessionStorage.setItem('currentClub', JSON.stringify(currentClub));
+        document.getElementById('clubNameDisplay').textContent = currentClub.name;
 
-                const { data, error } = await supabase
-                    .from('clubs')
-                    .update(updateData)
-                    .eq('id', currentClub.id)
-                    .select();
-
-                if (error) throw error;
-
-                currentClub = data[0];
-                sessionStorage.setItem('currentClub', JSON.stringify(currentClub));
-                document.getElementById('clubNameDisplay').textContent = currentClub.name;
-
-                showMessage('prefMessage', 'Préférences mises à jour avec succès!', 'success');
-                document.getElementById('prefPassword').value = '';
-                document.getElementById('prefPasswordConfirm').value = '';
-            } catch (error) {
-                console.error('Error updating preferences:', error);
-                showMessage('prefMessage', 'Erreur: ' + error.message, 'danger');
-            }
-        }
+        showMessage('prefMessage', 'Préférences mises à jour avec succès!', 'success');
+        document.getElementById('prefPassword').value = '';
+        document.getElementById('prefPasswordConfirm').value = '';
+    } catch (error) {
+        console.error('Error updating preferences:', error);
+        showMessage('prefMessage', 'Erreur: ' + error.message, 'danger');
+    }
+}
 
         // ============================================
         // MEMBERS MANAGEMENT
@@ -7220,6 +8903,96 @@ async function importExcel() {
         }
     };
     reader.readAsArrayBuffer(file);
+}
+// Fonction pour exporter la liste des clubs en Excel
+async function exportClubsToExcel() {
+    try {
+        const { data: clubs, error } = await supabase
+            .from('clubs')
+            .select('*')
+            .order('name', { ascending: true });
+
+        if (error) throw error;
+
+        const exportData = clubs.map(club => ({
+            'Nom du club': club.name,
+            'Username': club.username,
+            'Wilaya': club.wilaya || 'N/A',
+            'Logo URL': club.logo || 'N/A',
+            'Date création': new Date(club.created_at).toLocaleDateString('fr-FR')
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(exportData);
+
+        const colWidths = [
+            { wch: 20 }, { wch: 15 }, { wch: 15 }, 
+            { wch: 30 }, { wch: 12 }
+        ];
+        ws['!cols'] = colWidths;
+
+        XLSX.utils.book_append_sheet(wb, ws, 'Clubs');
+
+        const date = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+        const fileName = `liste_clubs_${date}.xlsx`;
+
+        XLSX.writeFile(wb, fileName);
+
+        showNotification('Export réussi', `${clubs.length} clubs exportés`, 'success');
+
+    } catch (error) {
+        console.error('Erreur export clubs:', error);
+        alert('Erreur lors de l\'export: ' + error.message);
+    }
+}
+
+// Ajoutez un bouton dans la section Gestion des Clubs
+function addExportClubsButton() {
+    const manageClubsSection = document.getElementById('manageClubsSection');
+    const cardHeader = manageClubsSection.querySelector('.card-header');
+    
+    if (cardHeader && !document.getElementById('exportClubsBtn')) {
+        const exportBtn = document.createElement('button');
+        exportBtn.id = 'exportClubsBtn';
+        exportBtn.className = 'btn btn-primary';
+        exportBtn.style.marginLeft = '10px';
+        exportBtn.textContent = '📊 Exporter Excel';
+        exportBtn.onclick = exportClubsToExcel;
+        
+        cardHeader.appendChild(exportBtn);
+    }
+}
+
+// Appelez cette fonction dans loadClubs()
+async function loadClubs() {
+    try {
+        const { data: clubs, error } = await supabase
+            .from('clubs')
+            .select('*')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        const clubsList = document.getElementById('clubsList');
+        clubsList.innerHTML = clubs.map(club => `
+            <tr>
+                <td>${club.name}</td>
+                <td><strong>${club.username}</strong></td>
+                <td>${club.wilaya || 'N/A'}</td>
+                <td>${club.logo ? `<img src="${club.logo}" style="width: 40px; height: 40px; border-radius: 50%;">` : 'N/A'}</td>
+                <td>${new Date(club.created_at).toLocaleDateString('fr-FR')}</td>
+                <td>
+                    <button class="btn btn-danger btn-sm" onclick="deleteClub('${club.id}')">🗑️ Supprimer</button>
+                </td>
+            </tr>
+        `).join('');
+        
+        // Ajouter le bouton d'export
+        addExportClubsButton();
+        
+    } catch (error) {
+        console.error('Error loading clubs:', error);
+    }
 }
 
         async function exportMembers() {
