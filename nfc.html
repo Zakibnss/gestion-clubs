@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NFC Validator — Kyokushin Manager Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --ok: #28a745;
+            --ko: #dc3545;
+            --warn: #ffc107;
+            --bg: #101318;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: background .25s ease;
+        }
+
+        header {
+            width: 100%;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255,255,255,.04);
+        }
+        header .brand { display:flex; align-items:center; gap:10px; font-weight:700; }
+        header img { height: 34px; border-radius: 50%; }
+        #sessionBanner {
+            font-size: .85rem;
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(255,193,7,.15);
+            color: var(--warn);
+        }
+        #sessionBanner.ok { background: rgba(40,167,69,.18); color: #6fdc8c; }
+
+        /* ---------- Zone d'état ---------- */
+        #stage {
+            flex: 1;
+            width: 100%;
+            max-width: 520px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            padding: 30px 16px;
+            text-align: center;
+        }
+        #icon {
+            font-size: clamp(64px, 22vw, 120px);
+            line-height: 1;
+            animation: pulse 2s infinite ease-in-out;
+        }
+        @keyframes pulse {
+            0%,100% { opacity: .85; transform: scale(1); }
+            50%     { opacity: 1;   transform: scale(1.06); }
+        }
+        #bigTitle { font-size: clamp(20px, 6vw, 30px); font-weight: 800; letter-spacing: 1px; }
+        #subText  { font-size: clamp(14px, 4vw, 18px); color: #aab2bd; white-space: pre-line; }
+
+        body.state-success { background: #0d2b17; }
+        body.state-success #icon { color: var(--ok); animation: none; }
+        body.state-expired { background: #38100f; animation: shakeBg .5s; }
+        body.state-expired #icon { color: var(--ko); animation: none; }
+        body.state-invalid { background: #2a2113; }
+        body.state-invalid #icon { color: var(--warn); animation: none; }
+        body.state-reading #icon { animation: spinPulse .9s infinite; }
+
+        @keyframes spinPulse { 50% { transform: scale(.92); opacity:.7 } }
+        @keyframes shakeBg { 0%,100%{transform:none} 25%{transform:translateX(-6px)} 75%{transform:translateX(6px)} }
+
+        /* ---------- Contrôles ---------- */
+        #controls {
+            width: 100%;
+            max-width: 520px;
+            padding: 0 16px 18px;
+            display: flex;
+            gap: 10px;
+        }
+        #manualInput {
+            flex: 1;
+            padding: 14px;
+            border-radius: 12px;
+            border: 2px solid #2c3340;
+            background: #171b22;
+            color: #fff;
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
+        #manualInput:focus { outline: none; border-color: var(--ok); }
+        button.primary {
+            padding: 14px 22px;
+            border: none;
+            border-radius: 12px;
+            background: var(--ok);
+            color: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        button.nfc {
+            background:#1d2330; border:1px solid #39445a; width:100%;
+            margin-bottom:10px; padding:12px; border-radius:12px;
+            color:#cfd6e4; font-weight:600; cursor:pointer;
+        }
+
+        /* ---------- Historique ---------- */
+        #historyWrap { width:100%; max-width:520px; padding:0 16px 40px; }
+        #historyWrap h2 { font-size:.95rem; color:#8b93a1; margin-bottom:8px; font-weight:600; }
+        #historyList { width:100%; border-collapse:collapse; font-size:.85rem; }
+        #historyList td { padding:7px 6px; border-bottom:1px solid #20262f; color:#cfd6e4; }
+        #historyList td.s-ok { color:#6fdc8c; font-weight:700; }
+        #historyList td.s-ko { color:#ff8080; font-weight:700; }
+        #historyList td.s-un { color:var(--warn); font-weight:700; }
+    </style>
+</head>
+<body class="state-waiting">
+
+<header>
+    <div class="brand">
+        <img src="logo_site.png" alt="">
+        <span>NFC Validator</span>
+    </div>
+    <span id="sessionBanner">Recherche séance…</span>
+</header>
+
+<div id="stage">
+    <div id="icon">○</div>
+    <div id="bigTitle">LECTEUR NFC</div>
+    <div id="subText">En attente de carte</div>
+</div>
+
+<div id="controls">
+    <button class="nfc" id="startNfcBtn">📲 Activer le lecteur NFC</button>
+    <input type="text" id="manualInput" placeholder="Ou ID adhérent (manuel)" autocomplete="off">
+    <button class="primary" id="manualBtn">Valider</button>
+</div>
+
+<div id="historyWrap">
+    <h2>Historique — 50 derniers scans</h2>
+    <table id="historyList"><tbody></tbody></table>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://gmoyoflorwaltuanfswn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdtb3lvZmxvcndhbHR1YW5mc3duIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxNTc0OTIsImV4cCI6MjA3NzczMzQ5Mn0.Yr0SFLvcPNbvRqNSjzwFdTZkrIz3Z6WZxcIyx8gwjZA';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const params = new URLSearchParams(location.search);
+const CLUB_ID = params.get('club');
+
+let currentSession = null;
+let busy = false;
+
+/* ---------------- Sons ---------------- */
+let audioCtx = null;
+function beep(freq, durationSec) {
+    try {
+        audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.value = freq;
+        osc.type = 'sine';
+        gain.gain.value = 0.25;
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + durationSec);
+    } catch (e) {}
+}
+
+/* ---------------- États visuels ---------------- */
+function setState(state, title, sub) {
+    document.body.className = 'state-' + state;
+    const icons = { waiting:'○', reading:'◉', success:'✓', expired:'⛔', invalid:'⚠️' };
+    document.getElementById('icon').textContent = icons[state] || '○';
+    document.getElementById('bigTitle').textContent = title;
+    document.getElementById('subText').textContent = sub || '';
+}
+
+function backToWaiting() {
+    setState('waiting', 'LECTEUR NFC', 'En attente de carte');
+    busy = false;
+}
+
+/* ---------------- Séance en cours ---------------- */
+async function loadCurrentSession() {
+    const banner = document.getElementById('sessionBanner');
+    if (!CLUB_ID) {
+        banner.textContent = 'Paramètre club manquant (?club=...)';
+        return;
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    const { data } = await supabase
+        .from('sessions')
+        .select('id, status, group_type, start_time')
+        .eq('club_id', CLUB_ID)
+        .eq('session_date', today)
+        .in('status', ['live','paused'])
+        .order('start_time');
+
+    if (data && data.length) {
+        currentSession = data[0];
+        banner.textContent = `● Séance ${currentSession.group_type || ''} — ${currentSession.status === 'paused' ? 'EN PAUSE' : 'EN COURS'}`;
+        banner.classList.add('ok');
+    } else {
+        currentSession = null;
+        banner.textContent = '⛔ Aucune séance en cours — démarrez une séance dans Groupes';
+        banner.classList.remove('ok');
+    }
+}
+setInterval(loadCurrentSession, 15000);
+
+/* ---------------- Traitement d'un scan ---------------- */
+async function handleScan(rawId, method) {
+    if (busy) return;
+    busy = true;
+    const memberId = String(rawId || '').trim().toUpperCase();
+
+    setState('reading', 'LECTURE...', '');
+    await new Promise(r => setTimeout(r, 250));
+
+    if (!currentSession) {
+        setState('invalid', 'PAS DE SÉANCE', 'Démarrez une séance dans la section Groupes');
+        beep(600, 0.4);
+        setTimeout(backToWaiting, 2500);
+        return;
+    }
+
+    try {
+        // Adhérent connu ?
+        const { data: member } = await supabase.from('members')
+            .select('id, first_name, last_name, photo_url')
+            .eq('id', memberId)
+            .eq('club_id', CLUB_ID)
+            .maybeSingle();
+
+        if (!member) {
+            addHistory('UNKNOWN', null, 'ERROR', method);
+            setState('invalid', 'CARTE INVALIDE', '');
+            beep(600, 0.4);
+            setTimeout(backToWaiting, 2000);
+            return;
+        }
+
+        // Statut abonnement (règle de continuité centralisée DB)
+        const { data: st } = await supabase.from('member_subscription_status')
+            .select('is_active, end_effective, days_left')
+            .eq('member_id', memberId)
+            .maybeSingle();
+
+        const fullName = `${member.last_name} ${member.first_name}`;
+
+        if (!st?.is_active) {
+            const daysExpired = st?.end_effective
+                ? Math.floor((Date.now() - new Date(st.end_effective + 'T00:00:00')) / 86400000)
+                : '?';
+            addHistory(memberId, fullName, 'EXPIRED', method);
+            setState('expired', 'ABONNEMENT EXPIRÉ',
+                `${fullName}\nExpiré depuis ${daysExpired} jour(s)`);
+            beep(440, 0.8);
+            setTimeout(backToWaiting, 4000);
+            return;
+        }
+
+        // Enregistrement présence liée à la séance (+ miroir legacy pour rapports mensuels)
+        const now = new Date();
+        const timeStr = now.toTimeString().slice(0, 8);
+
+        const { error } = await supabase.from('session_attendances').insert({
+            session_id: currentSession.id,
+            member_id: memberId,
+            club_id: CLUB_ID,
+            check_in_time: timeStr,
+            status: 'PRESENT',
+            scan_method: method,
+            subscription_status: 'ACTIVE'
+        });
+
+        if (error) {
+            if (error.code === '23505') {           // déjà pointé sur cette séance
+                addHistory(memberId, fullName, 'SUCCESS', method);
+                setState('success', 'DÉJÀ POINTÉ', fullName);
+                beep(880, 0.2);
+                setTimeout(backToWaiting, 2000);
+                return;
+            }
+            throw error;
+        }
+
+        // Miroir table attendance historique (dashboard / présences mensuelles existantes)
+        await supabase.from('attendance').insert({
+            member_id: memberId,
+            club_id: CLUB_ID,
+            attendance_date: now.toISOString().slice(0, 10),
+            attendance_time: timeStr,
+            month: now.toISOString().slice(0, 7)
+        });
+
+        addHistory(memberId, fullName, 'SUCCESS', method);
+        setState('success', 'CARTE VALIDÉE', fullName);
+        beep(880, 0.2);
+        setTimeout(backToWaiting, 2000);
+    } catch (err) {
+        console.error(err);
+        addHistory(memberId || '???', null, 'ERROR', method);
+        setState('invalid', 'ERREUR', err.message);
+        beep(600, 0.4);
+        setTimeout(backToWaiting, 3000);
+    }
+}
+
+/* ---------------- Historique local ---------------- */
+const history = [];
+function addHistory(id, name, status, method) {
+    history.unshift({
+        id,
+        label: name || id,
+        time: new Date().toTimeString().slice(0, 5),
+        status,
+        method
+    });
+    if (history.length > 50) history.pop();
+    renderHistory();
+}
+
+function renderHistory() {
+    const cls = { SUCCESS: 's-ok', EXPIRED: 's-ko', ERROR: 's-un' };
+    document.querySelector('#historyList tbody').innerHTML = history.map(h => `
+        <tr>
+            <td>${h.id}</td>
+            <td>${h.time}</td>
+            <td class="${cls[h.status] || ''}">${h.status}</td>
+            <td>${h.method}</td>
+        </tr>`).join('');
+}
+
+/* ---------------- Web NFC ---------------- */
+async function startNfc() {
+    if (!('NDEFReader' in window)) {
+        alert('Web NFC non supporté sur cet appareil/navigateur.\nUtilisez Chrome sur Android, ou la saisie manuelle.');
+        return;
+    }
+    try {
+        const ndef = new NDEFReader();
+        await ndef.scan();
+        setState('waiting', 'LECTEUR NFC', 'NFC actif — présentez une carte');
+        ndef.addEventListener('error', () => {
+            addHistory('UNKNOWN', null, 'ERROR', 'NFC');
+            setState('invalid', 'CARTE INVALIDE', '');
+            beep(600, 0.4);
+            setTimeout(backToWaiting, 2000);
+        });
+        ndef.addEventListener('reading', ({ message }) => {
+            let text = '';
+            for (const record of message.records) {
+                if (record.recordType === 'text') {
+                    text += new TextDecoder(record.encoding).decode(record.data);
+                }
+            }
+            handleScan(text.split('\n')[0], 'NFC');
+        });
+    } catch (err) {
+        alert('Impossible de démarrer le lecteur NFC : ' + err.message);
+    }
+}
+
+document.getElementById('startNfcBtn').addEventListener('click', startNfc);
+document.getElementById('manualBtn').addEventListener('click', () => {
+    const val = document.getElementById('manualInput').value;
+    if (val.trim()) {
+        handleScan(val, 'MANUAL');
+        document.getElementById('manualInput').value = '';
+    }
+});
+document.getElementById('manualInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') document.getElementById('manualBtn').click();
+});
+
+loadCurrentSession();
+setState('waiting', 'LECTEUR NFC', 'En attente de carte');
+</script>
+</body>
+</html>

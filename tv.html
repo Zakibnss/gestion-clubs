@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شاشة النادي — Kyokushin Manager Pro</title>
+    <link rel="icon" type="image/png" href="logo.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="css/tv.css">
+</head>
+<body>
+
+<!-- Fond animé -->
+<div class="tv-bg"></div>
+
+<header class="tv-header">
+    <div class="brand">
+        <img id="clubLogo" src="logo.png" alt="Logo">
+        <div class="brand-text">
+            <h1 id="clubName">النادي</h1>
+            <span>KYOKUSHIN KARATE</span>
+        </div>
+    </div>
+    <div class="clock">
+        <div id="tvTime">--:--:--</div>
+        <div id="tvDate"></div>
+    </div>
+</header>
+
+<main class="tv-main">
+
+    <!-- Colonne centrale : état de la séance -->
+    <section class="session-zone">
+
+        <div id="statusPill" class="status-pill st-waiting">في انتظار بدء الحصة</div>
+
+        <!-- État WAITING -->
+        <div id="stateWaiting" class="state-block">
+            <div class="waiting-icon">🥋</div>
+            <p class="waiting-msg">مرحبا بكم في النادي</p>
+            <p class="waiting-sub" id="nextSessionHint"></p>
+        </div>
+
+        <!-- État RUNNING -->
+        <div id="stateRunning" class="state-block hidden">
+            <div class="chrono" id="chronoDisplay">00:00:00</div>
+            <div class="present-count">
+                <span id="presentCount">0</span>
+                <span class="present-label">عدد الحاضرين</span>
+            </div>
+        </div>
+
+        <!-- Carte du dernier adhérent pointé -->
+        <div id="attendeeCard" class="attendee-card hidden">
+            <img id="attPhoto" src="" alt="">
+            <div class="att-info">
+                <h2 id="attName">—</h2>
+                <p><span class="att-id" id="attId"></span> · <span id="attTime"></span></p>
+                <p class="att-meta">
+                    <span id="attMonth"></span>
+                    <span id="attSub" class="sub-badge"></span>
+                </p>
+            </div>
+        </div>
+
+        <!-- Message séance terminée -->
+        <div id="celebration" class="celebration hidden">🎉 أحسنتم! انتهت الحصة بنجاح 🎉</div>
+    </section>
+
+    <!-- Colonne latérale -->
+    <aside class="side-panel">
+        <div class="panel">
+            <h3>📅 الحصص القادمة</h3>
+            <ul id="upcomingList"><li>—</li></ul>
+        </div>
+        <div class="panel">
+            <h3>🏆 الحدث القادم</h3>
+            <ul id="eventList"><li>—</li></ul>
+        </div>
+        <div class="panel">
+            <h3>✅ آخر التسجيلات</h3>
+            <ul id="recentList"><li>—</li></ul>
+        </div>
+    </aside>
+</main>
+
+<script src="js/tv.js?v=20260824"></script>
+</body>
+</html>

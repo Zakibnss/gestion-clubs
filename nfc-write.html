@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Enregistrer une carte NFC — Kyokushin Manager Pro</title>
+    <link rel="icon" type="image/png" href="logo_site.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/nfc-reader-service.js?v=20260830"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #c8102e; --accent: #ffd700; --dark: #0a0a0a;
+            --ok: #28a745; --ko: #dc3545; --warn: #ffc107;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(160deg, var(--dark) 0%, #16181d 100%);
+            color: #fff; min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+        }
+        header {
+            width: 100%; padding: 14px 18px; display: flex; justify-content: space-between;
+            align-items: center; background: rgba(255,255,255,.04); border-bottom: 1px solid rgba(200,16,46,.35);
+        }
+        header .brand { display:flex; align-items:center; gap:10px; font-weight:700; }
+        header img { height: 34px; border-radius: 50%; }
+        #stage {
+            flex: 1; width: 100%; max-width: 560px; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; gap: 14px; padding: 30px 16px; text-align: center;
+        }
+        #icon { font-size: clamp(64px, 20vw, 110px); line-height: 1; animation: pulse 2s infinite ease-in-out; }
+        @keyframes pulse { 0%,100% { opacity:.85; transform:scale(1); } 50% { opacity:1; transform:scale(1.06); } }
+        body.state-reading #icon { animation: spinPulse .9s infinite; }
+        @keyframes spinPulse { 50% { transform: scale(.92); opacity:.7 } }
+        #bigTitle { font-size: clamp(20px, 6vw, 30px); font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+        #subText { font-size: clamp(14px, 4vw, 17px); color: #aab2bd; white-space: pre-line; min-height: 24px; }
+        .panel {
+            width: 100%; background: rgba(255,255,255,.05); border: 1px solid rgba(200,16,46,.35);
+            border-radius: 16px; padding: 22px; display: flex; flex-direction: column; gap: 14px;
+        }
+        label { font-size:.85rem; color:#aab2bd; text-align:left; font-weight:600; }
+        select, input[type="text"] {
+            width: 100%; padding: 13px 14px; border-radius: 12px; border: 2px solid #2c3340;
+            background: #171b22; color: #fff; font-size: 1rem;
+        }
+        select:focus, input:focus { outline: none; border-color: var(--primary); }
+        button.primary-btn {
+            width: 100%; padding: 16px; border: none; border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), #8f0b20); color: #fff; font-size: 1.05rem;
+            font-weight: 700; cursor: pointer; transition: transform .15s ease;
+        }
+        button.primary-btn:hover:not(:disabled) { transform: translateY(-2px); }
+        button.primary-btn:disabled { opacity:.45; cursor:not-allowed; }
+        button.ghost {
+            width: 100%; padding: 14px; border-radius: 12px; border: 1px solid #39445a;
+            background: #1d2330; color: #cfd6e4; font-weight: 600; cursor: pointer;
+        }
+        #readerBox {
+            display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px;
+            background: rgba(220,53,69,.12); border: 1px solid var(--ko); text-align: left;
+        }
+        #readerBox.ok { background: rgba(40,167,69,.12); border-color: var(--ok); }
+        #readerBox .dot { font-size: 1.2rem; }
+        #readerBox .t { font-weight: 700; }
+        #readerBox .s { font-size:.8rem; color:#aab2bd; }
+        #waitCard {
+            display: none; text-align: center; padding: 22px 8px; border-radius: 14px;
+            border: 1px dashed #39445a; background: rgba(255,255,255,.03);
+        }
+        #waitCard .ic { font-size: 2.2rem; }
+        #waitCard .t { font-size: 1.15rem; font-weight:700; }
+        #waitCard .s { color:#aab2bd; margin-top:4px; font-size:.9rem; }
+        #detected {
+            display: none; text-align: center; padding: 18px 8px; border-radius: 14px;
+            border: 1px solid var(--ok); background: rgba(40,167,69,.12);
+        }
+        #detected .t { font-size: 1.15rem; font-weight:700; color: var(--ok); }
+        #uidLabel { font-size: 1rem; letter-spacing: 1px; margin-top:6px; word-break: break-all; }
+        .alert-box { display: none; padding: 13px 16px; border-radius: 12px; font-size: .9rem; font-weight: 600; text-align:left; }
+        .alert-box.show { display: block; }
+        .alert-box.success { background: rgba(40,167,69,.15); border: 1px solid var(--ok); color: #6fdc8c; }
+        .alert-box.error   { background: rgba(220,53,69,.15); border: 1px solid var(--ko); color: #ff8080; }
+        footer { padding: 14px; font-size: .75rem; color: #6b7280; text-align: center; }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="brand">
+        <img src="logo_site.png" alt="">
+        <span>Enregistrer une carte NFC</span>
+    </div>
+</header>
+
+<div id="stage">
+    <div id="icon">📇</div>
+    <div id="bigTitle">ENREGISTREMENT</div>
+    <div id="subText">Attribuez une carte (UID) à un adhérent</div>
+
+    <div class="panel">
+        <!-- Statut du lecteur -->
+        <div id="readerBox">
+            <span class="dot">🔴</span>
+            <div>
+                <div class="t" id="readerTitle">Lecteur non connecté</div>
+                <div class="s" id="readerSub">Branchez le lecteur NFC externe puis cliquez sur Connecter.</div>
+            </div>
+        </div>
+        <button class="ghost" id="connectBtn">🔌 Connecter le lecteur NFC</button>
+
+        <div>
+            <label for="memberSelect">👤 Adhérent concerné</label>
+            <select id="memberSelect">
+                <option value="">Chargement des adhérents…</option>
+            </select>
+        </div>
+
+        <!-- En attente de la carte -->
+        <div id="waitCard">
+            <div class="ic">📡</div>
+            <div class="t">En attente de la carte</div>
+            <div class="s">Placez la carte NFC sur le lecteur externe.</div>
+        </div>
+
+        <!-- Carte détectée -->
+        <div id="detected">
+            <div class="t">✓ Carte détectée</div>
+            <div id="uidLabel">UID : —</div>
+        </div>
+
+        <button class="primary-btn" id="saveBtn" disabled>💾 Enregistrer la carte</button>
+
+        <div class="alert-box" id="statusAlert"></div>
+    </div>
+</div>
+
+<footer>
+    Aucune donnée personnelle écrite sur la carte — seul l'UID (gravé en usine) est utilisé,
+    l'association à l'adhérent est stockée en base.
+</footer>
+
+<script>
+const SUPABASE_URL = 'https://gmoyoflorwaltuanfswn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdtb3lvZmxvcndhbHR1YW5mc3duIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxNTc0OTIsImV4cCI6MjA3NzczMzQ5Mn0.Yr0SFLvcPNbvRqNSjzwFdTZkrIz3Z6WZxcIyx8gwjZA';
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const CLUB_ID = new URLSearchParams(location.search).get('club');
+let membersCache = [];
+let detectedUid = null;
+
+function showAlert(type, msg) { const b = document.getElementById('statusAlert'); b.className = 'alert-box show ' + type; b.textContent = msg; }
+function hideAlert() { document.getElementById('statusAlert').className = 'alert-box'; }
+function setTitle(t, s) { document.getElementById('bigTitle').textContent = t; document.getElementById('subText').textContent = s || ''; document.body.className=''; }
+function showReader(ok, title, sub) {
+    const box = document.getElementById('readerBox');
+    box.className = ok ? 'ok' : '';
+    box.querySelector('.dot').textContent = ok ? '🟢' : '🔴';
+    document.getElementById('readerTitle').textContent = title;
+    document.getElementById('readerSub').textContent = sub;
+}
+function showWait() {
+    document.getElementById('waitCard').style.display = 'block';
+    document.getElementById('detected').style.display = 'none';
+    detectedUid = null;
+    document.getElementById('saveBtn').disabled = true;
+    document.body.className = 'state-reading';
+}
+function showDetected(uid) {
+    document.getElementById('waitCard').style.display = 'none';
+    document.getElementById('detected').style.display = 'block';
+    document.getElementById('uidLabel').textContent = 'UID : ' + uid;
+    detectedUid = uid;
+    document.getElementById('saveBtn').disabled = membersCache.some(m => m.id === document.getElementById('memberSelect').value) ? false : true;
+    document.body.className = '';
+}
+
+async function loadMembers() {
+    const sel = document.getElementById('memberSelect');
+    try {
+        let q = supabaseClient.from('members').select('id, first_name, last_name').order('last_name');
+        if (CLUB_ID && CLUB_ID !== 'admin') q = q.eq('club_id', CLUB_ID);
+        const { data, error } = await q;
+        if (error) throw error;
+        membersCache = data || [];
+        sel.innerHTML = '<option value="">— Sélectionner un adhérent —</option>' +
+            membersCache.map(m => `<option value="${m.id}">${m.last_name} ${m.first_name}</option>`).join('');
+    } catch (err) {
+        sel.innerHTML = '<option value="">Erreur de chargement</option>';
+        showAlert('error', 'Erreur : ' + err.message);
+    }
+}
+
+/* ---------- Lecture via lecteur NFC externe ---------- */
+async function connectReader() {
+    const btn = document.getElementById('connectBtn');
+    btn.disabled = true;
+    try {
+        await NFCReaderService.connect();
+        showReader(true, 'Lecteur connecté', 'Prêt à lire');
+        showWait();
+        setTitle('EN ATTENTE DE LA CARTE');
+        // Lecture continue : on remplit le UID dès que la carte est posée
+        NFCReaderService.startPolling(onCardUid);
+    } catch (err) {
+        console.error(err);
+        showReader(false, 'Lecteur non connecté', err.message);
+        showAlert('error', err.message);
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+let lastUid = null;
+function onCardUid(uid) {
+    const clean = NFCReaderService.normalizeUid(uid);
+    // éviter de re-traiter la même carte en continu tant qu'elle reste posée
+    if (clean === lastUid) return;
+    lastUid = clean;
+    showDetected(clean);
+    setTitle('CARTE DÉTECTÉE', 'Vérifiez l\'UID puis enregistrez');
+}
+
+async function saveCard() {
+    hideAlert();
+    const memberId = document.getElementById('memberSelect').value;
+    if (!detectedUid) { showAlert('error', 'Aucune carte détectée — placez la carte sur le lecteur.'); return; }
+    if (!memberId) { showAlert('error', 'Sélectionnez un adhérent.'); return; }
+
+    try {
+        const { data: existing } = await supabaseClient.from('nfc_cards')
+            .select('uid, member_id, status, first_name, last_name')
+            .eq('uid', detectedUid).maybeSingle();
+        if (existing && existing.status === 'assigned' && existing.member_id !== memberId) {
+            showAlert('error', `Cette carte est déjà attribuée à ${existing.first_name} ${existing.last_name}.`);
+            return;
+        }
+        const { error } = await supabaseClient.rpc('assign_nfc_card', { p_uid: detectedUid, p_member_id: memberId });
+        if (error) throw error;
+        showAlert('success', `✅ Carte ${detectedUid} attribuée avec succès.`);
+        lastUid = null;
+        showWait();
+        setTitle('CARTE ENREGISTRÉE');
+    } catch (err) {
+        console.error(err);
+        showAlert('error', 'Erreur : ' + err.message);
+    }
+}
+
+document.getElementById('connectBtn').addEventListener('click', connectReader);
+document.getElementById('saveBtn').addEventListener('click', saveCard);
+document.getElementById('memberSelect').addEventListener('change', () => {
+    document.getElementById('saveBtn').disabled = !(detectedUid && document.getElementById('memberSelect').value);
+});
+showReader(false, 'Lecteur non connecté', 'Branchez le lecteur NFC externe puis cliquez sur Connecter.');
+loadMembers();
+</script>
+</body>
+</html>

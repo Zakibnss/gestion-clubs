@@ -49,6 +49,29 @@
             flex: 1;
         }
 
+        /* Bouton langue */
+        .lang-toggle {
+            position: fixed;
+            top: 15px;
+            right: 15px;
+            z-index: 1000;
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            backdrop-filter: blur(5px);
+            transition: var(--transition);
+        }
+
+        .lang-toggle:hover {
+            background: rgba(255,255,255,0.35);
+            transform: scale(1.05);
+        }
+
         /* Header Styles */
         .header {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
@@ -91,11 +114,6 @@
             overflow: hidden;
             margin-bottom: 30px;
             transition: var(--transition);
-        }
-
-        .member-card:hover {
-            transform: translateY(-5px);
-            box-shadow: var(--shadow-lg);
         }
 
         .member-header {
@@ -173,6 +191,75 @@
             text-align: right;
         }
 
+        /* Mois non payés */
+        .months-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .month-chip {
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(220, 53, 69, 0.12);
+            color: var(--danger-color);
+            border: 1px solid rgba(220, 53, 69, 0.4);
+        }
+
+        .month-chip.ok {
+            background: rgba(40, 167, 69, 0.12);
+            color: var(--success-color);
+            border-color: rgba(40, 167, 69, 0.4);
+        }
+
+        .count-badge {
+            display: inline-block;
+            min-width: 32px;
+            text-align: center;
+            padding: 2px 10px;
+            border-radius: 12px;
+            background: var(--danger-color);
+            color: white;
+            font-weight: 700;
+        }
+
+        .count-badge.zero {
+            background: var(--success-color);
+        }
+
+        /* Stats présence */
+        .attendance-stats {
+            display: flex;
+            gap: 15px;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .stat-box {
+            flex: 1;
+            min-width: 120px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px 10px;
+            text-align: center;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
         /* Subscription Status */
         .subscription-status {
             display: inline-block;
@@ -230,19 +317,27 @@
             .container {
                 padding: 15px;
             }
-            
+
             .header-title h1 {
                 font-size: 1.8rem;
             }
-            
+
             .info-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .member-photo {
                 width: 120px;
                 height: 120px;
             }
+        }
+
+        [dir="rtl"] .info-value {
+            text-align: left;
+        }
+
+        [dir="rtl"] .months-list {
+            justify-content: flex-start;
         }
 
         /* Loading Spinner */
@@ -269,10 +364,11 @@
 <body>
     <!-- Header -->
     <div class="header">
+        <button id="langToggle" class="lang-toggle" onclick="toggleLang()">🌐 العربية</button>
         <div class="logo">🥋</div>
         <div class="header-title">
             <h1>Kyokushin Karaté Club</h1>
-            <p>Informations de l'adhérent</p>
+            <p data-i18n="subtitle">Informations de l'adhérent</p>
         </div>
     </div>
 
@@ -281,7 +377,7 @@
         <div id="memberCard" class="member-card">
             <div class="member-header">
                 <div class="member-photo-container">
-                    <img id="memberPhoto" class="member-photo" src="" alt="Photo de l'adhérent">
+                    <img id="memberPhoto" class="member-photo" src="" alt="">
                     <div id="memberPhotoPlaceholder" class="member-photo" style="display: flex; align-items: center; justify-content: center; font-size: 4rem;">
                         👤
                     </div>
@@ -289,63 +385,97 @@
                 <h2 class="member-name" id="memberFullName">-</h2>
                 <div class="member-id" id="memberIdDisplay">ID: -</div>
             </div>
-            
+
             <div class="member-content">
                 <div class="info-grid">
                     <div class="info-section">
-                        <h3 class="info-title">📋 Informations personnelles</h3>
+                        <h3 class="info-title" data-i18n="personalInfo">📋 Informations personnelles</h3>
                         <div class="info-row">
-                            <span class="info-label">Nom complet:</span>
+                            <span class="info-label" data-i18n="fullName">Nom complet:</span>
                             <span class="info-value" id="memberFullNameDetail">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Date de naissance:</span>
+                            <span class="info-label" data-i18n="birthDate">Date de naissance:</span>
                             <span class="info-value" id="memberDob">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Âge:</span>
+                            <span class="info-label" data-i18n="age">Âge:</span>
                             <span class="info-value" id="memberAge">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Groupe sanguin:</span>
+                            <span class="info-label" data-i18n="bloodType">Groupe sanguin:</span>
                             <span class="info-value" id="memberBloodType">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Téléphone:</span>
+                            <span class="info-label" data-i18n="phone">Téléphone:</span>
                             <span class="info-value" id="memberPhone">-</span>
                         </div>
                     </div>
-                    
+
                     <div class="info-section">
-                        <h3 class="info-title">💰 Informations d'abonnement</h3>
+                        <h3 class="info-title" data-i18n="subInfo">💰 Informations d'abonnement</h3>
                         <div class="info-row">
-                            <span class="info-label">Type d'abonnement:</span>
+                            <span class="info-label" data-i18n="subType">Type d'abonnement:</span>
                             <span class="info-value" id="memberSubscription">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Date de début:</span>
+                            <span class="info-label" data-i18n="startDate">Date de début:</span>
                             <span class="info-value" id="memberStartDate">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Date de fin:</span>
+                            <span class="info-label" data-i18n="endDate">Date d'expiration:</span>
                             <span class="info-value" id="memberEndDate">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Jours restants:</span>
+                            <span class="info-label" data-i18n="daysLeft">Jours restants:</span>
                             <span class="info-value" id="memberDaysLeft">-</span>
                         </div>
                         <div class="info-row">
-                            <span class="info-label">Statut:</span>
+                            <span class="info-label" data-i18n="status">Statut:</span>
                             <span class="info-value">
                                 <span id="memberStatus" class="subscription-status">-</span>
                             </span>
                         </div>
                     </div>
                 </div>
-                
+
+                <!-- Mois non payés / expirés -->
+                <div class="info-section">
+                    <h3 class="info-title" data-i18n="unpaidMonths">💳 Mois non payés</h3>
+                    <div class="info-row" style="border-bottom: none;">
+                        <span class="info-label"><span data-i18n="number">Nombre :</span> <span class="count-badge zero" id="unpaidCount">0</span></span>
+                        <span class="months-list" id="unpaidMonthsList"></span>
+                    </div>
+                </div>
+
+                <!-- Présences -->
+                <div class="info-section">
+                    <h3 class="info-title" data-i18n="attendanceTitle">🥋 Présences aux séances</h3>
+                    <div class="attendance-stats">
+                        <div class="stat-box">
+                            <div class="stat-number" id="attThisMonth">0</div>
+                            <div class="stat-label" data-i18n="thisMonth">Ce mois</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number" id="attPrevMonths">0</div>
+                            <div class="stat-label" data-i18n="prevMonths">Mois précédents</div>
+                        </div>
+                        <div class="stat-box">
+                            <div class="stat-number" id="attTotal">0</div>
+                            <div class="stat-label" data-i18n="total">Total</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Prochaines séances -->
+                <div class="info-section">
+                    <h3 class="info-title" data-i18n="nextSessions">🗓️ Prochaines séances</h3>
+                    <div id="nextSessionsList" style="display:flex;flex-wrap:wrap;gap:10px;"></div>
+                </div>
+
                 <!-- Alert for expiring subscription -->
                 <div id="subscriptionAlert" class="alert alert-warning hidden">
-                    ⚠️ <strong>Attention:</strong> L'abonnement expire bientôt!
+                    ⚠️ <strong data-i18n="expiringSoon">Attention:</strong>&nbsp;<span data-i18n="expiringSoonMsg">L'abonnement expire bientôt!</span>
                 </div>
             </div>
         </div>
@@ -353,7 +483,7 @@
         <!-- Loading State -->
         <div id="loadingState" class="hidden">
             <div class="spinner"></div>
-            <p style="text-align: center; color: var(--text-secondary); margin-top: 15px;">
+            <p style="text-align: center; color: var(--text-secondary); margin-top: 15px;" data-i18n="loading">
                 Chargement des informations de l'adhérent...
             </p>
         </div>
@@ -361,11 +491,11 @@
         <!-- Error State -->
         <div id="errorState" class="hidden" style="text-align: center; padding: 40px 20px;">
             <div style="font-size: 4rem; margin-bottom: 20px;">❌</div>
-            <h2 style="color: var(--danger-color); margin-bottom: 15px;">Adhérent non trouvé</h2>
-            <p style="color: var(--text-secondary); margin-bottom: 25px;">
+            <h2 style="color: var(--danger-color); margin-bottom: 15px;" data-i18n="notFound">Adhérent non trouvé</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 25px;" data-i18n="notFoundMsg">
                 Impossible de trouver les informations pour cet adhérent.
             </p>
-            <p style="font-size: 0.9rem; color: var(--text-secondary);">
+            <p style="font-size: 0.9rem; color: var(--text-secondary);" data-i18n="notFoundHint">
                 Vérifiez que le QR code a été scanné correctement ou contactez l'administration du club.
             </p>
         </div>
@@ -374,7 +504,7 @@
     <!-- Footer -->
     <div class="footer">
         <p>&copy; 2025 Kyokushin Karaté Club - Tous droits réservés -BENAISSA ZAKARIA-</p>
-        <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 5px;">
+        <p style="font-size: 0.9rem; opacity: 0.8; margin-top: 5px;" data-i18n="footerNote">
             Cette page affiche les informations d'un adhérent via scan de QR code
         </p>
     </div>
@@ -383,14 +513,124 @@
         // Configuration Supabase
         const SUPABASE_URL = 'https://gmoyoflorwaltuanfswn.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdtb3lvZmxvcndhbHR1YW5mc3duIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxNTc0OTIsImV4cCI6MjA3NzczMzQ5Mn0.Yr0SFLvcPNbvRqNSjzwFdTZkrIz3Z6WZxcIyx8gwjZA';
-        
+
         var supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // ============================
+        // INTERNATIONALISATION FR / AR
+        // ============================
+        let currentLang = localStorage.getItem('adherent_lang') || 'fr';
+
+        const I18N = {
+            fr: {
+                subtitle: "Informations de l'adhérent",
+                personalInfo: "📋 Informations personnelles",
+                fullName: "Nom complet:",
+                birthDate: "Date de naissance:",
+                age: "Âge:",
+                bloodType: "Groupe sanguin:",
+                phone: "Téléphone:",
+                notProvided: "Non renseigné",
+                subInfo: "💰 Informations d'abonnement",
+                subType: "Type d'abonnement:",
+                startDate: "Date de début:",
+                endDate: "Date d'expiration:",
+                daysLeft: "Jours restants:",
+                status: "Statut:",
+                days: "jour(s)",
+                years: "ans",
+                active: "Actif",
+                expired: "Expiré",
+                soonExpired: "Bientôt expiré",
+                unpaidMonths: "💳 Mois non payés",
+                number: "Nombre :",
+                none: "Aucun ✓",
+                attendanceTitle: "🥋 Présences aux séances",
+                thisMonth: "Ce mois",
+                prevMonths: "Mois précédents",
+                total: "Total",
+                sessions: "séance(s)",
+                nextSessions: "🗓️ Prochaines séances",
+                noSession: "Aucune séance planifiée",
+                noGroup: "Aucun groupe assigné",
+                monthly: "Mensuel", quarterly: "Trimestriel", biannual: "Semestriel", annual: "Annuel",
+                loading: "Chargement des informations de l'adhérent...",
+                notFound: "Adhérent non trouvé",
+                notFoundMsg: "Impossible de trouver les informations pour cet adhérent.",
+                notFoundHint: "Vérifiez que le QR code a été scanné correctement ou contactez l'administration du club.",
+                footerNote: "Cette page affiche les informations d'un adhérent via scan de QR code",
+                alertTitle: "Attention:",
+                alertMsg: "L'abonnement expire bientôt!",
+                switchBtn: "🌐 العربية",
+                locale: "fr-FR"
+            },
+            ar: {
+                subtitle: "معلومات العضو",
+                personalInfo: "📋 المعلومات الشخصية",
+                fullName: "الاسم الكامل:",
+                birthDate: "تاريخ الميلاد:",
+                age: "العمر:",
+                bloodType: "فصيلة الدم:",
+                phone: "الهاتف:",
+                notProvided: "غير محدد",
+                subInfo: "💰 معلومات الاشتراك",
+                subType: "نوع الاشتراك:",
+                startDate: "تاريخ البداية:",
+                endDate: "تاريخ الانتهاء:",
+                daysLeft: "الأيام المتبقية:",
+                status: "الحالة:",
+                days: "يوم",
+                years: "سنة",
+                active: "نشط",
+                expired: "منتهي",
+                soonExpired: "ينتهي قريباً",
+                unpaidMonths: "💳 الأشهر غير المدفوعة",
+                number: "العدد:",
+                none: "لا يوجد ✓",
+                attendanceTitle: "🥋 الحضور إلى الحصص",
+                thisMonth: "هذا الشهر",
+                prevMonths: "الأشهر السابقة",
+                total: "المجموع",
+                sessions: "حصة",
+                nextSessions: "🗓️ الحصص القادمة",
+                noSession: "لا توجد حصص مبرمجة",
+                noGroup: "لا توجد مجموعة مسندة",
+                monthly: "شهري", quarterly: "ثلاثي", biannual: "نصف سنوي", annual: "سنوي",
+                loading: "جارٍ تحميل معلومات العضو...",
+                notFound: "لم يتم العثور على العضو",
+                notFoundMsg: "لا يمكن العثور على معلومات هذا العضو.",
+                notFoundHint: "تأكد من مسح رمز QR بشكل صحيح أو اتصل بإدارة النادي.",
+                footerNote: "هذه الصفحة تعرض معلومات العضو عبر مسح رمز QR",
+                alertTitle: "تنبيه:",
+                alertMsg: "سينتهي الاشتراك قريباً!",
+                switchBtn: "🌐 Français",
+                locale: "ar-DZ"
+            }
+        };
+
+        function t(key) { return I18N[currentLang][key] || I18N.fr[key] || key; }
+
+        function applyStaticTranslations() {
+            document.documentElement.lang = currentLang;
+            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                el.textContent = t(el.dataset.i18n);
+            });
+            document.getElementById('langToggle').textContent = t('switchBtn');
+        }
+
+        function toggleLang() {
+            currentLang = currentLang === 'fr' ? 'ar' : 'fr';
+            localStorage.setItem('adherent_lang', currentLang);
+            applyStaticTranslations();
+            if (window._memberRenderData) renderMember(window._memberRenderData);
+        }
 
         // Fonction pour calculer la date de fin d'abonnement
         function computeEndDate(startDate, subscriptionType) {
             const start = new Date(startDate);
             const end = new Date(start);
-            
+
             switch (subscriptionType) {
                 case "monthly":
                     end.setMonth(end.getMonth() + 1);
@@ -407,7 +647,7 @@
                 default:
                     end.setMonth(end.getMonth() + 1);
             }
-            
+
             return end;
         }
 
@@ -417,11 +657,11 @@
             const birth = new Date(birthDate);
             let age = today.getFullYear() - birth.getFullYear();
             const monthDiff = today.getMonth() - birth.getMonth();
-            
+
             if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
                 age--;
             }
-            
+
             return age;
         }
 
@@ -431,41 +671,48 @@
             const end = new Date(endDate);
             const timeDiff = end.getTime() - today.getTime();
             const daysLeft = Math.ceil(timeDiff / (1000 * 3600 * 24));
-            
+
             return daysLeft;
         }
 
         // Fonction pour déterminer le statut de l'abonnement
         function getSubscriptionStatus(daysLeft) {
             if (daysLeft < 0) {
-                return { text: "Expiré", class: "status-expired" };
+                return { key: "expired", cls: "status-expired" };
             } else if (daysLeft <= 7) {
-                return { text: "Bientôt expiré", class: "status-warning" };
+                return { key: "soonExpired", cls: "status-warning" };
             } else {
-                return { text: "Actif", class: "status-active" };
+                return { key: "active", cls: "status-active" };
             }
         }
 
-        // Fonction pour formater la date en français
+        // Fonction pour formater la date selon la langue
         function formatDate(dateString) {
+            if (!dateString) return '-';
             const date = new Date(dateString);
-            return date.toLocaleDateString('fr-FR', {
+            return date.toLocaleDateString(t('locale'), {
                 day: '2-digit',
                 month: '2-digit',
                 year: 'numeric'
             });
         }
 
+        // Nom des mois dans la langue courante
+        function formatMonth(monthStr) {
+            const [y, m] = monthStr.split('-').map(Number);
+            return new Date(y, m - 1, 1).toLocaleDateString(t('locale'), { month: 'short', year: 'numeric' });
+        }
+
+        // Date d'une séance (jour + date) dans la langue courante
+        function formatSessionDate(dateStr) {
+            const d = new Date(dateStr + 'T00:00:00');
+            return d.toLocaleDateString(t('locale'), { weekday: 'short', day: '2-digit', month: 'short' });
+        }
+
         // Fonction pour formater le type d'abonnement
         function formatSubscriptionType(type) {
-            const types = {
-                "monthly": "Mensuel",
-                "quarterly": "Trimestriel", 
-                "biannual": "Semestriel",
-                "annual": "Annuel"
-            };
-            
-            return types[type] || type;
+            const map = { "monthly": "monthly", "quarterly": "quarterly", "biannual": "biannual", "annual": "annual" };
+            return t(map[type] || type);
         }
 
         // Fonction pour extraire l'ID du membre de l'URL
@@ -474,15 +721,211 @@
             return urlParams.get('id');
         }
 
+        // Récupérer les données supplémentaires (fin effective, paiements, présences)
+        async function loadExtraData(memberId, member) {
+            const results = {
+                endEffective: null,
+                isActive: null,
+                unpaidMonths: [],
+                attThisMonth: 0,
+                attPrevMonths: 0,
+                attByMonth: {}
+            };
+
+            try {
+                const nowMonth = new Date().toISOString().slice(0, 7);
+
+                // Fin d'abonnement effective + statut (règle de continuité DB)
+                const { data: st } = await supabase
+                    .from('member_subscription_status')
+                    .select('end_effective, is_active')
+                    .eq('member_id', memberId)
+                    .maybeSingle();
+                if (st) {
+                    results.endEffective = st.end_effective;
+                    results.isActive = st.is_active;
+                }
+
+                // Fenêtre de mois : du mois de début d'abonnement au mois courant
+                const months = [];
+                if (member.start_date) {
+                    let [y, mo] = member.start_date.slice(0, 7).split('-').map(Number);
+                    const [cy, cm] = nowMonth.split('-').map(Number);
+                    while (y < cy || (y === cy && mo <= cm)) {
+                        months.push(`${y}-${String(mo).padStart(2, '0')}`);
+                        mo++; if (mo > 12) { mo = 1; y++; }
+                        if (months.length > 60) break;
+                    }
+                }
+
+                // Paiements par mois → mois non payés = mois échus sans paiement.
+                // Fallback : si aucun paiement enregistré, un mois est payé
+                // s'il est couvert par start_date + durée d'abonnement.
+                if (months.length) {
+                    const { data: payments } = await supabase
+                        .from('subscription_payments')
+                        .select('period_month, status')
+                        .eq('member_id', memberId)
+                        .in('period_month', months);
+
+                    const paidSet = new Set(
+                        (payments || []).filter(p => p.status === 'PAYE').map(p => p.period_month)
+                    );
+
+                    if (!payments || !payments.length) {
+                        if (member.start_date && member.subscription) {
+                            const dur = { monthly: 1, quarterly: 3, biannual: 6, annual: 12 }[member.subscription] || 1;
+                            const d = new Date(member.start_date + 'T00:00:00');
+                            d.setDate(1);
+                            d.setMonth(d.getMonth() + dur - 1);
+                            const lastPaidMonth = d.toISOString().slice(0, 7);
+                            const startMonth = member.start_date.slice(0, 7);
+                            months.forEach(m => {
+                                if (m >= startMonth && m <= lastPaidMonth) paidSet.add(m);
+                            });
+                        }
+                    }
+
+                    results.unpaidMonths = months.filter(m => !paidSet.has(m));
+                }
+
+                // Présences par mois
+                const { data: att } = await supabase
+                    .from('attendance')
+                    .select('attendance_date, month')
+                    .eq('member_id', memberId);
+
+                (att || []).forEach(a => {
+                    const m = a.month || (a.attendance_date || '').slice(0, 7);
+                    if (!m) return;
+                    results.attByMonth[m] = (results.attByMonth[m] || 0) + 1;
+                    if (m === nowMonth) results.attThisMonth++;
+                    else results.attPrevMonths++;
+                });
+
+                // Prochaines séances du groupe de l'adhérent
+                results.nextSessions = [];
+                results.groupId = null;
+                let groupId = member.current_group_id;
+                if (!groupId) {
+                    const { data: gm } = await supabase
+                        .from('group_members')
+                        .select('group_id')
+                        .eq('member_id', memberId)
+                        .is('end_date', null)
+                        .limit(1);
+                    groupId = gm?.[0]?.group_id;
+                }
+                results.groupId = groupId || null;
+                if (groupId) {
+                    const { data: upcoming } = await supabase
+                        .from('sessions')
+                        .select('session_date, start_time')
+                        .eq('group_id', groupId)
+                        .gte('session_date', nowMonth + '-01')
+                        .neq('status', 'cancelled')
+                        .order('session_date', { ascending: true })
+                        .limit(8);
+                    // Ne garder que les séances à venir (>= aujourd'hui)
+                    const today = new Date().toISOString().slice(0, 10);
+                    results.nextSessions = (upcoming || [])
+                        .filter(s => s.session_date >= today)
+                        .slice(0, 5);
+                }
+            } catch (err) {
+                console.error('Erreur données supplémentaires:', err);
+            }
+
+            return results;
+        }
+
+        // Rendu complet (appelé aussi au changement de langue)
+        function renderMember(data) {
+            const { member, extra } = data;
+
+            // Dates et statuts
+            const endDate = extra.endEffective
+                ? new Date(extra.endEffective + 'T00:00:00')
+                : computeEndDate(member.start_date, member.subscription);
+            const daysLeft = calculateDaysLeft(endDate);
+            const status = getSubscriptionStatus(daysLeft);
+            const age = calculateAge(member.dob);
+
+            // Identité
+            document.getElementById('memberFullName').textContent = `${member.last_name} ${member.first_name}`;
+            document.getElementById('memberFullNameDetail').textContent = `${member.last_name} ${member.first_name}`;
+            document.getElementById('memberIdDisplay').textContent = `ID: ${member.id}`;
+            document.getElementById('memberDob').textContent = formatDate(member.dob);
+            document.getElementById('memberAge').textContent = `${age} ${t('years')}`;
+            document.getElementById('memberBloodType').textContent = member.blood_type || t('notProvided');
+            document.getElementById('memberPhone').textContent = member.phone_number || t('notProvided');
+
+            // Abonnement
+            document.getElementById('memberSubscription').textContent = formatSubscriptionType(member.subscription);
+            document.getElementById('memberStartDate').textContent = formatDate(member.start_date);
+            document.getElementById('memberEndDate').textContent = formatDate(endDate);
+            document.getElementById('memberDaysLeft').textContent =
+                `${daysLeft} ${t('days')} ${daysLeft < 0 ? `(-${Math.abs(daysLeft)})` : ''}`.trim();
+
+            const statusElement = document.getElementById('memberStatus');
+            statusElement.textContent = t(status.key);
+            statusElement.className = `subscription-status ${status.cls}`;
+
+            // Photo
+            if (member.photo_url) {
+                document.getElementById('memberPhoto').src = member.photo_url;
+                document.getElementById('memberPhoto').style.display = 'block';
+                document.getElementById('memberPhotoPlaceholder').style.display = 'none';
+            } else {
+                document.getElementById('memberPhoto').style.display = 'none';
+                document.getElementById('memberPhotoPlaceholder').style.display = 'flex';
+            }
+
+            // Mois non payés
+            const unpaid = extra.unpaidMonths;
+            const countBadge = document.getElementById('unpaidCount');
+            countBadge.textContent = unpaid.length;
+            countBadge.className = 'count-badge' + (unpaid.length === 0 ? ' zero' : '');
+            document.getElementById('unpaidMonthsList').innerHTML = unpaid.length
+                ? unpaid.map(m => `<span class="month-chip">${formatMonth(m)}</span>`).join('')
+                : `<span class="month-chip ok">${t('none')}</span>`;
+
+            // Présences
+            document.getElementById('attThisMonth').textContent = extra.attThisMonth;
+            document.getElementById('attPrevMonths').textContent = extra.attPrevMonths;
+            document.getElementById('attTotal').textContent = extra.attThisMonth + extra.attPrevMonths;
+
+            // Prochaines séances
+            const nsList = document.getElementById('nextSessionsList');
+            if (!extra.groupId) {
+                nsList.innerHTML = `<span style="color:var(--text-secondary)">${t('noGroup')}</span>`;
+            } else if (!extra.nextSessions.length) {
+                nsList.innerHTML = `<span style="color:var(--text-secondary)">${t('noSession')}</span>`;
+            } else {
+                nsList.innerHTML = extra.nextSessions.map(s => `
+                    <div class="stat-box" style="min-width:150px;flex:0 1 auto;">
+                        <div class="stat-number" style="font-size:1.1rem;">${formatSessionDate(s.session_date)}</div>
+                        <div class="stat-label">🕒 ${(s.start_time || '').slice(0, 5)}</div>
+                    </div>`).join('');
+            }
+
+            // Alerte expiration proche
+            if (daysLeft <= 7 && daysLeft >= 0) {
+                document.querySelector('#subscriptionAlert strong').textContent = t('alertTitle');
+                document.querySelector('#subscriptionAlert span[data-i18n="expiringSoonMsg"]').textContent = t('alertMsg');
+                document.getElementById('subscriptionAlert').classList.remove('hidden');
+            } else {
+                document.getElementById('subscriptionAlert').classList.add('hidden');
+            }
+        }
+
         // Fonction principale pour charger les données du membre
         async function loadMemberData(memberId) {
             try {
-                // Afficher l'état de chargement
                 document.getElementById('memberCard').classList.add('hidden');
                 document.getElementById('errorState').classList.add('hidden');
                 document.getElementById('loadingState').classList.remove('hidden');
-                
-                // Récupérer les données du membre depuis Supabase
+
                 const { data: member, error } = await supabase
                     .from('members')
                     .select('*')
@@ -493,55 +936,17 @@
                     throw new Error('Adhérent non trouvé');
                 }
 
-                // Calculer les dates et statuts
-                const endDate = computeEndDate(member.start_date, member.subscription);
-                const daysLeft = calculateDaysLeft(endDate);
-                const status = getSubscriptionStatus(daysLeft);
-                const age = calculateAge(member.dob);
-                
-                // Mettre à jour l'interface
-                document.getElementById('memberFullName').textContent = `${member.last_name} ${member.first_name}`;
-                document.getElementById('memberFullNameDetail').textContent = `${member.last_name} ${member.first_name}`;
-                document.getElementById('memberIdDisplay').textContent = `ID: ${member.id}`;
-                document.getElementById('memberDob').textContent = formatDate(member.dob);
-                document.getElementById('memberAge').textContent = `${age} ans`;
-                document.getElementById('memberBloodType').textContent = member.blood_type || 'Non renseigné';
-                document.getElementById('memberPhone').textContent = member.phone_number || 'Non renseigné';
-                document.getElementById('memberSubscription').textContent = formatSubscriptionType(member.subscription);
-                document.getElementById('memberStartDate').textContent = formatDate(member.start_date);
-                document.getElementById('memberEndDate').textContent = formatDate(endDate);
-                document.getElementById('memberDaysLeft').textContent = `${daysLeft} jour(s)`;
-                
-                // Mettre à jour le statut
-                const statusElement = document.getElementById('memberStatus');
-                statusElement.textContent = status.text;
-                statusElement.className = `subscription-status ${status.class}`;
-                
-                // Gérer la photo
-                if (member.photo_url) {
-                    document.getElementById('memberPhoto').src = member.photo_url;
-                    document.getElementById('memberPhoto').style.display = 'block';
-                    document.getElementById('memberPhotoPlaceholder').style.display = 'none';
-                } else {
-                    document.getElementById('memberPhoto').style.display = 'none';
-                    document.getElementById('memberPhotoPlaceholder').style.display = 'flex';
-                }
-                
-                // Afficher l'alerte si l'abonnement expire bientôt
-                if (daysLeft <= 7 && daysLeft >= 0) {
-                    document.getElementById('subscriptionAlert').classList.remove('hidden');
-                } else {
-                    document.getElementById('subscriptionAlert').classList.add('hidden');
-                }
-                
-                // Afficher la carte du membre
+                const extra = await loadExtraData(memberId, member);
+
+                window._memberRenderData = { member, extra };
+                renderMember(window._memberRenderData);
+
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('memberCard').classList.remove('hidden');
-                
+
             } catch (error) {
                 console.error('Erreur lors du chargement des données:', error);
-                
-                // Afficher l'état d'erreur
+
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('memberCard').classList.add('hidden');
                 document.getElementById('errorState').classList.remove('hidden');
@@ -550,12 +955,13 @@
 
         // Initialisation au chargement de la page
         document.addEventListener('DOMContentLoaded', function() {
+            applyStaticTranslations();
+
             const memberId = getMemberIdFromURL();
-            
+
             if (memberId) {
                 loadMemberData(memberId);
             } else {
-                // Aucun ID fourni, afficher l'état d'erreur
                 document.getElementById('loadingState').classList.add('hidden');
                 document.getElementById('memberCard').classList.add('hidden');
                 document.getElementById('errorState').classList.remove('hidden');

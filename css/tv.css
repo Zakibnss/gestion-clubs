@@ -1,0 +1,200 @@
+/* ============================================
+   TV DISPLAY — écran plein 16:9
+   ============================================ */
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+:root {
+    --tv-bg1:#0b0d12;
+    --tv-bg2:#141824;
+    --accent:#e50914;
+    --gold:#ffd700;
+    --green:#28c76f;
+    --text:#f5f6fa;
+    --text-dim:#9aa3b2;
+}
+
+html, body { height:100%; overflow:hidden; }
+
+body {
+    font-family:'Segoe UI', Tahoma, 'Arial', sans-serif;
+    background:var(--tv-bg1);
+    color:var(--text);
+    display:flex;
+    flex-direction:column;
+}
+
+/* Fond animé dégradé */
+.tv-bg {
+    position:fixed; inset:0; z-index:-1;
+    background:linear-gradient(120deg, var(--tv-bg1), var(--tv-bg2), #1a0d10, var(--tv-bg1));
+    background-size:300% 300%;
+    animation:bgShift 25s ease infinite;
+}
+@keyframes bgShift {
+    0%,100% { background-position:0% 50%; }
+    50%     { background-position:100% 50%; }
+}
+
+/* ---------- Header ---------- */
+.tv-header {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:22px 48px;
+    border-bottom:1px solid rgba(255,255,255,.07);
+}
+.brand { display:flex; align-items:center; gap:18px; }
+.brand img {
+    width:74px; height:74px; border-radius:50%;
+    object-fit:cover; border:2px solid var(--gold);
+}
+.brand-text h1 { font-size:34px; font-weight:800; }
+.brand-text span { font-size:14px; color:var(--gold); letter-spacing:4px; }
+
+.clock { text-align:left; direction:ltr; }
+#tvTime { font-size:44px; font-weight:800; font-variant-numeric:tabular-nums; }
+#tvDate { font-size:16px; color:var(--text-dim); }
+
+/* ---------- Layout ---------- */
+.tv-main {
+    flex:1;
+    display:flex;
+    gap:32px;
+    padding:28px 48px;
+    min-height:0;
+}
+.session-zone {
+    flex:1.4;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    gap:26px;
+    position:relative;
+}
+.side-panel {
+    width:340px;
+    display:flex; flex-direction:column; gap:20px;
+}
+
+/* ---------- Statut ---------- */
+.status-pill {
+    font-size:26px; font-weight:700;
+    padding:12px 42px; border-radius:60px;
+    letter-spacing:.5px;
+}
+.st-waiting   { background:rgba(154,163,178,.15); color:var(--text-dim); }
+.st-live      { background:rgba(40,199,111,.18); color:var(--green);
+                animation:pillPulse 1.6s infinite; }
+.st-paused    { background:rgba(255,193,7,.18); color:#ffc107; }
+@keyframes pillPulse {
+    0%,100% { transform:scale(1); }
+    50%     { transform:scale(1.05); }
+}
+
+/* ---------- Chrono ---------- */
+.chrono {
+    font-size:clamp(90px, 13vw, 170px);
+    font-weight:900;
+    font-variant-numeric:tabular-nums;
+    direction:ltr;
+    line-height:1;
+    text-shadow:0 0 40px rgba(40,199,111,.35);
+}
+.chrono.over-time { color:var(--accent); text-shadow:0 0 40px rgba(229,9,20,.5); }
+
+.present-count { text-align:center; direction:rtl; }
+#presentCount {
+    font-size:64px; font-weight:900; color:var(--green);
+    display:inline-block;
+}
+.present-label { font-size:20px; color:var(--text-dim); margin-right:10px; }
+
+.count-bump { animation:bump .45s ease; }
+@keyframes bump {
+    0%   { transform:scale(1); }
+    40%  { transform:scale(1.35); color:#fff; }
+    100% { transform:scale(1); }
+}
+
+/* ---------- WAITING ---------- */
+.state-block { display:flex; flex-direction:column; align-items:center; gap:14px; }
+.waiting-icon { font-size:110px; animation:floaty 3s ease-in-out infinite; }
+@keyframes floaty {
+    0%,100% { transform:translateY(0); }
+    50%     { transform:translateY(-14px); }
+}
+.waiting-msg { font-size:38px; font-weight:700; }
+.waiting-sub { font-size:18px; color:var(--text-dim); }
+
+.hidden { display:none !important; }
+
+/* ---------- Carte adhérent ---------- */
+.attendee-card {
+    display:flex; align-items:center; gap:22px;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,215,0,.35);
+    border-radius:22px;
+    padding:20px 30px;
+    min-width:420px;
+    animation:cardIn .45s cubic-bezier(.2,.9,.3,1.3);
+}
+@keyframes cardIn {
+    from { opacity:0; transform:scale(.85) translateY(16px); }
+    to   { opacity:1; transform:scale(1) translateY(0); }
+}
+.attendee-card img {
+    width:96px; height:96px; border-radius:50%;
+    object-fit:cover; border:3px solid var(--gold);
+}
+.att-info h2 { font-size:30px; margin-bottom:4px; }
+.att-info p { font-size:17px; color:var(--text-dim); }
+.att-id { color:var(--gold); font-weight:700; letter-spacing:1px; }
+.att-meta { margin-top:6px; display:flex; align-items:center; gap:12px; }
+.sub-badge {
+    font-size:14px; font-weight:700;
+    padding:3px 14px; border-radius:20px;
+}
+.sub-badge.ok { background:rgba(40,199,111,.2); color:var(--green); }
+.sub-badge.ko { background:rgba(229,9,20,.2);  color:#ff6b71; }
+
+/* ---------- Célébration ---------- */
+.celebration {
+    font-size:44px; font-weight:900; color:var(--gold);
+    text-align:center;
+    animation:celebratePop .7s ease;
+}
+@keyframes celebratePop {
+    0%   { opacity:0; transform:scale(.5); }
+    60%  { transform:scale(1.12); }
+    100% { opacity:1; transform:scale(1); }
+}
+
+/* ---------- Panneaux latéraux ---------- */
+.panel {
+    background:rgba(255,255,255,.05);
+    border-radius:18px;
+    padding:20px 22px;
+    flex:1;
+    overflow:hidden;
+}
+.panel h3 {
+    font-size:19px; color:var(--gold);
+    margin-bottom:12px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    padding-bottom:8px;
+}
+.panel ul { list-style:none; }
+.panel li {
+    display:flex; justify-content:space-between; align-items:center;
+    padding:8px 0;
+    font-size:16px;
+    border-bottom:1px dashed rgba(255,255,255,.06);
+}
+.panel li:last-child { border-bottom:none; }
+.panel li .dim { color:var(--text-dim); font-size:14px; }
+.panel li.empty { color:var(--text-dim); justify-content:center; }
+
+/* ---------- Flash dépassement ---------- */
+.over-flash { animation:overFlash .55s ease 3; }
+@keyframes overFlash {
+    0%,100% { background-color:transparent; }
+    50%     { background-color:rgba(229,9,20,.28); }
+}

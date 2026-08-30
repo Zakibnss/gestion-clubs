@@ -10,6 +10,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
@@ -523,6 +524,12 @@
             background: rgba(23, 162, 184, 0.1);
             border: 1px solid var(--info-color);
             color: var(--info-color);
+        }
+
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.12);
+            border: 1px solid var(--warning-color);
+            color: var(--warning-color);
         }
 
         /* Modal */
@@ -1458,6 +1465,7 @@
     margin-left: 8px;
 }
     </style>
+    <link rel="stylesheet" href="css/v2.css?v=20260824">
 </head>
 <body>
 
@@ -1823,14 +1831,9 @@
         </div>
         <div class="grid grid-2">
             <div class="form-group">
-                <label>Uploader une image pour le RECTO</label>
+                <label>Uploader le modèle design de la carte</label>
                 <input type="file" id="cardFrontImage" class="form-control" accept="image/*">
-                <small class="form-text text-muted">Image pour la face avant de la carte</small>
-            </div>
-            <div class="form-group">
-                <label>Uploader une image pour le VERSO</label>
-                <input type="file" id="cardBackImage" class="form-control" accept="image/*">
-                <small class="form-text text-muted">Image pour la face arrière de la carte</small>
+                <small class="form-text text-muted">Image de fond : photo, nom, date de naissance et QR code seront ajoutés dessus</small>
             </div>
         </div>
         <button class="btn btn-primary" onclick="loadMembersForCards()" id="loadMembersForCardsBtn" style="margin: 20px 0;">
@@ -1842,6 +1845,12 @@
         
         <!-- Conteneur pour la prévisualisation des cartes -->
         <div id="cardsPreview" style="margin-top: 30px; display: flex; flex-direction: column; align-items: center;"></div>
+
+        <!-- Export global PDF / Impression -->
+        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 25px; flex-wrap: wrap;">
+            <button class="btn btn-danger" onclick="exportAllCardsPDF()">📄 Exporter tout en PDF</button>
+            <button class="btn btn-info" onclick="printAllCards()">🖨️ Imprimer les cartes</button>
+        </div>
     </div>
 </div>
 
@@ -1985,6 +1994,485 @@
         📱 Veuillez autoriser l'accès à la caméra pour utiliser le scanner
     </div>
 </div>
+<!-- ============ SECTIONS V2 : GROUPES / ABONNEMENTS / RAPPORTS / PAIEMENTS ============ -->
+
+<!-- Groupes -->
+<div id="groupsSection" class="content-section">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">🥊 Gestion des Groupes</h2>
+            <button class="btn btn-primary" onclick="openGroupModal()">+ Nouveau groupe</button>
+        </div>
+        <div class="v2-toolbar" id="groupsToolbar"></div>
+        <div id="groupsMessage" style="margin-top:10px;"></div>
+        <div id="groupsGrid" class="grid grid-2" style="margin-top:15px;"></div>
+
+        <div id="sessionsPanel" class="hidden" style="margin-top:25px;">
+            <div class="card-header">
+                <h3 class="card-title" id="sessionsPanelTitle">🗓️ Séances</h3>
+                <div>
+                    <button class="btn btn-success btn-sm" onclick="generateSessionsForGroup()">⚡ Générer les séances</button>
+                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('sessionsPanel').classList.add('hidden')">Fermer</button>
+                </div>
+            </div>
+            <div class="table-responsive sessions-table">
+                <table>
+                    <thead><tr><th>Date</th><th>Heure</th><th>Durée prévue</th><th>Statut</th><th>Actions</th></tr></thead>
+                    <tbody id="sessionsTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Abonnements -->
+<div id="subscriptionsSection" class="content-section">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">💳 Abonnements Mensuels</h2>
+        </div>
+        <p style="color:var(--text-secondary);font-size:.85rem;">
+            Règle de continuité : un mois payé tardivement conserve sa période théorique
+            (ex : janvier payé le 15/02 → période 01/01 → 31/01).
+        </p>
+        <div class="v2-toolbar" id="subsToolbar"></div>
+        <div id="subscriptionsMessage" style="margin-top:10px;"></div>
+        <div id="subscriptionsList" style="margin-top:15px;"><div class="spinner"></div></div>
+    </div>
+</div>
+
+<!-- Rapports -->
+<div id="reportsSection" class="content-section">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📊 Rapports</h2>
+            <div>
+                <button class="btn btn-info btn-sm" onclick="exportReportCSV()">⬇️ CSV du dernier rapport</button>
+                <button class="btn btn-danger btn-sm" onclick="exportReportPDF()">🖨️ PDF du dernier rapport</button>
+            </div>
+        </div>
+        <div class="v2-toolbar" id="reportsToolbar"></div>
+        <div id="reportsMessage" style="margin-top:10px;"></div>
+
+        <div style="margin-top:20px;">
+            <h3 style="color:var(--primary-color)">👤 Présences individuelles</h3>
+            <div class="report-filters">
+                <div class="form-group"><label>Adhérent</label>
+                    <select id="repMember" class="form-control"></select></div>
+                <div class="form-group"><label>Du</label>
+                    <input type="date" id="repFrom" class="form-control"></div>
+                <div class="form-group"><label>Au</label>
+                    <input type="date" id="repTo" class="form-control"></div>
+                <button class="btn btn-primary" onclick="runIndividualReport()">Générer</button>
+            </div>
+            <div id="individualReportResult"></div>
+        </div>
+
+        <hr style="border-color:var(--border-color)">
+
+        <div style="margin-top:15px;">
+            <h3 style="color:var(--primary-color)">🥊 Matrice de groupe (P/A)</h3>
+            <div class="report-filters">
+                <div class="form-group"><label>Groupe</label>
+                    <select id="repGroup" class="form-control"></select></div>
+                <div class="form-group"><label>Du</label>
+                    <input type="date" id="repGroupFrom" class="form-control"></div>
+                <div class="form-group"><label>Au</label>
+                    <input type="date" id="repGroupTo" class="form-control"></div>
+                <button class="btn btn-primary" onclick="runGroupMatrix()">Générer</button>
+            </div>
+            <div id="groupMatrixResult"></div>
+        </div>
+
+        <hr style="border-color:var(--border-color)">
+
+        <div style="margin-top:15px;">
+            <h3 style="color:var(--primary-color)">💳 Abonnements</h3>
+            <div class="report-filters">
+                <div class="form-group"><label>Adhérent (vide = tous)</label>
+                    <select id="srMember" class="form-control"></select></div>
+                <div class="form-group"><label>Mois début</label>
+                    <input type="month" id="srFrom" class="form-control"></div>
+                <div class="form-group"><label>Mois fin</label>
+                    <input type="month" id="srTo" class="form-control"></div>
+                <button class="btn btn-primary" onclick="runSubscriptionReport()">Générer</button>
+            </div>
+            <div id="subscriptionReportResult"></div>
+        </div>
+
+        <hr style="border-color:var(--border-color)">
+
+        <div style="margin-top:15px;">
+            <h3 style="color:var(--primary-color)">💰 Événements & Recettes</h3>
+            <div class="report-filters">
+                <div class="form-group"><label>Du</label>
+                    <input type="date" id="evFrom" class="form-control"></div>
+                <div class="form-group"><label>Au</label>
+                    <input type="date" id="evTo" class="form-control"></div>
+                <button class="btn btn-primary" onclick="runEventsReport()">Générer</button>
+            </div>
+            <div id="eventsReportResult"></div>
+        </div>
+
+        <hr style="border-color:var(--border-color)">
+
+        <div style="margin-top:15px;">
+            <h3 style="color:var(--primary-color)">👥 État des adhérents</h3>
+            <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:8px;">
+                Vue globale : abonnement, groupe et ancienneté de chaque adhérent.
+            </p>
+            <button class="btn btn-primary" onclick="runMembersReport()">Générer</button>
+            <div id="membersReportResult" style="margin-top:10px;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Paiements / Événements -->
+<div id="eventsSection" class="content-section">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">💰 Événements & Participations</h2>
+            <button class="btn btn-primary" onclick="openEventModal()">+ Nouvel événement</button>
+        </div>
+        <div class="v2-toolbar" id="eventsToolbar"></div>
+        <div id="eventsMessage" style="margin-top:10px;"></div>
+        <div id="eventsGrid" class="grid grid-2" style="margin-top:15px;"></div>
+    </div>
+</div>
+
+<!-- ============ CARTES NFC (UID) ============ -->
+<div id="nfcCardsSection" class="content-section">
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">📇 Cartes NFC (UID)</h2>
+            <div>
+                <button class="btn btn-info btn-sm" onclick="openNfcScanner()">📡 Scanner de présence</button>
+                <button class="btn btn-primary" onclick="openNfcCardModal()">+ Nouvelle carte</button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-3" style="margin-bottom:16px;" id="nfcStats">
+            <div class="stats-card"><div class="stats-number" id="nfcStatTotal">0</div><div class="stats-label">📇 Total cartes</div></div>
+            <div class="stats-card"><div class="stats-number" id="nfcStatAssigned">0</div><div class="stats-label">✅ Attribuées</div></div>
+            <div class="stats-card"><div class="stats-number" id="nfcStatScans">0</div><div class="stats-label">📡 Scans</div></div>
+        </div>
+
+        <!-- Recherche / filtres -->
+        <div class="v2-toolbar" id="nfcToolbar">
+            <input type="search" id="nfcSearch" class="form-control" placeholder="🔎 Rechercher un UID…" style="max-width:240px;">
+            <select id="nfcFilter" class="form-control" style="max-width:180px;">
+                <option value="all">Tous les statuts</option>
+                <option value="assigned">Attribuées</option>
+                <option value="unassigned">Libres</option>
+                <option value="lost">Perdues</option>
+                <option value="retired">Retirées</option>
+            </select>
+        </div>
+
+        <div id="nfcMessage" style="margin-top:10px;"></div>
+
+        <!-- Tableau des cartes -->
+        <div class="table-responsive" style="margin-top:15px;">
+            <table>
+                <thead>
+                    <tr>
+                        <th>UID</th>
+                        <th>Adhérent</th>
+                        <th>Statut</th>
+                        <th>Attribuée le</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="nfcCardsTable"></tbody>
+            </table>
+        </div>
+
+        <!-- Historique global -->
+        <div style="margin-top:25px;">
+            <h3 style="color:var(--primary-color)">🕓 Historique des scans</h3>
+            <div class="table-responsive">
+                <table>
+                    <thead><tr><th>Heure</th><th>UID</th><th>Adhérent</th><th>Résultat</th><th>Méthode</th></tr></thead>
+                    <tbody id="nfcHistoryTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ============ MODAUX V2 ============ -->
+
+<!-- Modal Carte NFC (création / attribution) -->
+<div id="nfcCardModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="nfcCardModalTitle">📇 Nouvelle carte NFC</h2>
+            <button class="modal-close" onclick="closeModal('nfcCardModal')">&times;</button>
+        </div>
+        <div class="form-group">
+            <label>UID / Serial Number *</label>
+            <div style="display:flex;gap:8px;">
+                <input type="text" id="nfcUid" class="form-control" placeholder="Ex : 04:12:3A:9F:02:56" style="text-transform:uppercase;" readonly>
+                <button class="btn btn-primary" id="nfcReadBtn" onclick="readUidIntoCardModal()">📡 Lire la carte</button>
+            </div>
+            <small style="color:var(--text-secondary);">UID lu automatiquement par le lecteur NFC externe (modifiable en cas exceptionnel).</small>
+        </div>
+        <div class="form-group">
+            <label>Attribuer à un adhérent</label>
+            <select id="nfcMemberSelect" class="form-control">
+                <option value="">— Carte libre —</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Statut</label>
+            <select id="nfcStatus" class="form-control">
+                <option value="unassigned">Libre</option>
+                <option value="assigned">Attribuée</option>
+                <option value="lost">Perdue</option>
+                <option value="retired">Retirée</option>
+            </select>
+        </div>
+        <div id="nfcCardMessage" style="margin-top:10px;"></div>
+        <button class="btn btn-success" onclick="saveNfcCard()">💾 Enregistrer la carte</button>
+    </div>
+</div>
+
+<!-- Modal Scanner de présence -->
+<div id="nfcScannerModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2>📡 Validation de présence (lecteur NFC)</h2>
+            <button class="modal-close" onclick="closeNfcScanner()">&times;</button>
+        </div>
+        <div id="nfcScannerBody">
+            <!-- État du lecteur -->
+            <div id="nfcReaderStatus" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:rgba(220,53,69,.1);border:1px solid #dc3545;margin-bottom:12px;">
+                <span style="font-size:1.2rem;">🔴</span>
+                <div>
+                    <div style="font-weight:700;" id="nfcReaderStatusTitle">Lecteur non connecté</div>
+                    <div style="font-size:.8rem;color:var(--text-secondary);" id="nfcReaderStatusSub">Branchez le lecteur USB puis cliquez sur Connecter.</div>
+                </div>
+            </div>
+
+            <div style="display:flex;gap:10px;margin:12px 0;">
+                <button class="btn btn-primary" id="nfcConnectBtn" onclick="connectNfcReader()">🔌 Connecter le lecteur</button>
+                <button class="btn btn-secondary" id="nfcDisconnectBtn" style="display:none;" onclick="disconnectNfcReader()">⏹ Déconnecter</button>
+            </div>
+
+            <!-- Cœur du scanner -->
+            <div id="nfcScannerCore" style="text-align:center;padding:22px 8px;border-radius:14px;background:rgba(255,255,255,.03);border:1px dashed var(--border);display:none;">
+                <div style="font-size:2.4rem;">📡</div>
+                <div style="font-size:1.15rem;font-weight:700;margin-top:6px;" id="nfcScannerTitle">Prêt à scanner</div>
+                <div style="color:var(--text-secondary);margin-top:4px;" id="nfcScannerSub">Placez la carte NFC sur le lecteur externe.</div>
+                <div id="nfcScanResult" style="margin-top:14px;"></div>
+            </div>
+
+            <details style="margin-top:14px;font-size:.85rem;">
+                <summary style="cursor:pointer;color:var(--text-secondary);">⌨️ Saisie manuelle (administrateur — cas exceptionnel)</summary>
+                <div style="display:flex;gap:8px;margin-top:8px;">
+                    <input type="text" id="nfcScanInput" class="form-control" placeholder="UID de la carte" autocomplete="off">
+                    <button class="btn btn-secondary" onclick="performNfcScan()">Valider</button>
+                </div>
+            </details>
+
+            <hr style="margin:16px 0;border:none;border-top:1px solid var(--border);">
+            <h3 style="font-size:.95rem;">🕓 Derniers scans</h3>
+            <div id="nfcScanHistory" style="margin-top:10px;max-height:260px;overflow-y:auto;"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Groupe -->
+<div id="groupModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="groupModalTitle">➕ Nouveau groupe</h2>
+            <button class="modal-close" onclick="closeModal('groupModal')">&times;</button>
+        </div>
+        <form id="groupForm">
+            <input type="hidden" id="groupId">
+            <div class="form-group">
+                <label>Nom du groupe *</label>
+                <input type="text" id="groupName" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="groupDescription" rows="2" class="form-control"></textarea>
+            </div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label>Date de début</label>
+                    <input type="date" id="groupStartDate" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Date de fin</label>
+                    <input type="date" id="groupEndDate" class="form-control">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Nombre de séances prévues par mois</label>
+                <input type="number" id="groupPlannedCount" class="form-control" min="1" value="8">
+            </div>
+            <div class="form-group">
+                <label>🗓️ Planning hebdomadaire (jours + heure)</label>
+                <div id="groupScheduleGrid" class="schedule-grid">
+                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <label style="min-width:90px;font-weight:600;">Lundi</label>
+                    <input type="checkbox" id="sched_lundi">
+                    <input type="time" id="schedtime_lundi" class="form-control" style="width:auto;" disabled
+                           onchange="" oninput="">
+                </div>
+                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <label style="min-width:90px;font-weight:600;">Mardi</label>
+                    <input type="checkbox" id="sched_mardi">
+                    <input type="time" id="schedtime_mardi" class="form-control" style="width:auto;" disabled
+                           onchange="" oninput="">
+                </div>
+                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <label style="min-width:90px;font-weight:600;">Mercredi</label>
+                    <input type="checkbox" id="sched_mercredi">
+                    <input type="time" id="schedtime_mercredi" class="form-control" style="width:auto;" disabled
+                           onchange="" oninput="">
+                </div>
+                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <label style="min-width:90px;font-weight:600;">Jeudi</label>
+                    <input type="checkbox" id="sched_jeudi">
+                    <input type="time" id="schedtime_jeudi" class="form-control" style="width:auto;" disabled
+                           onchange="" oninput="">
+                </div>
+                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <label style="min-width:90px;font-weight:600;">Vendredi</label>
+                    <input type="checkbox" id="sched_vendredi">
+                    <input type="time" id="schedtime_vendredi" class="form-control" style="width:auto;" disabled
+                           onchange="" oninput="">
+                </div>
+                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <label style="min-width:90px;font-weight:600;">Samedi</label>
+                    <input type="checkbox" id="sched_samedi">
+                    <input type="time" id="schedtime_samedi" class="form-control" style="width:auto;" disabled
+                           onchange="" oninput="">
+                </div>
+                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <label style="min-width:90px;font-weight:600;">Dimanche</label>
+                    <input type="checkbox" id="sched_dimanche">
+                    <input type="time" id="schedtime_dimanche" class="form-control" style="width:auto;" disabled
+                           onchange="" oninput="">
+                </div>
+            </div>
+            <script>
+            (function() {
+                var days = ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
+                document.querySelectorAll('#groupScheduleGrid input[type=checkbox]').forEach(function(cb) {
+                    cb.addEventListener('change', function() {
+                        var tm = document.getElementById('schedtime_' + cb.id.replace('sched_', ''));
+                        tm.disabled = !cb.checked;
+                        if (cb.checked && !tm.value) tm.focus();
+                    });
+                });
+            })();
+            </script>
+            </div>
+            <div id="groupMessage" style="margin-top:10px;"></div>
+            <button type="submit" class="btn btn-success">💾 Enregistrer le groupe</button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Affectation adhérents -->
+<div id="assignModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="assignModalTitle">👥 Affectation</h2>
+            <button class="modal-close" onclick="closeModal('assignModal')">&times;</button>
+        </div>
+        <div id="assignCount" style="margin-bottom:10px;font-weight:600;"></div>
+        <div id="assignMembersList" style="max-height:400px;overflow-y:auto;"></div>
+    </div>
+</div>
+
+<!-- Modal Mois d'abonnement -->
+<div id="monthsModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="monthsModalTitle">💳 Abonnement</h2>
+            <button class="modal-close" onclick="closeModal('monthsModal')">&times;</button>
+        </div>
+        <div id="monthsSummary" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;"></div>
+        <div id="memberMonthsGrid"></div>
+    </div>
+</div>
+
+<!-- Modal Événement -->
+<div id="eventModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="eventModalTitle">➕ Nouvel événement</h2>
+            <button class="modal-close" onclick="closeModal('eventModal')">&times;</button>
+        </div>
+        <form id="eventForm">
+            <input type="hidden" id="eventId">
+            <div class="form-group">
+                <label>Titre *</label>
+                <input type="text" id="eventTitle" class="form-control" required>
+            </div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label>Date *</label>
+                    <input type="date" id="eventDate" class="form-control" required>
+                </div>
+                <div class="form-group">
+                    <label>Heure</label>
+                    <input type="time" id="eventTime" class="form-control">
+                </div>
+            </div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label>Lieu</label>
+                    <input type="text" id="eventLieu" class="form-control">
+                </div>
+                <div class="form-group">
+                    <label>Prix (DA)</label>
+                    <input type="number" id="eventPrice" class="form-control" min="0" value="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Type</label>
+                <select id="eventType" class="form-control">
+                    <option value="stage">Stage</option>
+                    <option value="competition">Compétition</option>
+                    <option value="exam">Examen</option>
+                    <option value="other">Autre</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="eventDescription" rows="3" class="form-control"></textarea>
+            </div>
+            <button type="submit" class="btn btn-success">💾 Enregistrer l'événement</button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal Participations événement -->
+<div id="eventParticipantsModal" class="modal">
+    <div class="modal-content" style="max-width:700px;">
+        <div class="modal-header">
+            <h2 id="epTitle">👥 Participations</h2>
+            <button class="modal-close" onclick="closeModal('eventParticipantsModal')">&times;</button>
+        </div>
+        <h4 style="margin-bottom:8px;">Sélection des participants</h4>
+        <div id="epMembersList" style="max-height:250px;overflow-y:auto;margin-bottom:15px;"></div>
+        <h4 style="margin-bottom:8px;">Liste des participations</h4>
+        <div class="table-responsive">
+            <table>
+                <thead><tr><th>Adhérent</th><th>Groupe</th><th>Action</th></tr></thead>
+                <tbody id="epParticipantsTable"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
 <!-- SMS Section -->
 <!-- SMS Section Corrigée -->
 <div id="smsSection" class="content-section">
@@ -10267,11 +10755,18 @@ function showSubscriptionAlertForScan(member) {
     // Configurer les boutons
     document.getElementById('renewBtn').onclick = async () => {
         try {
-            // Renouveler l'abonnement (date d'aujourd'hui)
-            const today = new Date().toISOString().split('T')[0];
+            // Règle de continuité : la réactivation débute après la fin de
+            // l'abonnement précédent (pas à la date de renouvellement)
+            const prevEnd = computeEndDate(member);
+            let newStartDate = new Date().toISOString().split('T')[0];
+            if (prevEnd && !isNaN(prevEnd.getTime())) {
+                const dayAfter = new Date(prevEnd);
+                dayAfter.setDate(dayAfter.getDate() + 1);
+                newStartDate = dayAfter.toISOString().split('T')[0];
+            }
             const { error } = await supabase
                 .from('members')
-                .update({ start_date: today })
+                .update({ start_date: newStartDate })
                 .eq('id', member.id);
             
             if (error) throw error;
@@ -11625,28 +12120,19 @@ async function generateSelectedCards() {
         }
 
         const frontImageFile = document.getElementById('cardFrontImage').files[0];
-        const backImageFile = document.getElementById('cardBackImage').files[0];
-        
-        if (!frontImageFile || !backImageFile) {
-            alert('Veuillez sélectionner les deux images (recto et verso)');
+
+        if (!frontImageFile) {
+            alert('Veuillez sélectionner une image de modèle pour la carte');
             return;
         }
 
-        // Récupérer les URLs des deux images
-        const [frontImageUrl, backImageUrl] = await Promise.all([
-            new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = e => resolve(e.target.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(frontImageFile);
-            }),
-            new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = e => resolve(e.target.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(backImageFile);
-            })
-        ]);
+        // Récupérer l'URL de l'image de fond
+        const frontImageUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(frontImageFile);
+        });
 
         // Récupérer les IDs des membres sélectionnés
         const selectedMemberIds = Array.from(checkboxes).map(checkbox => checkbox.value);
@@ -11663,7 +12149,7 @@ async function generateSelectedCards() {
             <div style="grid-column: 1/-1; text-align: center; margin-bottom: 20px;">
                 <h3>🎫 Cartes générées (${members.length} adhérent(s))</h3>
                 <p style="color: var(--text-secondary);">
-                    Cliquez sur "Télécharger Recto+Verso" pour sauvegarder les deux faces en une seule image
+                    Utilisez "Exporter tout en PDF" ou "Imprimer" en bas de page
                 </p>
             </div>
             <div style="display: flex; flex-wrap: wrap; gap: 25px; justify-content: center;"></div>
@@ -11684,7 +12170,7 @@ async function generateSelectedCards() {
 
         // Générer les cartes pour chaque membre
         for (const member of members) {
-            const cardContainer = await generateCard(member, frontImageUrl, backImageUrl);
+            const cardContainer = await generateCard(member, frontImageUrl);
             cardsContainer.appendChild(cardContainer);
         }
 
@@ -11702,7 +12188,39 @@ async function generateSelectedCards() {
     }
 }
 
-async function generateCard(member, frontImageUrl, backImageUrl) {
+async function generateCard(member, frontImageUrl) {
+    // Données supplémentaires : fin d'abonnement + présences par mois
+    let subEnd = null;
+    let presencesThisMonth = 0;
+    let presencesPrevMonths = 0;
+    try {
+        const [statusRes, attRes] = await Promise.all([
+            supabase.from('member_subscription_status')
+                .select('end_effective')
+                .eq('member_id', member.id)
+                .maybeSingle(),
+            supabase.from('attendance')
+                .select('attendance_date, month')
+                .eq('member_id', member.id)
+        ]);
+        subEnd = statusRes.data?.end_effective || null;
+        const nowMonth = new Date().toISOString().slice(0, 7);
+        (attRes.data || []).forEach(a => {
+            const m = a.month || (a.attendance_date || '').slice(0, 7);
+            if (!m) return;
+            if (m === nowMonth) presencesThisMonth++;
+            else presencesPrevMonths++;
+        });
+    } catch (err) {
+        console.error('Erreur chargement données carte:', err);
+    }
+    if (!subEnd && member.start_date) {
+        const computed = computeEndDate(member);
+        if (computed && !isNaN(computed.getTime())) {
+            subEnd = computed.toISOString().split('T')[0];
+        }
+    }
+
     const wrapper = document.createElement("div");
     wrapper.style.cssText = `
         display: flex;
@@ -11733,18 +12251,9 @@ async function generateCard(member, frontImageUrl, backImageUrl) {
     `;
     wrapper.appendChild(headerDiv);
 
-    // Conteneur pour les deux faces de la carte
-    const cardContainer = document.createElement("div");
-    cardContainer.style.cssText = `
-        display: flex;
-        gap: 20px;
-        flex-wrap: wrap;
-        justify-content: center;
-        width: 100%;
-    `;
-
-    // ==================== CARTE RECTO (FACE AVANT) ====================
+    // ==================== CARTE UNIQUE ====================
     const frontCardDiv = document.createElement("div");
+    frontCardDiv.classList.add("generated-card-face");
     frontCardDiv.style.cssText = `
         width: 638px;
         height: 1011px;
@@ -11760,233 +12269,140 @@ async function generateCard(member, frontImageUrl, backImageUrl) {
         font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
     `;
 
-    // Contenu principal de la face avant
-    const frontContentDiv = document.createElement("div");
-    frontContentDiv.style.cssText = `
+    const cardContent = document.createElement("div");
+    cardContent.style.cssText = `
         position: relative;
         z-index: 2;
         height: 100%;
-        display: flex;
-        flex-direction: column;
+        width: 100%;
     `;
 
-    // Photo en cercle positionnée précisément
+    // ---- PHOTO (cercle centré en haut) ----
     const photoContainer = document.createElement("div");
-photoContainer.style.cssText = `
-    position: absolute;
-    left: 169px;
-    top: 255px;
-    width: 295px;
-    height: 295px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    overflow: hidden;
-    border-radius: 50%;
-`;
-
-let photo;
-if (member.photo_url) {
-    photo = document.createElement("img");
-    photo.crossOrigin = "anonymous";
-    photo.alt = member.first_name;
-    try {
-        const blob = await fetch(member.photo_url).then(r => r.blob());
-        const reader = new FileReader();
-        await new Promise(resolve => {
-            reader.onloadend = () => {
-                photo.src = reader.result;
-                resolve();
-            };
-            reader.readAsDataURL(blob);
-        });
-    } catch (err) {
-        console.error("Erreur chargement photo:", err);
-        photo = createPlaceholderPhoto();
-    }
-    photo.style.cssText = `
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    `;
-} else {
-    photo = createPlaceholderPhoto();
-    photo.style.cssText = `
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    `;
-}
-
-photoContainer.appendChild(photo);
-frontContentDiv.appendChild(photoContainer);
-
-
-    const nameDiv = document.createElement("div");
-nameDiv.style.cssText = `
-    position: absolute;
-    left: 140px;
-    top: 600px;a
-    width: 350px;
-    text-align: center;
-    font-weight: 890;
-    color: #a81a10;
-    font-family: 'Poppins', sans-serif;
-    line-height: 1.2;
-    word-break: break-word;
-    font-size: 36px;
-`;
-
-nameDiv.innerText = `${member.last_name.toUpperCase()} ${member.first_name.toUpperCase()}`;
-document.body.appendChild(nameDiv);
-
-let fontSize = 36;
-const minFontSize = 18; // taille minimale
-const lineHeightFactor = 1.2;
-
-let lineHeightPx = fontSize * lineHeightFactor;
-let numLines = Math.round(nameDiv.scrollHeight / lineHeightPx);
-
-// Réduction progressive douce
-while (numLines > 2 && fontSize > minFontSize) {
-    fontSize -= 1; // réduction 1px à la fois
-    nameDiv.style.fontSize = fontSize + "px";
-    lineHeightPx = fontSize * lineHeightFactor;
-    numLines = Math.round(nameDiv.scrollHeight / lineHeightPx);
-}
-
-
-
-
-
-frontContentDiv.appendChild(nameDiv);
-
-    // Informations (ID, DDN, GS) positionnées avec plus d'espace
-    const infoContainer = document.createElement("div");
-    infoContainer.style.cssText = `
+    photoContainer.style.cssText = `
         position: absolute;
-        left: 150px;
-        top: 700px;
+        left: 194px;
+        top: 90px;
+        width: 250px;
+        height: 250px;
         display: flex;
-        flex-direction: column;
-        gap: 15px;
-    `;
-
-    // ID
-    const idDiv = document.createElement("div");
-    idDiv.innerHTML = `
-        <div style="font-size: 35px; font-weight: 700; color: black; font-family: 'Poppins', sans-serif;">
-            ID&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: ${member.id}
-        </div>
-    `;
-
-    // Date de naissance
-    const dobDiv = document.createElement("div");
-    const formattedDob = new Date(member.dob).toLocaleDateString('fr-FR');
-    dobDiv.innerHTML = `
-        <div style="font-size: 35px; font-weight: 700; color: black; font-family: 'Poppins', sans-serif;">
-            DDN&nbsp;&nbsp;: ${formattedDob}
-        </div>
-    `;
-
-    // Groupe sanguin
-    const bloodDiv = document.createElement("div");
-    bloodDiv.innerHTML = `
-        <div style="font-size: 35px; font-weight: 700; color: black; font-family: 'Poppins', sans-serif;">
-            G.S&nbsp;&nbsp;&nbsp;: ${member.blood_type || 'N/A'}
-        </div>
-    `;
-
-    infoContainer.appendChild(idDiv);
-    infoContainer.appendChild(dobDiv);
-    infoContainer.appendChild(bloodDiv);
-    frontContentDiv.appendChild(infoContainer);
-
-    // Ajouter le contenu à la carte recto
-    frontCardDiv.appendChild(frontContentDiv);
-
-    // ==================== CARTE VERSO (FACE ARRIÈRE) ====================
-    const backCardDiv = document.createElement("div");
-    backCardDiv.style.cssText = `
-        width: 638px;
-        height: 1011px;
-        background: url('${backImageUrl}') no-repeat center center;
-        background-size: cover;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-        display: flex;
-        flex-direction: column;
-        position: relative;
+        justify-content: center;
+        align-items: center;
         overflow: hidden;
-        border: 2px solid #e9ecef;
-        font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+        border-radius: 50%;
     `;
 
-    // Contenu principal de la face arrière
-    const backContentDiv = document.createElement("div");
-    backContentDiv.style.cssText = `
-        position: relative;
-        z-index: 2;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-    `;
+    let photo;
+    if (member.photo_url) {
+        photo = document.createElement("img");
+        photo.crossOrigin = "anonymous";
+        photo.alt = member.first_name;
+        try {
+            const blob = await fetch(member.photo_url).then(r => r.blob());
+            await new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    photo.src = reader.result;
+                    resolve();
+                };
+                reader.readAsDataURL(blob);
+            });
+        } catch (err) {
+            console.error("Erreur chargement photo:", err);
+            photo = createPlaceholderPhoto();
+        }
+        photo.style.cssText = `
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        `;
+    } else {
+        photo = createPlaceholderPhoto();
+        photo.style.cssText += `
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border: none;
+            font-size: 60px;
+        `;
+    }
 
-    // QR Code positionné selon vos spécifications
+    photoContainer.appendChild(photo);
+    cardContent.appendChild(photoContainer);
+
+    // ---- NOM + PRÉNOM ----
+    const nameDiv = document.createElement("div");
+    nameDiv.style.cssText = `
+        position: absolute;
+        left: 20px;
+        top: 370px;
+        width: 598px;
+        text-align: center;
+        font-weight: 800;
+        color: #a81a10;
+        font-family: 'Poppins', sans-serif;
+        line-height: 1.2;
+        word-break: break-word;
+        font-size: 42px;
+        text-transform: uppercase;
+    `;
+    nameDiv.innerText = `${member.last_name} ${member.first_name}`;
+    cardContent.appendChild(nameDiv);
+
+    // ---- DATE DE NAISSANCE ----
+    const formattedDob = member.dob ? new Date(member.dob).toLocaleDateString('fr-FR') : '';
+    const dobDiv = document.createElement("div");
+    dobDiv.style.cssText = `
+        position: absolute;
+        left: 20px;
+        top: 480px;
+        width: 598px;
+        text-align: center;
+        font-size: 32px;
+        font-weight: 700;
+        color: black;
+        font-family: 'Poppins', sans-serif;
+    `;
+    dobDiv.innerText = formattedDob ? `Né(e) le : ${formattedDob}` : '';
+    cardContent.appendChild(dobDiv);
+
+    // ---- QR CODE AU MILIEU DE LA CARTE ----
     const qrContainer = document.createElement("div");
     qrContainer.style.cssText = `
         position: absolute;
-        left: 180px;
-        top: 550px;
-        width: 300px;
-        height: 300px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    `;
-
-    const qrDiv = document.createElement("div");
-    qrDiv.style.cssText = `
+        left: 50%;
+        transform: translateX(-50%);
+        top: 570px;
+        width: 330px;
+        height: 330px;
         background: white;
-        top:200px;
-        left:200px;
         border-radius: 12px;
         box-shadow: 0 4px 12px rgba(0,0,0,0.1);
         border: 1px solid #ddd;
-        width: 300px;
-        height: 300px;
         display: flex;
         justify-content: center;
         align-items: center;
+        padding: 10px;
     `;
-    
+
+    // Contenu du QR : uniquement le lien public (simple et facile à scanner)
     const memberURL = `https://zakibnss.github.io/gestion-clubs/adherent.html?id=${member.id}`;
 
-    new QRCode(qrDiv, { 
+    new QRCode(qrContainer, {
         text: memberURL,
-        width: 300,
-        height: 300,
+        width: 310,
+        height: 310,
         colorDark: "#000000",
         colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
+        correctLevel: QRCode.CorrectLevel.L
     });
-    const qrText = document.createElement("div");
 
-    qrContainer.appendChild(qrDiv);
-   
-    backContentDiv.appendChild(qrContainer);
+    cardContent.appendChild(qrContainer);
 
-    // Ajouter le contenu à la carte verso
-    backCardDiv.appendChild(backContentDiv);
+    frontCardDiv.appendChild(cardContent);
+    wrapper.appendChild(frontCardDiv);
 
-    // ==================== ASSEMBLAGE FINAL ====================
-
-    // Ajouter les deux faces au conteneur
-    cardContainer.appendChild(frontCardDiv);
-    cardContainer.appendChild(backCardDiv);
-    wrapper.appendChild(cardContainer);
-
-    // Boutons de téléchargement
+    // ---- Boutons d'export par carte ----
     const buttonsContainer = document.createElement("div");
     buttonsContainer.style.cssText = `
         display: flex;
@@ -11996,37 +12412,19 @@ frontContentDiv.appendChild(nameDiv);
         justify-content: center;
     `;
 
-    // Bouton pour télécharger les deux faces en une seule image
-    const exportBothBtn = document.createElement("button");
-    exportBothBtn.textContent = "📄 Télécharger Recto+Verso";
-    exportBothBtn.className = "btn btn-success";
-    exportBothBtn.style.padding = "12px 25px";
-    exportBothBtn.style.fontSize = "16px";
-    exportBothBtn.onclick = () => exportBothCardsAsPNG(frontCardDiv, backCardDiv, member.id);
+    const exportBtn = document.createElement("button");
+    exportBtn.textContent = "💾 Télécharger PNG";
+    exportBtn.className = "btn btn-primary";
+    exportBtn.style.padding = "12px 25px";
+    exportBtn.style.fontSize = "16px";
+    exportBtn.onclick = () => exportCardAsPNG(frontCardDiv, `${member.id}_carte`);
 
-    // Bouton pour télécharger seulement le recto
-    const exportFrontBtn = document.createElement("button");
-    exportFrontBtn.textContent = "💾 Télécharger Recto";
-    exportFrontBtn.className = "btn btn-primary";
-    exportFrontBtn.style.padding = "12px 25px";
-    exportFrontBtn.style.fontSize = "16px";
-    exportFrontBtn.onclick = () => exportCardAsPNG(frontCardDiv, `${member.id}_recto`);
-
-    // Bouton pour télécharger seulement le verso
-    const exportBackBtn = document.createElement("button");
-    exportBackBtn.textContent = "💾 Télécharger Verso";
-    exportBackBtn.className = "btn btn-primary";
-    exportBackBtn.style.padding = "12px 25px";
-    exportBackBtn.style.fontSize = "16px";
-    exportBackBtn.onclick = () => exportCardAsPNG(backCardDiv, `${member.id}_verso`);
-
-    buttonsContainer.appendChild(exportBothBtn);
-    buttonsContainer.appendChild(exportFrontBtn);
-    buttonsContainer.appendChild(exportBackBtn);
-
+    buttonsContainer.appendChild(exportBtn);
     wrapper.appendChild(buttonsContainer);
+
     return wrapper;
 }
+
 
 // Fonction helper pour créer une photo placeholder
 function createPlaceholderPhoto() {
@@ -12139,5 +12537,15 @@ async function exportCardAsPNG(cardElement, fileName) {
             document.getElementById(modalId).classList.remove('active');
         }
     </script>
+
+    <!-- Modules V2 : Groupes / Abonnements / Rapports / Paiements + navigation NFC -->
+    <script src="js/groups.js?v=20260824"></script>
+    <script src="js/subscriptions.js?v=20260824"></script>
+    <script src="js/reports.js?v=20260824"></script>
+    <script src="js/events.js?v=20260824"></script>
+    <script src="js/nfc-reader-service.js?v=20260830"></script>
+    <script src="js/nfc-cards.js?v=20260830"></script>
+    <script src="js/nfc-cards-ui.js?v=20260830"></script>
+    <script src="js/v2-bootstrap.js?v=20260824"></script>
 </body>
 </html>

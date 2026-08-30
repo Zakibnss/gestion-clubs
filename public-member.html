@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ma Fiche — Kyokushin Manager</title>
+    <link rel="icon" type="image/png" href="logo_site.png">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family:'Segoe UI', Tahoma, sans-serif;
+            background:linear-gradient(135deg,#1a1a1a 0%,#2d132c 100%);
+            min-height:100vh;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            padding:20px;
+        }
+        .card {
+            background:#fff;
+            border-radius:22px;
+            max-width:420px;
+            width:100%;
+            overflow:hidden;
+            box-shadow:0 24px 60px rgba(0,0,0,.45);
+            animation:cardIn .5s cubic-bezier(.2,.9,.3,1.2);
+        }
+        @keyframes cardIn {
+            from { opacity:0; transform:translateY(24px) scale(.96); }
+            to   { opacity:1; transform:none; }
+        }
+        .card-head {
+            background:linear-gradient(135deg,#c8102e,#8f0b21);
+            color:#fff;
+            text-align:center;
+            padding:28px 20px 22px;
+        }
+        .avatar {
+            width:110px; height:110px;
+            border-radius:50%;
+            object-fit:cover;
+            border:4px solid #ffd700;
+            margin-bottom:12px;
+            background:#fff;
+        }
+        .card-head h1 { font-size:26px; }
+        .badge {
+            display:inline-block;
+            margin-top:10px;
+            padding:6px 20px;
+            border-radius:30px;
+            font-weight:800;
+            font-size:14px;
+        }
+        .badge.ok { background:#d4f5e3; color:#158a4b; }
+        .badge.ko { background:#ffe0e0; color:#c0392b; }
+
+        .rows { padding:8px 24px 18px; }
+        .row {
+            display:flex; justify-content:space-between; align-items:center;
+            gap:12px;
+            padding:12px 0;
+            border-bottom:1px solid #f0f0f0;
+            font-size:15px;
+        }
+        .row:last-child { border-bottom:none; }
+        .k { color:#888; }
+        .v { font-weight:700; text-align:left; }
+
+        h3.sec {
+            font-size:13px;
+            color:#c8102e;
+            letter-spacing:1px;
+            text-transform:uppercase;
+            padding:16px 24px 6px;
+        }
+        .months { display:flex; flex-wrap:wrap; gap:8px; padding:4px 24px 20px; }
+        .mchip {
+            min-width:86px;
+            text-align:center;
+            border-radius:10px;
+            padding:7px 10px;
+            font-size:12px;
+            line-height:1.5;
+        }
+        .mchip b { display:block; font-size:17px; }
+        .m-ok  { background:#e8f8ef; color:#158a4b; }
+        .m-mid { background:#fff6dd; color:#9a7b00; }
+        .m-ko  { background:#ffecec; color:#c0392b; }
+
+        .footer {
+            text-align:center;
+            font-size:11.5px;
+            color:#aaa;
+            padding:0 20px 18px;
+        }
+        .error {
+            padding:40px 30px;
+            text-align:center;
+            color:#c0392b;
+            font-weight:600;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card" id="app">
+    <div class="error">Chargement…</div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://gmoyoflorwaltuanfswn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdtb3lvZmxvcndhbHR1YW5mc3duIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxNTc0OTIsImV4cCI6MjA3NzczMzQ5Mn0.Yr0SFLvcPNbvRqNSjzwFdTZkrIz3Z6WZxcIyx8gwjZA';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const TOKEN = new URLSearchParams(location.search).get('t');
+
+function esc(s) {
+    return String(s ?? '').replace(/[&<>"']/g,
+        c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+}
+function frDate(d) {
+    if (!d) return '—';
+    return new Date(d + (String(d).length === 10 ? 'T00:00:00' : '')).toLocaleDateString('fr-FR');
+}
+
+function monthClass(abs) {
+    if (abs === 0) return 'm-ok';
+    if (abs <= 2) return 'm-mid';
+    return 'm-ko';
+}
+function monthName(key) {           // key = 'YYYY-MM'
+    const [y, m] = key.split('-');
+    const names = ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Aoû','Sep','Oct','Nov','Déc'];
+    return `${names[parseInt(m, 10) - 1]} ${y.slice(2)}`;
+}
+
+async function load() {
+    const app = document.getElementById('app');
+    if (!TOKEN) {
+        app.innerHTML = '<div class="error">Lien invalide.</div>';
+        return;
+    }
+
+    let data, error;
+    try {
+        ({ data, error } = await supabase.rpc('get_public_member', { p_token: TOKEN }));
+    } catch (err) { error = err; }
+
+    if (error || !data || !data.length) {
+        app.innerHTML = '<div class="error">Carte introuvable ou lien expiré.</div>';
+        return;
+    }
+
+    const m = data[0];
+    const active = m.sub_status === 'ACTIF';
+    const absences = m.absences && typeof m.absences === 'object'
+        ? Object.entries(m.absences) : [];
+
+    app.innerHTML = `
+        <div class="card-head">
+            <img class="avatar" src="${esc(m.photo_url || '')}" alt=""
+                 onerror="this.style.display='none'">
+            <h1>${esc(m.full_name)}</h1>
+            <span class="badge ${active ? 'ok' : 'ko'}">${active ? '🟢 ABONNEMENT ACTIF' : '🔴 ABONNEMENT EXPIRÉ'}</span>
+        </div>
+
+        <div class="rows">
+            <div class="row"><span class="k">Date de naissance</span><span class="v">${frDate(m.dob)}</span></div>
+            <div class="row"><span class="k">Groupe</span><span class="v">${esc(m.group_name || '—')}</span></div>
+            ${!active ? `<div class="row"><span class="k">Expiré le</span><span class="v">${frDate(m.sub_end)}</span></div>` : ''}
+            <div class="row"><span class="k">Prochaine séance</span>
+                <span class="v">${m.next_session_date
+                    ? `${frDate(m.next_session_date)}${m.next_session_time ? ' · ' + String(m.next_session_time).slice(0,5) : ''}`
+                    : '—'}</span></div>
+            <div class="row"><span class="k">Présences ce mois</span>
+                <span class="v">${m.month_present ?? '—'} / ${m.month_target ?? '—'}</span></div>
+        </div>
+
+        ${absences.length ? `
+        <h3 class="sec">Absences par mois</h3>
+        <div class="months">
+            ${absences.sort((a, b) => b[0].localeCompare(a[0])).slice(0, 6)
+                .map(([mo, n]) => `
+                <div class="mchip ${monthClass(n)}">${monthName(mo)}<b>${n}</b></div>`).join('')}
+        </div>` : ''}
+
+        <div class="footer">Fiche officielle du club · Lecture seule · Kyokushin Manager Pro</div>`;
+}
+
+load();
+</script>
+</body>
+</html>
