@@ -57,6 +57,17 @@ async function connectNfcReader() {
     }
 }
 
+/* Test de connexion du lecteur externe */
+async function testNfcReader() {
+    const res = await NFCReaderService.testConnection();
+    const msg = document.getElementById('nfcScanResult');
+    if (res.ok) {
+        msg.innerHTML = `<div class="alert alert-success">🧪 <strong>Test réussi</strong> — ${escapeHtmlV2(res.message)}</div>`;
+    } else {
+        msg.innerHTML = `<div class="alert alert-danger">🧪 <strong>Test échoué</strong> — ${escapeHtmlV2(res.message)}</div>`;
+    }
+}
+
 async function disconnectNfcReader() {
     NfcCards.stopPolling();
     nfcPollingStarted = false;
