@@ -14,6 +14,58 @@
    ============================================================= */
 let nfcPollingStarted = false;
 
+// Adapter externe configuré par l'opérateur (bridge/driver/...).
+let nfcExternalAdapter = 'bridge';
+try { nfcExternalAdapter = NFCReaderService.getAdapterName() || 'bridge'; } catch (e) { /* ignore */ }
+let nfcSelectedMode = 'external';   // 'external' | 'pcnfc' | 'webnfc'
+
+/* Affichage de la dispo des NFC intégrés (PC + smartphone) */
+function renderWebNfcStatus() {
+    const el = document.getElementById('nfcWebNfcStatus');
+    if (!el) return;
+    const pcOk = NFCReaderService.pcNfcAvailable();
+    const mobileOk = NFCReaderService.webNfcAvailable();
+    el.innerHTML = `
+        <div style="margin-bottom:3px;">💻 NFC PC intégré — ${pcOk
+            ? `<span style="color:#28a745;">🟢 Bridge PC/SC disponible</span>`
+            : `<span style="color:#dc3545;">🔴 Aucun bridge NFC PC intégré</span>`}</div>
+        <div>📱 NFC smartphone — ${mobileOk
+            ? `<span style="color:#28a745;">🟢 Web NFC disponible</span>`
+            : `<span style="color:#dc3545;">🔴 Web NFC non disponible</span>`}</div>
+        <div style="font-size:.78rem;margin-top:4px;">⚠️ Le NFC intégré ne fournit pas toujours l'UID brut d'une MIFARE Classic 1K. Le lecteur NFC externe reste le mode fiable.</div>`;
+}
+
+/* Bascule du mode de lecture */
+function setNfcMode(mode) {
+    nfcSelectedMode = mode;
+    // Ne pas re-connecter si même mode déjà actif
+    NfcCards.stopPolling();
+    nfcPollingStarted = false;
+    NFCReaderService.disconnect().catch(() => {});
+    if (mode === 'webnfc') {
+        NFCReaderService.setTransportConfig({ adapter: 'webnfc' });
+        nfcReaderUi({
+            connected: false,
+            message: NFCReaderService.webNfcAvailable()
+                ? 'Mode NFC intégré — cliquez sur Connecter'
+                : 'Web NFC non disponible sur cet appareil'
+        });
+    } else if (mode === 'pcnfc') {
+        NFCReaderService.setTransportConfig({ adapter: 'pcnfc' });
+        nfcReaderUi({
+            connected: false,
+            message: NFCReaderService.pcNfcAvailable()
+                ? 'NFC intégré du PC — cliquez sur Connecter'
+                : 'Aucun bridge NFC intégré au PC détecté'
+        });
+    } else {
+        NFCReaderService.setTransportConfig({ adapter: nfcExternalAdapter });
+        nfcReaderUi({ connected: false, message: 'Branchez le lecteur USB puis cliquez sur Connecter.' });
+    }
+    setNfcScannerCore(false);
+    setNfcScannerError('');
+}
+
 function nfcReaderUi(status) {
     const box = document.getElementById('nfcReaderStatus');
     if (!box) return;
@@ -41,7 +93,21 @@ async function connectNfcReader() {
     try {
         await NFCReaderService.connect();
         nfcReaderUi({ connected: true, message: 'Prêt à scanner' });
-        // Démarrer la boucle de lecture continue du lecteur externe
+
+        // NFC intégré (Web NFC / PC) sans UID brut : on n'utilise pas la
+        // boucle de présence par UID et on affiche l'avertissement.
+        if (!NFCReaderService.supportsRawUid()) {
+            const res = document.getElementById('nfcScanResult');
+            res.innerHTML = `<div class="alert alert-warning">
+                ⚠ <strong>Lecture UID non disponible avec le NFC intégré.</strong><br>
+                Ce mode ne fournit pas l'UID brut d'une MIFARE Classic 1K.<br>
+                Utilisez le lecteur NFC externe USB/OTG.
+            </div>`;
+            document.getElementById('nfcScannerCore').style.display = 'none';
+            return;
+        }
+
+        // Lecteur externe : boucle de lecture continue de l'UID
         if (!nfcPollingStarted) {
             NfcCards.startPolling(onScannedUid);
             nfcPollingStarted = true;
@@ -111,12 +177,29 @@ function setNfcScannerError(msg) {
     if (res) res.innerHTML = `<div class="alert alert-danger">${escapeHtmlV2(msg)}</div>`;
 }
 
+function renderNfcWebNfcWarning() {
+    setNfcScannerCore(false);
+    const res = document.getElementById('nfcScanResult');
+    if (res) res.innerHTML = `<div class="alert alert-warning">
+        ⚠ <strong>Lecture UID non disponible avec le NFC intégré.</strong><br>
+        Utilisez le lecteur NFC externe USB/OTG pour lire l'UID des cartes MIFARE Classic.
+    </div>`;
+}
+
 /* ---------- Détection d'une carte (via lecteur externe) ---------- */
 let nfcProcessing = false;
 
 async function onScannedUid(rawUid) {
     if (nfcProcessing) return;
     nfcProcessing = true;
+
+    // Marqueur du WebNfcAdapter : NDEF seulement, pas d'UID
+    if (rawUid && typeof rawUid === 'object' && rawUid.uidUnavailable) {
+        renderNfcWebNfcWarning();
+        nfcProcessing = false;
+        return;
+    }
+
     const uid = NFCReaderService.normalizeUid(rawUid);
     if (!uid) { nfcProcessing = false; return; }
 
@@ -247,11 +330,12 @@ function renderNfcScanHistory(h) {
 
 /* ---------- Ouverture du scanner ---------- */
 async function openNfcScanner() {
+    renderWebNfcStatus();
     document.getElementById('nfcScanResult').innerHTML = '';
     setNfcScannerCore(false);
     const connected = NFCReaderService.isConnected();
     nfcReaderUi({ connected, message: connected ? 'Prêt à scanner' : 'Branchez le lecteur USB puis cliquez sur Connecter.' });
-    if (connected) {
+    if (connected && NFCReaderService.supportsRawUid()) {
         if (!nfcPollingStarted) { NfcCards.startPolling(onScannedUid); nfcPollingStarted = true; }
         setNfcScannerState('ready');
     }

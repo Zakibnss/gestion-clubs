@@ -9,29 +9,36 @@
 //     selon le modèle exact du lecteur — jamais inventé ici.
 //   . Seule donnée retournée à l'application : l'UID de la carte.
 //
-// Flux :
+// Flux (mode officiel/fiable) :
 //   External NFC Reader
 //         ↓
-//   NFC Reader Adapter (driver / bridge / simulate)
+//   NFC Reader Adapter (driver / bridge)
 //         ↓
 //   NFCReaderService  -> readUID() -> UID
 //         ↓
 //   App -> Supabase
 //
-// Device compatibility :
-//   Windows   : USB -> WebUSB / Serial / HID / PC/SC (via driver ou bridge)
-//   Android   : USB OTG -> le navigateur peut ne pas permettre l'accès USB
-//               direct. Dans ce cas on utilise un BRIDGE (app native /
-//               serveur local) qui lit le lecteur et expose readUID().
-//   Le NFC interne du smartphone n'est JAMAIS utilisé. Web NFC jamais.
+// Modes / adapters implémentés :
+//   1. 'driver'   — driver injecté (config.driver) : protocole RÉEL du
+//                   lecteur (WebUSB, Serial, HID, PC/SC, …).
+//   2. 'bridge'   — window.NfcBridge (app native / serveur local).
+//                   Chemin pour Android via USB OTG ET pour Windows.
+//   3. 'simulate' — simulateur de dev/test (jamais en prod).
+//   4. 'webnfc'   — [EXPERIMENTAL / FALLBACK] NFC intégré Android via
+//                   Web NFC. NE DONNE PAS le UID brut d'une MIFARE
+//                   Classic 1K : readUid() refuse de fabriquer un UID à
+//                   partir de données NDEF. Il ne lit que des messages
+//                   NDEF et l'application doit donc le traiter comme un
+//                   adapter DISTINCT qui n'émet pas d'UID fiable.
 //
-// Nombre de pilotes (adapters) fournis :
-//   1. 'driver'   — utilise un driver injecté (config.driver) qui
-//                   implémente { open, close, isConnected, readUid, test }.
-//                   Permet le WebUSB/Serial/HID/PC/SC réel selon le lecteur.
-//   2. 'bridge'   — utilise window.NfcBridge (app native / pont local pour
-//                   Android & Windows) : { isConnected, readUid, test }.
-//   3. 'simulate' — simulateur de dev/test (jamais en production).
+// Device compatibility :
+//   Windows  : Lecteur USB externe   -> UID ✅ (pas officiel Web NFC)
+//   Android  : Lecteur USB OTG externe -> UID ✅
+//   Android  : NFC intégré + Web NFC -> UID ⚠️ pas garanti (adapter webnfc)
+//   iPhone   : NFC intégré           -> ❌ (hors architecture Web NFC)
+//
+// Le NFC interne android (via Web NFC) ne remplace PAS le lecteur
+// externe pour l'UID brut MIFARE Classic 1K.
 //
 // Aucun VID/PID, endpoint ou octet de protocole n'est codé en dur ici :
 // l'opérateur injecte le driver/bridge correspondant à son matériel.
@@ -174,12 +181,167 @@ window.NFCReaderService = (function () {
         _stopLoop() { if (this._loop) { clearInterval(this._loop); this._loop = null; } }
     }
 
+    /* ==========================================================
+       ADAPTER : 'webnfc' — NFC intégré Android via Web NFC
+       [EXPERIMENTAL / FALLBACK — ne produit PAS un UID fiable]
+       ==========================================================
+       Le Web NFC (NDEFReader) permet de lire des messages NDEF sur des
+       tags compatibles (NTAG216…). Il n'expose PAS le UID brut/Serial
+       Number d'une MIFARE Classic 1K de façon standard.
+
+       Conformément à l'exigence « ne pas fabriquer un UID », readUid()
+       de cet adapter REFUSE de convertir artificiellement des données
+       NDEF en UID : il lève une erreur explicite invitant à utiliser le
+       lecteur externe. L'application doit traiter ce mode comme un
+       adapter DISTINCT (capable au mieux de lire un NDEF, jamais d'émettre
+       un UID fiable).
+       ========================================================== */
+    class WebNfcAdapter {
+        constructor() {
+            this.connected = false;
+            this.ndefReader = null;
+            this._ondata = null;
+        }
+
+        /* Capacité réelle : le Web NFC ne fournit pas l'UID brut. */
+        static isAvailable() {
+            return ('NDEFReader' in window);
+        }
+        supportsRawUid() { return false; }
+
+        isConnected() { return this.connected; }
+
+        async connect() {
+            if (!WebNfcAdapter.isAvailable()) {
+                throw new Error('Web NFC (NFC intégré) non disponible dans ce navigateur. Utilisez Chrome sur Android, ou le lecteur externe.');
+            }
+            try {
+                this.ndefReader = new NDEFReader();
+                await this.ndefReader.scan();
+                this.connected = true;
+                emitStatus('connected', 'NFC intégré (Web NFC) connecté');
+            } catch (err) {
+                this.connected = false;
+                throw new Error('Impossible d\'activer le NFC intégré : ' + err.message);
+            }
+            return this;
+        }
+
+        async disconnect() {
+            this.connected = false;
+            if (this._unsub) { try { this._unsub(); } catch (e) {} this._unsub = null; }
+            this.ndefReader = null;
+            emitStatus('disconnected', 'NFC intégré déconnecté');
+        }
+
+        /* ⚠ Ne JAMAIS renvoyer un UID inventé à partir de NDEF. */
+        async readUid() {
+            throw new Error('⚠ Lecture UID non disponible avec le NFC intégré (Web NFC ne fournit pas l\'UID brut MIFARE Classic 1K). Utilisez le lecteur NFC externe USB/OTG.');
+        }
+
+        /* Lecture NDEF (expérimentale) — retourne le texte NDEF, PAS un UID.
+           Utile uniquement pour des tags NDEF (NTAG) compatibles. */
+        async readNdefMessage() {
+            if (!this.connected || !this.ndefReader) throw new Error('NFC intégré non actif');
+            return new Promise((resolve, reject) => {
+                const onReading = (ev) => {
+                    let text = '';
+                    for (const record of ev.message.records || []) {
+                        if (record.recordType === 'text' && record.data) {
+                            text += new TextDecoder(record.encoding || 'utf-8').decode(record.data);
+                        }
+                    }
+                    cleanup();
+                    resolve(text || null);
+                };
+                const onError = () => { cleanup(); reject(new Error('Erreur de lecture NDEF')); };
+                const cleanup = () => {
+                    this.ndefReader.removeEventListener('reading', onReading);
+                    this.ndefReader.removeEventListener('error', onError);
+                };
+                this.ndefReader.addEventListener('reading', onReading);
+                this.ndefReader.addEventListener('error', onError);
+                // délai de sécurité
+                setTimeout(() => { cleanup(); reject(new Error('Aucun tag NDEF détecté.')); }, 8000);
+            });
+        }
+
+        async test() { return this.connected; }
+
+        async startPolling(onUid) {
+            // En mode Web NFC on ne peut pas poller l'UID : on notifie la
+            // non-disponibilité pour le flux UID. L'application doit le savoir.
+            if (onUid) onUid({ ndefOnly: true, uidUnavailable: true });
+            this._loop = setInterval(() => {
+                if (onUid) onUid({ ndefOnly: true, uidUnavailable: true });
+            }, 5000);
+        }
+        _stopLoop() { if (this._loop) { clearInterval(this._loop); this._loop = null; } }
+    }
+
+    /* ==========================================================
+       ADAPTER : 'pcnfc' — NFC intégré du PC
+       [via PC/SC ou bridge — ne pas supposer la lecture de l'UID]
+       ==========================================================
+       Certains PC disposent d'un lecteur NFC intégré, normalement
+       exposé via PC/SC. Le navigateur n'y accède pas directement :
+       il faut un bridge natif (app/serveur local) exposant readUid().
+
+       Cet adapter utilise donc un bridge/driver fourni par l'opérateur
+       (config.pcnfc ou window.NfcBridgePc). Il ne PRÉTEND pas lire
+       l'UID tant qu'aucun bridge réel n'est disponible :
+         supportsRawUid() = false  -> lecture UID indisponible.
+       ========================================================== */
+    class PcNfcAdapter {
+        constructor() {
+            this.brg = (config.pcnfc && config.pcnfc.bridge) || window.NfcBridgePc || window.NfcBridge;
+            this.connected = false;
+            this._loop = null;
+        }
+        static isAvailable() {
+            const b = (config && config.pcnfc && config.pcnfc.bridge) || window.NfcBridgePc || window.NfcBridge;
+            return !!(typeof NDEFReader === 'undefined' && b && typeof b.readUid === 'function');
+        }
+        supportsRawUid() { return !!(this.brg && typeof this.brg.readUid === 'function'); }
+        isConnected() { return !!(this.brg && this.brg.isConnected && this.brg.isConnected()); }
+        async connect() {
+            if (!this.brg || typeof this.brg.readUid !== 'function') {
+                throw new Error('NFC intégré du PC : aucun bridge PC/SC disponible. Installez/lancez le pont (lecteur NFC du PC).');
+            }
+            if (this.brg.open) await this.brg.open();
+            this.connected = true;
+            emitStatus('connected', 'NFC intégré du PC connecté');
+            return this;
+        }
+        async disconnect() {
+            if (this.brg && this.brg.close) { try { await this.brg.close(); } catch (e) {} }
+            this.connected = false;
+            emitStatus('disconnected', 'NFC intégré du PC déconnecté');
+        }
+        async readUid() {
+            if (!this.brg || typeof this.brg.readUid !== 'function') {
+                throw new Error('⚠ Lecture UID non disponible avec le NFC intégré du PC (pas de bridge PC/SC). Utilisez le lecteur NFC externe USB.');
+            }
+            return this.brg.readUid();
+        }
+        async test() { return this.isConnected(); }
+        async startPolling(onUid) {
+            if (this.brg && this.brg.startPolling) return this.brg.startPolling(onUid);
+            this._loop = setInterval(async () => {
+                try { const u = await this.readUid(); if (u && onUid) onUid(u); } catch (e) {}
+            }, 600);
+        }
+        _stopLoop() { if (this._loop) { clearInterval(this._loop); this._loop = null; } }
+    }
+
     /* ---------- Fabrique ---------- */
     function createAdapter(name) {
         switch (name) {
             case 'driver':   return new DriverAdapter(config.driver);
-            case 'bridge':   return new BridgeAdapter(config.bridge);
+            case 'bridge':   return new BridgeAdapter(config.bridge || window.NfcBridge);
             case 'simulate': return new SimulateAdapter();
+            case 'webnfc':   return new WebNfcAdapter();
+            case 'pcnfc':    return new PcNfcAdapter();
             default: throw new Error('Adaptateur NFC inconnu : ' + name);
         }
     }
@@ -234,6 +396,11 @@ window.NFCReaderService = (function () {
             if (!activeAdapter.isConnected()) {
                 return { ok: false, message: 'Lecteur non connecté' };
             }
+            // Mode NFC intégré (Web NFC ou PC) : le lecteur est actif,
+            // mais il ne fournit pas d'UID brut fiable
+            if (typeof activeAdapter.supportsRawUid === 'function' && !activeAdapter.supportsRawUid()) {
+                return { ok: false, message: '⚠ Lecture UID non disponible avec le NFC intégré. Utilisez le lecteur NFC externe USB/OTG.' };
+            }
             try {
                 if (activeAdapter.test) {
                     const r = await activeAdapter.test();
@@ -243,6 +410,38 @@ window.NFCReaderService = (function () {
             } catch (e) {
                 return { ok: false, message: e.message };
             }
+        },
+
+        /* Capacités / sélection des modes */
+
+        /* Web NFC (NFC intégré Android) disponible dans ce navigateur ? */
+        webNfcAvailable() {
+            return ('NDEFReader' in window);
+        },
+
+        /* NFC intégré du PC disponible (bridge PC/SC fourni) ? */
+        pcNfcAvailable() {
+            return PcNfcAdapter.isAvailable();
+        },
+
+        /* L'adapter actif peut-il fournir un UID fiable ? */
+        supportsRawUid() {
+            if (!activeAdapter) {
+                const a = config.adapter || 'bridge';
+                if (a === 'webnfc') return false;
+                if (a === 'pcnfc') return PcNfcAdapter.isAvailable();
+                return true;
+            }
+            if (typeof activeAdapter.supportsRawUid === 'function') return activeAdapter.supportsRawUid();
+            return true;
+        },
+
+        /* Lecture NDEF (mode webnfc uniquement, expérimental) */
+        readNdefMessage() {
+            if (!activeAdapter || typeof activeAdapter.readNdefMessage !== 'function') {
+                throw new Error('Lecture NDEF disponible uniquement avec le NFC intégré (webnfc).');
+            }
+            return activeAdapter.readNdefMessage();
         },
 
         startPolling(onUid) {
@@ -260,7 +459,8 @@ window.NFCReaderService = (function () {
         },
 
         normalizeUid(raw) {
-            return String(raw || '').trim().toUpperCase().replace(/\s+/g, '');
+            if (raw === null || raw === undefined || typeof raw !== 'string') return '';
+            return raw.trim().toUpperCase().replace(/\s+/g, '');
         },
         isSimulation() {
             return (config.adapter || 'bridge') === 'simulate';
