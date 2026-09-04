@@ -54,6 +54,7 @@ window.NFCReaderService = (function () {
 
     let config = JSON.parse(JSON.stringify(DEFAULT_CONFIG));
     let activeAdapter = null;
+    let _lastExternalAdapter = null;   // adapter externe opérateur (bridge/driver) restauré au retour du mode intégré
     const statusCallbacks = [];
 
     /* ---------- Status ---------- */
@@ -183,18 +184,20 @@ window.NFCReaderService = (function () {
 
     /* ==========================================================
        ADAPTER : 'webnfc' — NFC intégré Android via Web NFC
-       [EXPERIMENTAL / FALLBACK — ne produit PAS un UID fiable]
+       (mode 'android-integrated', EXPERIMENTAL / COMPLÉMENTAIRE)
        ==========================================================
-       Le Web NFC (NDEFReader) permet de lire des messages NDEF sur des
-       tags compatibles (NTAG216…). Il n'expose PAS le UID brut/Serial
-       Number d'une MIFARE Classic 1K de façon standard.
+       Encapsule TOUT l'usage de NDEFReader ici — jamais dans les
+       composants/UI. Ne fournit PAS l'UID brut/Serial Number d'une
+       MIFARE Classic 1K de façon standard : readUid() REFUSE de
+       fabriquer un UID à partir de données NDEF.
 
-       Conformément à l'exigence « ne pas fabriquer un UID », readUid()
-       de cet adapter REFUSE de convertir artificiellement des données
-       NDEF en UID : il lève une erreur explicite invitant à utiliser le
-       lecteur externe. L'application doit traiter ce mode comme un
-       adapter DISTINCT (capable au mieux de lire un NDEF, jamais d'émettre
-       un UID fiable).
+       Codes d'erreur (err.code) :
+         WEB_NFC_UNAVAILABLE        - Web NFC indisponible dans ce contexte
+         WEB_NFC_PERMISSION_DENIED  - autorisation refusée / scan bloqué
+         WEB_NFC_SCAN_FAILED        - échec de scan
+         WEB_NFC_UID_UNAVAILABLE    - carte détectée mais UID indisponible
+         NFC_NOT_SUPPORTED          - navigateur/page non compatible
+         NFC_SCAN_CANCELLED         - scan annulé
        ========================================================== */
     class WebNfcAdapter {
         constructor() {
@@ -207,22 +210,32 @@ window.NFCReaderService = (function () {
         static isAvailable() {
             return ('NDEFReader' in window);
         }
+
+        /* Web NFC ne peut pas fournir l'UID MIFARE Classic 1K. */
         supportsRawUid() { return false; }
 
         isConnected() { return this.connected; }
 
         async connect() {
             if (!WebNfcAdapter.isAvailable()) {
-                throw new Error('Web NFC (NFC intégré) non disponible dans ce navigateur. Utilisez Chrome sur Android, ou le lecteur externe.');
+                throw nfcError(NFC_ERROR_CODES.WEB_NFC_UNAVAILABLE,
+                    'Web NFC non disponible. Utilisez Chrome sur Android en HTTPS, ou le lecteur externe.');
             }
             try {
                 this.ndefReader = new NDEFReader();
                 await this.ndefReader.scan();
                 this.connected = true;
-                emitStatus('connected', 'NFC intégré (Web NFC) connecté');
+                emitStatus('connected', 'NFC intégré Android connecté');
             } catch (err) {
                 this.connected = false;
-                throw new Error('Impossible d\'activer le NFC intégré : ' + err.message);
+                // L'utilisateur a refusé/annulé la permission ou le scan.
+                const down = String(err && err.message || '').toLowerCase();
+                throw nfcError(
+                    /permission|cancel|denied|not allowed/.test(down)
+                        ? NFC_ERROR_CODES.WEB_NFC_PERMISSION_DENIED
+                        : NFC_ERROR_CODES.WEB_NFC_SCAN_FAILED,
+                    'Impossible d\'activer le NFC intégré : ' + (err && err.message || 'erreur inconnue')
+                );
             }
             return this;
         }
@@ -231,18 +244,19 @@ window.NFCReaderService = (function () {
             this.connected = false;
             if (this._unsub) { try { this._unsub(); } catch (e) {} this._unsub = null; }
             this.ndefReader = null;
-            emitStatus('disconnected', 'NFC intégré déconnecté');
+            emitStatus('disconnected', 'NFC intégré Android déconnecté');
         }
 
         /* ⚠ Ne JAMAIS renvoyer un UID inventé à partir de NDEF. */
         async readUid() {
-            throw new Error('⚠ Lecture UID non disponible avec le NFC intégré (Web NFC ne fournit pas l\'UID brut MIFARE Classic 1K). Utilisez le lecteur NFC externe USB/OTG.');
+            throw nfcError(NFC_ERROR_CODES.WEB_NFC_UID_UNAVAILABLE,
+                '⚠ Lecture UID non disponible avec le NFC intégré (Web NFC ne fournit pas l\'UID brut MIFARE Classic 1K). Utilisez le lecteur NFC externe USB/OTG.');
         }
 
         /* Lecture NDEF (expérimentale) — retourne le texte NDEF, PAS un UID.
            Utile uniquement pour des tags NDEF (NTAG) compatibles. */
         async readNdefMessage() {
-            if (!this.connected || !this.ndefReader) throw new Error('NFC intégré non actif');
+            if (!this.connected || !this.ndefReader) throw nfcError(NFC_ERROR_CODES.NFC_NOT_SUPPORTED, 'NFC intégré non actif');
             return new Promise((resolve, reject) => {
                 const onReading = (ev) => {
                     let text = '';
@@ -254,7 +268,15 @@ window.NFCReaderService = (function () {
                     cleanup();
                     resolve(text || null);
                 };
-                const onError = () => { cleanup(); reject(new Error('Erreur de lecture NDEF')); };
+                const onError = (ev) => {
+                    cleanup();
+                    let code = NFC_ERROR_CODES.WEB_NFC_SCAN_FAILED;
+                    let msg = 'Erreur de lecture NFC';
+                    if (ev && (ev.error === 'NotAllowedError' || ev.error === 'SecurityError')) {
+                        code = NFC_ERROR_CODES.WEB_NFC_PERMISSION_DENIED; msg = 'Autorisation NFC refusée';
+                    }
+                    reject(nfcError(code, msg));
+                };
                 const cleanup = () => {
                     this.ndefReader.removeEventListener('reading', onReading);
                     this.ndefReader.removeEventListener('error', onError);
@@ -262,14 +284,55 @@ window.NFCReaderService = (function () {
                 this.ndefReader.addEventListener('reading', onReading);
                 this.ndefReader.addEventListener('error', onError);
                 // délai de sécurité
-                setTimeout(() => { cleanup(); reject(new Error('Aucun tag NDEF détecté.')); }, 8000);
+                setTimeout(() => { cleanup(); reject(nfcError(NFC_ERROR_CODES.NFC_SCAN_CANCELLED, 'Aucun tag NFC détecté.')); }, 8000);
+            });
+        }
+
+        /* Test du NFC intégré : détecte réellement une carte qui passe
+           devant le téléphone. Retourne { detected, uid, warning }.
+           - detected=true  : une carte a été détectée.
+           - uid            : UID si le navigateur l'expose (normalement non).
+           - warning=true   : UID non garanti (limitation Web NFC).
+           Ne fabrique JAMAIS un UID à partir du NDEF. */
+        async testCard(timeoutMs) {
+            timeoutMs = timeoutMs || 8000;
+            const start = Date.now();
+            // Attendre une carte : on espionne l'évènement 'reading' de NDEFReader.
+            return new Promise((resolve, reject) => {
+                const timer = setTimeout(() => {
+                    cleanup();
+                    resolve({ detected: false, uid: '', warning: false, timedOut: true });
+                }, timeoutMs);
+
+                const onReading = () => {
+                    clearTimeout(timer);
+                    cleanup();
+                    // Carte détectée (via NDEF). L'UID n'est PAS exposé de façon fiable.
+                    resolve({ detected: true, uid: '', warning: true, uidUnavailable: true });
+                };
+                const onError = (ev) => {
+                    clearTimeout(timer);
+                    cleanup();
+                    let code = NFC_ERROR_CODES.WEB_NFC_SCAN_FAILED;
+                    let msg = 'Erreur de lecture NFC';
+                    if (ev && (ev.error === 'NotAllowedError' || ev.error === 'SecurityError')) {
+                        code = NFC_ERROR_CODES.WEB_NFC_PERMISSION_DENIED; msg = 'Autorisation NFC refusée';
+                    }
+                    reject(nfcError(code, msg));
+                };
+                const cleanup = () => {
+                    this.ndefReader.removeEventListener('reading', onReading);
+                    this.ndefReader.removeEventListener('error', onError);
+                };
+                this.ndefReader.addEventListener('reading', onReading);
+                this.ndefReader.addEventListener('error', onError);
             });
         }
 
         async test() { return this.connected; }
 
         async startPolling(onUid) {
-            // En mode Web NFC on ne peut pas poller l'UID : on notifie la
+            // En mode NFC intégré on ne peut pas poller l'UID : on notifie la
             // non-disponibilité pour le flux UID. L'application doit le savoir.
             if (onUid) onUid({ ndefOnly: true, uidUnavailable: true });
             this._loop = setInterval(() => {
@@ -280,58 +343,41 @@ window.NFCReaderService = (function () {
     }
 
     /* ==========================================================
-       ADAPTER : 'pcnfc' — NFC intégré du PC
-       [via PC/SC ou bridge — ne pas supposer la lecture de l'UID]
+       MODES DE LECTURE (NFCReaderMode)
        ==========================================================
-       Certains PC disposent d'un lecteur NFC intégré, normalement
-       exposé via PC/SC. Le navigateur n'y accède pas directement :
-       il faut un bridge natif (app/serveur local) exposant readUid().
+       . 'external'           — lecteur NFC externe (USB / USB OTG).
+       . 'android-integrated' — NFC intégré du smartphone Android via
+                                Web NFC (mode complémentaire, expérimental).
 
-       Cet adapter utilise donc un bridge/driver fourni par l'opérateur
-       (config.pcnfc ou window.NfcBridgePc). Il ne PRÉTEND pas lire
-       l'UID tant qu'aucun bridge réel n'est disponible :
-         supportsRawUid() = false  -> lecture UID indisponible.
+       Windows utilise UNIQUEMENT 'external'. Le mode android-integrated
+       n'est jamais proposé (ni Web NFC) sur Windows, ni sur iPhone.
        ========================================================== */
-    class PcNfcAdapter {
-        constructor() {
-            this.brg = (config.pcnfc && config.pcnfc.bridge) || window.NfcBridgePc || window.NfcBridge;
-            this.connected = false;
-            this._loop = null;
-        }
-        static isAvailable() {
-            const b = (config && config.pcnfc && config.pcnfc.bridge) || window.NfcBridgePc || window.NfcBridge;
-            return !!(typeof NDEFReader === 'undefined' && b && typeof b.readUid === 'function');
-        }
-        supportsRawUid() { return !!(this.brg && typeof this.brg.readUid === 'function'); }
-        isConnected() { return !!(this.brg && this.brg.isConnected && this.brg.isConnected()); }
-        async connect() {
-            if (!this.brg || typeof this.brg.readUid !== 'function') {
-                throw new Error('NFC intégré du PC : aucun bridge PC/SC disponible. Installez/lancez le pont (lecteur NFC du PC).');
-            }
-            if (this.brg.open) await this.brg.open();
-            this.connected = true;
-            emitStatus('connected', 'NFC intégré du PC connecté');
-            return this;
-        }
-        async disconnect() {
-            if (this.brg && this.brg.close) { try { await this.brg.close(); } catch (e) {} }
-            this.connected = false;
-            emitStatus('disconnected', 'NFC intégré du PC déconnecté');
-        }
-        async readUid() {
-            if (!this.brg || typeof this.brg.readUid !== 'function') {
-                throw new Error('⚠ Lecture UID non disponible avec le NFC intégré du PC (pas de bridge PC/SC). Utilisez le lecteur NFC externe USB.');
-            }
-            return this.brg.readUid();
-        }
-        async test() { return this.isConnected(); }
-        async startPolling(onUid) {
-            if (this.brg && this.brg.startPolling) return this.brg.startPolling(onUid);
-            this._loop = setInterval(async () => {
-                try { const u = await this.readUid(); if (u && onUid) onUid(u); } catch (e) {}
-            }, 600);
-        }
-        _stopLoop() { if (this._loop) { clearInterval(this._loop); this._loop = null; } }
+    const MODES = {
+        EXTERNAL: 'external',
+        ANDROID_INTEGRATED: 'android-integrated'
+    };
+    // L'adapter 'webnfc' incarne le mode 'android-integrated'.
+    const MODE_TO_ADAPTER = {
+        [MODES.EXTERNAL]: 'bridge',          // défaut : bridge externe de l'opérateur
+        [MODES.ANDROID_INTEGRATED]: 'webnfc'
+    };
+
+    /* ==========================================================
+       CODES D'ERREUR WEB NFC (lisibles par l'application)
+       ========================================================== */
+    const NFC_ERROR_CODES = {
+        WEB_NFC_UNAVAILABLE: 'WEB_NFC_UNAVAILABLE',
+        WEB_NFC_PERMISSION_DENIED: 'WEB_NFC_PERMISSION_DENIED',
+        WEB_NFC_SCAN_FAILED: 'WEB_NFC_SCAN_FAILED',
+        WEB_NFC_UID_UNAVAILABLE: 'WEB_NFC_UID_UNAVAILABLE',
+        NFC_NOT_SUPPORTED: 'NFC_NOT_SUPPORTED',
+        NFC_SCAN_CANCELLED: 'NFC_SCAN_CANCELLED'
+    };
+
+    function nfcError(code, message) {
+        const err = new Error(message);
+        err.code = code;
+        return err;
     }
 
     /* ---------- Fabrique ---------- */
@@ -341,7 +387,6 @@ window.NFCReaderService = (function () {
             case 'bridge':   return new BridgeAdapter(config.bridge || window.NfcBridge);
             case 'simulate': return new SimulateAdapter();
             case 'webnfc':   return new WebNfcAdapter();
-            case 'pcnfc':    return new PcNfcAdapter();
             default: throw new Error('Adaptateur NFC inconnu : ' + name);
         }
     }
@@ -351,6 +396,8 @@ window.NFCReaderService = (function () {
        ========================================================== */
     const service = {
         DEFAULT_CONFIG,
+        NFC_ERROR_CODES,
+        MODES,
 
         /* Configurer le mode + driver/bridge sans coder de matériel ici.
            Ex. :
@@ -365,8 +412,14 @@ window.NFCReaderService = (function () {
 
         async connect() {
             await this.disconnect();
-            emitStatus('connecting', 'Connexion du lecteur NFC externe…');
-            activeAdapter = createAdapter(config.adapter || 'bridge');
+            const adapterName = config.adapter || 'bridge';
+            const mode = this.getMode();
+            // Mémoriser l'adapter externe opérateur (bridge/driver…) pour
+            // pouvoir le restaurer après un passage en mode NFC intégré.
+            if (mode !== MODES.ANDROID_INTEGRATED) _lastExternalAdapter = adapterName;
+            emitStatus('connecting', mode === MODES.ANDROID_INTEGRATED
+                ? 'Activation du NFC intégré Android…' : 'Connexion du lecteur NFC externe…');
+            activeAdapter = createAdapter(adapterName);
             await activeAdapter.connect();
             return activeAdapter;
         },
@@ -412,16 +465,65 @@ window.NFCReaderService = (function () {
             }
         },
 
-        /* Capacités / sélection des modes */
-
-        /* Web NFC (NFC intégré Android) disponible dans ce navigateur ? */
-        webNfcAvailable() {
-            return ('NDEFReader' in window);
+        /* ---------- Compatibilité plateforme ---------- */
+        isAndroid() {
+            return /Android/i.test(navigator.userAgent);
+        },
+        isWindows() {
+            return /Windows/i.test(navigator.userAgent);
+        },
+        isIOS() {
+            return /iPhone|iPad|iPod/i.test(navigator.userAgent);
         },
 
-        /* NFC intégré du PC disponible (bridge PC/SC fourni) ? */
-        pcNfcAvailable() {
-            return PcNfcAdapter.isAvailable();
+        /* Définition des modes (NFCReaderMode) */
+        getModes() { return MODES; },
+        getMode() {
+            const a = config.adapter || 'bridge';
+            // adapter 'webnfc' incarne le mode 'android-integrated'
+            return a === 'webnfc' ? MODES.ANDROID_INTEGRATED : MODES.EXTERNAL;
+        },
+        setMode(mode) {
+            if (mode === MODES.ANDROID_INTEGRATED) {
+                // Mémoriser l'adapter externe pour pouvoir y revenir, puis
+                // passer en Web NFC.
+                _lastExternalAdapter = config.adapter || 'bridge';
+                return this.setTransportConfig({ adapter: MODE_TO_ADAPTER[MODES.ANDROID_INTEGRATED] });
+            }
+            // external : restaurer l'adapter externe opérateur (bridge/driver…)
+            const ext = _lastExternalAdapter || config.bridge || 'bridge';
+            _lastExternalAdapter = null;
+            return this.setTransportConfig({ adapter: ext });
+        },
+
+        /* Modes réellement proposables sur CET appareil.
+           Windows : externe uniquement (jamais Web NFC / NFC interne).
+           Android : externe + android-integrated.
+           iPhone  : externe uniquement. */
+        supportedModes() {
+            const modes = [MODES.EXTERNAL];
+            if (this.isAndroid() && this.isWebNFCAvailable()) {
+                modes.push(MODES.ANDROID_INTEGRATED);
+            }
+            return modes;
+        },
+
+        /* Détection : le NFC intégré Android (Web NFC) est-il disponible ?
+           Vérifie : navigateur compatible + NDEFReader + HTTPS + Android.
+           (Web NFC n'existe pas fiabilment sur Windows/iPhone.) */
+        isWebNFCAvailable() {
+            if (!this.isAndroid()) return false;             // jamais sur Windows/iPhone
+            if (typeof window === 'undefined') return false;
+            if (!('NDEFReader' in window)) return false;     // navigateur non compatible
+            try {
+                if (window.isSecureContext !== true) return false; // HTTPS requis
+            } catch (e) { /* ignore */ }
+            return true;
+        },
+
+        /* Web NFC disponible dans ce navigateur (indépendant de la plateforme) */
+        webNfcAvailable() {
+            return ('NDEFReader' in window);
         },
 
         /* L'adapter actif peut-il fournir un UID fiable ? */
@@ -429,19 +531,31 @@ window.NFCReaderService = (function () {
             if (!activeAdapter) {
                 const a = config.adapter || 'bridge';
                 if (a === 'webnfc') return false;
-                if (a === 'pcnfc') return PcNfcAdapter.isAvailable();
                 return true;
             }
             if (typeof activeAdapter.supportsRawUid === 'function') return activeAdapter.supportsRawUid();
             return true;
         },
 
-        /* Lecture NDEF (mode webnfc uniquement, expérimental) */
+        /* Lecture NDEF (mode android-integrated uniquement, expérimental) */
         readNdefMessage() {
             if (!activeAdapter || typeof activeAdapter.readNdefMessage !== 'function') {
                 throw new Error('Lecture NDEF disponible uniquement avec le NFC intégré (webnfc).');
             }
             return activeAdapter.readNdefMessage();
+        },
+
+        /* Test du NFC intégré Android : détecte réellement une carte.
+           Retourne { detected, uid, warning, timedOut } sans jamais
+           fabriquer un UID à partir du NDEF. */
+        async testIntegratedCard(timeoutMs) {
+            if (!activeAdapter) {
+                await this.connect();
+            }
+            if (!activeAdapter || typeof activeAdapter.testCard !== 'function') {
+                return { ok: false, message: 'Mode NFC intégré non actif.' };
+            }
+            return activeAdapter.testCard(timeoutMs);
         },
 
         startPolling(onUid) {

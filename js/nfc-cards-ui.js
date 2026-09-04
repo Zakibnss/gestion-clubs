@@ -17,22 +17,27 @@ let nfcPollingStarted = false;
 // Adapter externe configuré par l'opérateur (bridge/driver/...).
 let nfcExternalAdapter = 'bridge';
 try { nfcExternalAdapter = NFCReaderService.getAdapterName() || 'bridge'; } catch (e) { /* ignore */ }
-let nfcSelectedMode = 'external';   // 'external' | 'pcnfc' | 'webnfc'
+let nfcSelectedMode = 'external';   // 'external' | 'android-integrated'
 
-/* Affichage de la dispo des NFC intégrés (PC + smartphone) */
+/* Modes réellement proposables (external toujours ; android-integrated
+   uniquement sur Android + Web NFC + HTTPS). */
+function nfcSupportedModes() {
+    return NFCReaderService.supportedModes ? NFCReaderService.supportedModes() : ['external'];
+}
+
+/* Affichage de la dispo du NFC intégré Android */
 function renderWebNfcStatus() {
     const el = document.getElementById('nfcWebNfcStatus');
     if (!el) return;
-    const pcOk = NFCReaderService.pcNfcAvailable();
-    const mobileOk = NFCReaderService.webNfcAvailable();
-    el.innerHTML = `
-        <div style="margin-bottom:3px;">💻 NFC PC intégré — ${pcOk
-            ? `<span style="color:#28a745;">🟢 Bridge PC/SC disponible</span>`
-            : `<span style="color:#dc3545;">🔴 Aucun bridge NFC PC intégré</span>`}</div>
-        <div>📱 NFC smartphone — ${mobileOk
-            ? `<span style="color:#28a745;">🟢 Web NFC disponible</span>`
-            : `<span style="color:#dc3545;">🔴 Web NFC non disponible</span>`}</div>
-        <div style="font-size:.78rem;margin-top:4px;">⚠️ Le NFC intégré ne fournit pas toujours l'UID brut d'une MIFARE Classic 1K. Le lecteur NFC externe reste le mode fiable.</div>`;
+    // Sur Windows/iPhone : le NFC intégré n'est jamais proposé (spec).
+    const canIntegrated = nfcSupportedModes().includes('android-integrated');
+    if (!canIntegrated) {
+        el.innerHTML = `<div>📱 NFC intégré Android — <span style="color:#dc3545;">🔴 Non disponible sur cet appareil</span></div>
+            <div style="font-size:.78rem;margin-top:2px;">Utilisez le lecteur NFC externe USB / USB OTG.</div>`;
+        return;
+    }
+    el.innerHTML = `<div>📱 NFC intégré Android — <span style="color:#28a745;">🟢 Disponible</span></div>
+        <div style="font-size:.78rem;margin-top:2px;">⚠️ Le NFC intégré ne fournit pas l'UID brut d'une MIFARE Classic 1K. Le lecteur NFC externe reste le mode fiable.</div>`;
 }
 
 /* Bascule du mode de lecture */
@@ -42,28 +47,22 @@ function setNfcMode(mode) {
     NfcCards.stopPolling();
     nfcPollingStarted = false;
     NFCReaderService.disconnect().catch(() => {});
-    if (mode === 'webnfc') {
-        NFCReaderService.setTransportConfig({ adapter: 'webnfc' });
+    if (mode === 'android-integrated') {
+        NFCReaderService.setMode('android-integrated');
         nfcReaderUi({
             connected: false,
-            message: NFCReaderService.webNfcAvailable()
-                ? 'Mode NFC intégré — cliquez sur Connecter'
-                : 'Web NFC non disponible sur cet appareil'
-        });
-    } else if (mode === 'pcnfc') {
-        NFCReaderService.setTransportConfig({ adapter: 'pcnfc' });
-        nfcReaderUi({
-            connected: false,
-            message: NFCReaderService.pcNfcAvailable()
-                ? 'NFC intégré du PC — cliquez sur Connecter'
-                : 'Aucun bridge NFC intégré au PC détecté'
+            message: NFCReaderService.isWebNFCAvailable()
+                ? 'Mode NFC intégré Android — cliquez sur Connecter, puis placez une carte près du téléphone.'
+                : 'NFC intégré Android non disponible dans ce contexte'
         });
     } else {
-        NFCReaderService.setTransportConfig({ adapter: nfcExternalAdapter });
+        // external
+        NFCReaderService.setMode('external');
         nfcReaderUi({ connected: false, message: 'Branchez le lecteur USB puis cliquez sur Connecter.' });
     }
     setNfcScannerCore(false);
     setNfcScannerError('');
+    renderNfcCardModeNote();
 }
 
 function nfcReaderUi(status) {
@@ -123,14 +122,59 @@ async function connectNfcReader() {
     }
 }
 
-/* Test de connexion du lecteur externe */
+/* Test de connexion / détection.
+   - Mode externe : test de connexion du lecteur.
+   - Mode NFC intégré : détection réelle d'une carte (UID ou avertissement).
+*/
 async function testNfcReader() {
-    const res = await NFCReaderService.testConnection();
     const msg = document.getElementById('nfcScanResult');
+    if (nfcSelectedMode === 'android-integrated') {
+        await testIntegratedNfc();
+        return;
+    }
+    const res = await NFCReaderService.testConnection();
     if (res.ok) {
         msg.innerHTML = `<div class="alert alert-success">🧪 <strong>Test réussi</strong> — ${escapeHtmlV2(res.message)}</div>`;
     } else {
         msg.innerHTML = `<div class="alert alert-danger">🧪 <strong>Test échoué</strong> — ${escapeHtmlV2(res.message)}</div>`;
+    }
+}
+
+/* Test du NFC intégré Android : on attend qu'une carte passe près du
+   téléphone, puis on rapporte UID (si exposé) ou l'avertissement
+   WEB_NFC_UID_UNAVAILABLE (limitation API — jamais d'UID inventé). */
+async function testIntegratedNfc() {
+    const msg = document.getElementById('nfcScanResult');
+    try {
+        if (!NFCReaderService.isConnected()) {
+            await NFCReaderService.connect();
+        } else if (NFCReaderService.supportsRawUid()) {
+            // Le NFC intégré ne fournit jamais d'UID fiable
+        }
+        if (!NFCReaderService.isConnected()) {
+            msg.innerHTML = `<div class="alert alert-warning">Impossible d'activer le NFC intégré.</div>`;
+            return;
+        }
+        msg.innerHTML = `<div class="alert alert-info">📱 NFC intégré Android<br>Placez une carte NFC près du téléphone...</div>`;
+        const r = await NFCReaderService.testIntegratedCard(8000);
+        if (r.timedOut) {
+            msg.innerHTML = `<div class="alert alert-warning">Aucune carte détectée. Approchez une carte du téléphone.</div>`;
+        } else if (r.detected) {
+            if (r.uid) {
+                msg.innerHTML = `<div class="alert alert-success">✓ Carte détectée<br><strong>UID&nbsp;:</strong> <code>${escapeHtmlV2(NFCReaderService.normalizeUid(r.uid))}</code></div>`;
+            } else {
+                msg.innerHTML = `<div class="alert alert-warning">⚠ Carte détectée<br>Le NFC intégré a détecté la carte, mais le navigateur ne fournit pas le UID nécessaire. Utilisez le lecteur NFC externe.</div>`;
+            }
+        }
+    } catch (err) {
+        const code = err && err.code;
+        let text = escapeHtmlV2(err && err.message || 'Erreur');
+        if (code === 'WEB_NFC_PERMISSION_DENIED') {
+            text = 'Autorisation NFC refusée. Activez le NFC et autorisez-le dans le navigateur.';
+        } else if (code === 'WEB_NFC_UNAVAILABLE') {
+            text = 'NFC intégré indisponible. Utilisez le lecteur NFC externe USB/OTG.';
+        }
+        msg.innerHTML = `<div class="alert alert-warning">⚠ ${text}</div>`;
     }
 }
 
@@ -283,11 +327,30 @@ function assignScannedCard(uid) {
     openNfcCardModal(null, uid);
 }
 
+/* Indique dans le modal carte la méthode de lecture active. */
+function renderNfcCardModeNote() {
+    const el = document.getElementById('nfcCardModeNote');
+    if (!el) return;
+    el.innerHTML = nfcSelectedMode === 'android-integrated'
+        ? `<span style="color:#e0a800;">📱 Méthode active&nbsp;: NFC intégré du smartphone (l'UID ne peut pas être lu ici — utilisez le lecteur externe pour lire l'UID).</span>`
+        : `🔌 Méthode active : Lecteur NFC externe — appuyez sur « 📡 Lire la carte » puis placez la carte sur le lecteur.`;
+}
+
 /* ---------- Lecture d'un UID dans le modal d'enregistrement ---------- */
 async function readUidIntoCardModal() {
     const btn = document.getElementById('nfcReadBtn');
     const msg = document.getElementById('nfcCardMessage');
     btn.disabled = true;
+
+    // Mode NFC intégré : ne fournit pas l'UID ; on prévient clairement.
+    if (nfcSelectedMode === 'android-integrated') {
+        msg.innerHTML = `<div class="alert alert-warning">⚠ <strong>Lecture UID non disponible avec le NFC intégré.</strong><br>
+            Le Web NFC ne fournit pas l'UID brut d'une MIFARE Classic 1K.<br>
+            Passez en méthode <strong>Lecteur NFC externe</strong> pour lire l'UID d'une carte.</div>`;
+        btn.disabled = false;
+        return;
+    }
+
     msg.innerHTML = '<div class="alert alert-info">📡 Placez la carte sur le lecteur…</div>';
     try {
         if (!NFCReaderService.isConnected()) {
@@ -328,9 +391,25 @@ function renderNfcScanHistory(h) {
         : '<p style="color:var(--text-secondary);">Aucun scan.</p>';
 }
 
+/* Affiche/masque l'option "NFC intégré Android" dans le sélecteur.
+   Windows/iPhone : uniquement lecteur externe (spec). */
+function updateNfcModeSelector() {
+    const wrap = document.getElementById('nfcIntegratedModeWrap');
+    if (!wrap) return;
+    const canIntegrated = nfcSupportedModes().includes('android-integrated');
+    wrap.style.display = canIntegrated ? '' : 'none';
+    // Si le mode intégré n'est pas proposable, forcer le mode externe.
+    if (!canIntegrated && nfcSelectedMode === 'android-integrated') {
+        const radio = document.querySelector('input[name="nfcMode"][value="external"]');
+        if (radio) { radio.checked = true; }
+        setNfcMode('external');
+    }
+}
+
 /* ---------- Ouverture du scanner ---------- */
 async function openNfcScanner() {
     renderWebNfcStatus();
+    updateNfcModeSelector();
     document.getElementById('nfcScanResult').innerHTML = '';
     setNfcScannerCore(false);
     const connected = NFCReaderService.isConnected();
@@ -452,6 +531,7 @@ let nfcReplaceCardId = null;
 async function openNfcCardModal(cardId, prefillUid) {
     nfcEditingId = cardId || null;
     nfcReplaceCardId = null;
+    renderNfcCardModeNote();
     document.getElementById('nfcCardMessage').innerHTML = '';
     document.getElementById('nfcUid').value = prefillUid ? NFCReaderService.normalizeUid(prefillUid) : '';
     document.getElementById('nfcStatus').value = 'unassigned';
@@ -488,6 +568,7 @@ async function openNfcCardModal(cardId, prefillUid) {
 async function replaceNfcCard(cardId) {
     nfcReplaceCardId = cardId;
     nfcEditingId = cardId;
+    renderNfcCardModeNote();
     document.getElementById('nfcCardMessage').innerHTML = '';
     const cards = await NfcCards.listCards({ status: 'all', q: '' });
     const card = cards.find(c => c.id === cardId);

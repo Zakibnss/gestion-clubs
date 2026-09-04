@@ -2217,6 +2217,7 @@
                 <button class="btn btn-primary" id="nfcReadBtn" onclick="readUidIntoCardModal()">📡 Lire la carte</button>
             </div>
             <small style="color:var(--text-secondary);">UID lu automatiquement par le lecteur NFC externe (modifiable en cas exceptionnel).</small>
+            <div id="nfcCardModeNote" style="margin-top:6px;font-size:.82rem;color:var(--text-secondary);"></div>
         </div>
         <div class="form-group">
             <label>Attribuer à un adhérent</label>
@@ -2248,18 +2249,14 @@
         <div id="nfcScannerBody">
             <!-- Sélecteur de mode de lecture -->
             <div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);">
-                <div style="font-weight:700;margin-bottom:8px;">Mode de lecture NFC</div>
+                <div style="font-weight:700;margin-bottom:8px;">Méthode de lecture NFC</div>
                 <label style="font-weight:400;display:block;margin:4px 0;cursor:pointer;">
                     <input type="radio" name="nfcMode" value="external" checked onchange="setNfcMode('external')">
-                    ○ Lecteur NFC externe (USB / USB OTG)
+                    🔌 Lecteur NFC externe (USB / USB OTG)
                 </label>
-                <label style="font-weight:400;display:block;margin:4px 0;cursor:pointer;">
-                    <input type="radio" name="nfcMode" value="pcnfc" onchange="setNfcMode('pcnfc')">
-                    ○ NFC intégré du PC (via PC/SC)
-                </label>
-                <label style="font-weight:400;display:block;margin:4px 0;cursor:pointer;">
-                    <input type="radio" name="nfcMode" value="webnfc" onchange="setNfcMode('webnfc')">
-                    ○ NFC intégré du smartphone (Web NFC, expérimental)
+                <label id="nfcIntegratedModeWrap" style="font-weight:400;display:block;margin:4px 0;cursor:pointer;">
+                    <input type="radio" name="nfcMode" value="android-integrated" onchange="setNfcMode('android-integrated')">
+                    📱 NFC intégré du smartphone (Web NFC, expérimental)
                 </label>
                 <div id="nfcWebNfcStatus" style="margin-top:8px;font-size:.85rem;color:var(--text-secondary);"></div>
             </div>
