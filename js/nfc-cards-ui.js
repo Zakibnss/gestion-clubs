@@ -14,9 +14,9 @@
    ============================================================= */
 let nfcPollingStarted = false;
 
-// Adapter externe configuré par l'opérateur (bridge/driver/...).
-let nfcExternalAdapter = 'bridge';
-try { nfcExternalAdapter = NFCReaderService.getAdapterName() || 'bridge'; } catch (e) { /* ignore */ }
+// Adapter externe configuré par l'opérateur (hid/bridge/driver/...).
+let nfcExternalAdapter = 'hid';
+try { nfcExternalAdapter = NFCReaderService.getAdapterName() || 'hid'; } catch (e) { /* ignore */ }
 let nfcSelectedMode = 'external';   // 'external' | 'android-integrated'
 
 /* Modes réellement proposables (external toujours ; android-integrated
@@ -58,10 +58,10 @@ function setNfcMode(mode) {
     } else {
         // external
         NFCReaderService.setMode('external');
-        nfcReaderUi({ connected: false, message: 'Branchez le lecteur USB puis cliquez sur Connecter.' });
+        nfcReaderUi({ connected: false, message: 'Branchez le lecteur USB (HID Keyboard). Écoute automatique à la prochaine ouverture.' });
     }
-    setNfcScannerCore(false);
-    setNfcScannerError('');
+    setNfcScannerCoreV2(false);
+    setNfcScannerErrorV2('');
     renderNfcCardModeNote();
 }
 
@@ -77,13 +77,16 @@ function nfcReaderUi(status) {
         <div>
             <div style="font-weight:700;" id="nfcReaderStatusTitle">${c ? 'Lecteur connecté' : 'Lecteur non connecté'}</div>
             <div style="font-size:.8rem;color:var(--text-secondary);" id="nfcReaderStatusSub">
-                ${status.message || (c ? 'Prêt à scanner' : 'Branchez le lecteur USB puis cliquez sur Connecter.')}
+                ${status.message || (c ? 'Prêt à scanner — présentez la carte.' : 'Branchez le lecteur USB puis cliquez sur Connecter.')}
             </div>
         </div>`;
-    document.getElementById('nfcConnectBtn').style.display = c ? 'none' : '';
-    document.getElementById('nfcDisconnectBtn').style.display = c ? '' : 'none';
+    const connectBtn = document.getElementById('nfcConnectBtn');
+    const disconnectBtn = document.getElementById('nfcDisconnectBtn');
+    const core = document.getElementById('nfcScannerCore');
+    if (connectBtn) connectBtn.style.display = c ? 'none' : '';
+    if (disconnectBtn) disconnectBtn.style.display = c ? '' : 'none';
     // Le cœur du scanner n'apparaît que si le lecteur est connecté
-    document.getElementById('nfcScannerCore').style.display = c ? '' : 'none';
+    if (core) core.style.display = c ? '' : 'none';
 }
 
 async function connectNfcReader() {
@@ -116,15 +119,18 @@ async function connectNfcReader() {
     } catch (err) {
         console.error(err);
         nfcReaderUi({ connected: false, message: err.message });
-        setNfcScannerError(err.message);
+        setNfcScannerErrorV2(err.message);
     } finally {
         btn.disabled = false;
     }
 }
 
-/* Test de connexion / détection.
-   - Mode externe : test de connexion du lecteur.
-   - Mode NFC intégré : détection réelle d'une carte (UID ou avertissement).
+/* Test du lecteur (mode externe) : le navigateur ne peut pas détecter
+   lui-même la présence physique du lecteur HID (« USB Composite Device /
+   HID Keyboard »). On affiche donc « 🟡 Prêt à scanner », on attend la
+   frappe RÉELLE d'une carte, puis :
+     . 🟢 Lecture réussie + valeur détectée (lecteur opérationnel)
+     . 🔴 Aucune lecture détectée dans le délai
 */
 async function testNfcReader() {
     const msg = document.getElementById('nfcScanResult');
@@ -132,11 +138,30 @@ async function testNfcReader() {
         await testIntegratedNfc();
         return;
     }
-    const res = await NFCReaderService.testConnection();
-    if (res.ok) {
-        msg.innerHTML = `<div class="alert alert-success">🧪 <strong>Test réussi</strong> — ${escapeHtmlV2(res.message)}</div>`;
-    } else {
-        msg.innerHTML = `<div class="alert alert-danger">🧪 <strong>Test échoué</strong> — ${escapeHtmlV2(res.message)}</div>`;
+    try {
+        if (!NFCReaderService.isConnected()) {
+            await NFCReaderService.connect();
+        }
+        msg.innerHTML = `<div class="alert alert-warning" style="background:rgba(255,193,7,.12);border-color:#ffc107;">
+            📡 <strong>Lecteur NFC externe</strong><br><br>
+            🟡 <strong>Prêt à scanner</strong><br>
+            Présentez une carte sur le lecteur.
+        </div>`;
+        const res = await NFCReaderService.testScan(10000);
+        if (res.ok && res.value) {
+            msg.innerHTML = `<div class="alert alert-success">✓ <strong>Lecture réussie</strong><br>
+                📡 <strong>Lecteur opérationnel</strong><br>
+                Type&nbsp;: <strong>HID Keyboard</strong><br><br>
+                Valeur détectée&nbsp;:<br>
+                <code style="font-size:1.1rem;font-weight:700;">${escapeHtmlV2(NFCReaderService.normalizeUid(res.value))}</code><br><br>
+                <button class="btn btn-secondary btn-sm" onclick="testNfcReader()">🧪 Tester à nouveau</button></div>`;
+        } else {
+            msg.innerHTML = `<div class="alert alert-danger">🔴 <strong>Aucune lecture détectée.</strong><br>
+                Présentez une carte et vérifiez que le lecteur USB est bien branché (HID Keyboard).</div>`;
+        }
+    } catch (err) {
+        console.error(err);
+        msg.innerHTML = `<div class="alert alert-danger">🔴 ${escapeHtmlV2(err.message)}</div>`;
     }
 }
 
@@ -181,31 +206,37 @@ async function testIntegratedNfc() {
 async function disconnectNfcReader() {
     NfcCards.stopPolling();
     nfcPollingStarted = false;
+    if (nfcAutoResetTimer) { clearTimeout(nfcAutoResetTimer); nfcAutoResetTimer = null; }
+    nfcProcessing = false;
     try { await NFCReaderService.disconnect(); } catch (e) { /* ignore */ }
     nfcReaderUi({ connected: false, message: 'Lecteur déconnecté' });
-    setNfcScannerCore(false);
+    setNfcScannerCoreV2(false);
 }
 
 function closeNfcScanner() {
     NfcCards.stopPolling();
     nfcPollingStarted = false;
+    if (nfcAutoResetTimer) { clearTimeout(nfcAutoResetTimer); nfcAutoResetTimer = null; }
+    nfcProcessing = false;
     closeModal('nfcScannerModal');
 }
 
 /* ---------- États visuels du cœur du scanner ---------- */
-function setNfcScannerCore(show) {
-    document.getElementById('nfcScannerCore').style.display = show ? '' : 'none';
+function setNfcScannerCoreV2(show) {
+    const el = document.getElementById('nfcScannerCore');
+    if (el) el.style.display = show ? '' : 'none';
 }
 
 function setNfcScannerState(state) {
     const el = document.getElementById('nfcScannerCore');
+    if (!el) return;
     el.style.display = '';
     const title = document.getElementById('nfcScannerTitle');
     const sub = document.getElementById('nfcScannerSub');
     const res = document.getElementById('nfcScanResult');
     if (state === 'ready') {
         title.textContent = '📡 Prêt à scanner';
-        sub.textContent = 'Placez la carte NFC sur le lecteur externe.';
+        sub.textContent = 'Présentez une carte';
         res.innerHTML = '';
     } else if (state === 'reading') {
         title.textContent = '🔄 Lecture en cours…';
@@ -216,13 +247,13 @@ function setNfcScannerState(state) {
     }
 }
 
-function setNfcScannerError(msg) {
+function setNfcScannerErrorV2(msg) {
     const res = document.getElementById('nfcScanResult');
     if (res) res.innerHTML = `<div class="alert alert-danger">${escapeHtmlV2(msg)}</div>`;
 }
 
 function renderNfcWebNfcWarning() {
-    setNfcScannerCore(false);
+    setNfcScannerCoreV2(false);
     const res = document.getElementById('nfcScanResult');
     if (res) res.innerHTML = `<div class="alert alert-warning">
         ⚠ <strong>Lecture UID non disponible avec le NFC intégré.</strong><br>
@@ -232,6 +263,7 @@ function renderNfcWebNfcWarning() {
 
 /* ---------- Détection d'une carte (via lecteur externe) ---------- */
 let nfcProcessing = false;
+let nfcAutoResetTimer = null;
 
 async function onScannedUid(rawUid) {
     if (nfcProcessing) return;
@@ -251,19 +283,28 @@ async function onScannedUid(rawUid) {
 
     try {
         const res = await NfcCards.scanPresence(uid, v2GetActiveClubId(), { method: 'NFC' });
-        const autoReset = renderNfcScanResult(res);
+        renderNfcScanResult(res);
         loadNfcScannerHistory();
-        // Retour automatique à "Prêt à scanner" pour l'adhérent suivant
-        if (autoReset) {
-            setTimeout(() => { setNfcScannerState('ready'); nfcProcessing = false; }, 3000);
-        } else {
-            nfcProcessing = false;
-        }
+        // Retour automatique à "Prêt à scanner" pour l'adhérent suivant,
+        // quel que soit le résultat (présence, expiré, inconnu…).
+        scheduleNfcAutoReset(3000);
     } catch (err) {
         console.error(err);
-        setNfcScannerError(err.message);
-        nfcProcessing = false;
+        setNfcScannerErrorV2(err.message);
+        scheduleNfcAutoReset(3000);
     }
+}
+
+/* Retour automatique de l'écran à « Prêt à scanner » après un scan.
+   Un scan plus récent annule le reset programmé par un scan précédent
+   (jamais un message ne réaffiche l'état précédent). */
+function scheduleNfcAutoReset(delayMs) {
+    clearTimeout(nfcAutoResetTimer);
+    nfcAutoResetTimer = setTimeout(() => {
+        nfcAutoResetTimer = null;
+        nfcProcessing = false;
+        setNfcScannerState('ready');
+    }, delayMs);
 }
 
 function renderNfcScanResult(res) {
@@ -273,17 +314,40 @@ function renderNfcScanResult(res) {
     const sub = document.getElementById('nfcScannerSub');
 
     if (!res.ok && (res.result === 'unknown' || res.result === 'unassigned')) {
-        title.textContent = '⚠ Carte non attribuée';
+        title.textContent = '⚠ Carte inconnue';
         sub.textContent = 'UID : ' + escapeHtmlV2(res.uid);
         document.getElementById('nfcScanResult').innerHTML = `
             <div class="alert alert-warning">
                 <strong>Cette carte n'est associée à aucun adhérent.</strong><br>
+                <div style="font-size:.9rem;margin-top:6px;">UID détecté : <code>${escapeHtmlV2(res.uid)}</code></div>
                 <div style="margin-top:10px;display:flex;gap:8px;justify-content:center;">
                     <button class="btn btn-primary btn-sm" onclick="assignScannedCard('${escapeAttr(res.uid)}')">Attribuer à un adhérent</button>
                     <button class="btn btn-secondary btn-sm" onclick="setNfcScannerState('ready');">Annuler</button>
                 </div>
             </div>`;
-        return false;
+        return;
+    }
+
+    if (res.expired) {
+        // Carte lue + adhérent identifié + présence ENREGISTRÉE malgré
+        // l'abonnement expiré (couleur avertissement, pas succès).
+        const m = res.member || {};
+        title.textContent = '⚠ Présence enregistrée — abonnement expiré';
+        sub.textContent = escapeHtmlV2(m.last_name ? m.last_name + ' ' + m.first_name : '');
+        const dateFmt = res.date ? new Date(res.date + 'T00:00:00').toLocaleDateString('fr-FR') : '';
+        document.getElementById('nfcScanResult').innerHTML = `
+            <div class="alert alert-warning">
+                <div style="font-size:1.15rem;font-weight:700;margin-bottom:4px;">${escapeHtmlV2(m.last_name || '')} ${escapeHtmlV2(m.first_name || '')}</div>
+                <div style="font-size:.9rem;color:var(--text-secondary);">
+                    ID : #${escapeHtmlV2(m.id || '')}${res.groupName ? ' — Groupe : ' + escapeHtmlV2(res.groupName) : ''}
+                </div>
+                <hr style="margin:8px 0;border:none;border-top:1px solid rgba(255,255,255,.2);">
+                <div style="font-size:.9rem;">
+                    Présence :<br><strong>${dateFmt} — ${escapeHtmlV2(res.time)}</strong><br>
+                    <span style="color:var(--warn);">Abonnement expiré — présence quand même validée.</span>
+                </div>
+            </div>`;
+        return;
     }
 
     if (!res.ok && res.result === 'expired') {
@@ -291,7 +355,7 @@ function renderNfcScanResult(res) {
         sub.textContent = escapeHtmlV2(res.member ? res.member.last_name + ' ' + res.member.first_name : '');
         document.getElementById('nfcScanResult').innerHTML =
             `<div class="alert alert-danger"><strong>Abonnement expiré</strong><br>${escapeHtmlV2(res.detail)}</div>`;
-        return false;
+        return;
     }
 
     if (res.duplicate) {
@@ -299,7 +363,7 @@ function renderNfcScanResult(res) {
         sub.textContent = escapeHtmlV2(res.member ? res.member.last_name + ' ' + res.member.first_name : '');
         document.getElementById('nfcScanResult').innerHTML =
             `<div class="alert alert-info"><strong>Présence déjà enregistrée</strong><br>${escapeHtmlV2(res.detail)}</div>`;
-        return true;
+        return;
     }
 
     // Succès
@@ -318,7 +382,6 @@ function renderNfcScanResult(res) {
                 Présence :<br><strong>${dateFmt} — ${escapeHtmlV2(res.time)}</strong>
             </div>
         </div>`;
-    return true;
 }
 
 /* Attribution depuis le scanner (carte non attribuée) */
@@ -377,9 +440,14 @@ async function performNfcScan() {
 }
 
 /* ---------- Historique du scanner ---------- */
+let nfcScanViewEpoch = 0;   // incrémenté quand on affiche l'historique d'une carte
+
 async function loadNfcScannerHistory() {
+    const epoch = nfcScanViewEpoch;
     try {
         const h = await NfcCards.listAllHistory(30);
+        // Ne pas écraser un historique-carte affiché entre-temps.
+        if (epoch !== nfcScanViewEpoch) return;
         renderNfcScanHistory(h);
     } catch (e) { /* silencieux */ }
 }
@@ -387,7 +455,8 @@ function renderNfcScanHistory(h) {
     const el = document.getElementById('nfcScanHistory');
     el.innerHTML = h.length
         ? h.slice(0, 30).map(x => `<div style="padding:4px 0;border-bottom:1px solid var(--border);font-size:.85rem;">
-            ${new Date(x.scan_time).toLocaleString('fr-FR')} — ${NFC_RESULT_LABEL[x.scan_result] || x.scan_result}</div>`).join('')
+            ${new Date(x.scan_time).toLocaleString('fr-FR')} — ${NFC_RESULT_LABEL[x.scan_result] || x.scan_result}
+            <span style="color:var(--text-secondary);">UID <code>${escapeHtmlV2(x.uid)}</code></span></div>`).join('')
         : '<p style="color:var(--text-secondary);">Aucun scan.</p>';
 }
 
@@ -406,18 +475,40 @@ function updateNfcModeSelector() {
     }
 }
 
+/* ---------- Armement du scanner (R30 / HID Keyboard) ---------- */
+/* En mode externe, l'écoute HID est armée immédiatement : le R30 tape
+   les UID dans la page et la boucle de présence traite chaque carte
+   automatiquement — aucun clic sur « Connecter » requis dans le
+   workflow normal. En mode NFC intégré (webnfc), l'activation reste
+   manuelle (permission navigateur obligatoire). */
+async function armNfcScanner() {
+    if (nfcSelectedMode === 'android-integrated') {
+        setNfcScannerCoreV2(false);
+        nfcReaderUi({ connected: false, message: 'Mode NFC intégré — cliquez sur Connecter puis placez la carte près du téléphone.' });
+        return;
+    }
+    setNfcScannerCoreV2(true);
+    nfcReaderUi({ connected: true, message: 'Prêt à scanner — présentez la carte.' });
+    try {
+        await NFCReaderService.connect();
+        if (!nfcPollingStarted) {
+            NfcCards.startPolling(onScannedUid);
+            nfcPollingStarted = true;
+        }
+        setNfcScannerState('ready');
+    } catch (err) {
+        console.error(err);
+        nfcReaderUi({ connected: false, message: err.message || 'Connexion du lecteur impossible.' });
+        setNfcScannerErrorV2(err.message || 'Connexion du lecteur impossible.');
+    }
+}
+
 /* ---------- Ouverture du scanner ---------- */
 async function openNfcScanner() {
     renderWebNfcStatus();
     updateNfcModeSelector();
     document.getElementById('nfcScanResult').innerHTML = '';
-    setNfcScannerCore(false);
-    const connected = NFCReaderService.isConnected();
-    nfcReaderUi({ connected, message: connected ? 'Prêt à scanner' : 'Branchez le lecteur USB puis cliquez sur Connecter.' });
-    if (connected && NFCReaderService.supportsRawUid()) {
-        if (!nfcPollingStarted) { NfcCards.startPolling(onScannedUid); nfcPollingStarted = true; }
-        setNfcScannerState('ready');
-    }
+    await armNfcScanner();
     loadNfcScannerHistory();
     openModal('nfcScannerModal');
 }
@@ -426,7 +517,7 @@ async function openNfcScanner() {
 NFCReaderService.onStatus(s => {
     const opened = document.getElementById('nfcScannerModal')?.classList.contains('active');
     if (opened) nfcReaderUi(s);
-    if (!s.connected && opened) setNfcScannerCore(false);
+    if (!s.connected && opened) setNfcScannerCoreV2(false);
 });
 
 /* =============================================================
@@ -645,12 +736,14 @@ async function unassignNfcCard(cardId, uid) {
 }
 
 async function viewNfcHistory(uid) {
+    nfcScanViewEpoch++;
+    await armNfcScanner();
     const history = await NfcCards.listCardHistory(uid);
     const body = document.getElementById('nfcScanHistory');
     body.innerHTML = history.length
         ? history.map(h => `<div style="padding:6px 0;border-bottom:1px solid var(--border);">
             ${new Date(h.scan_time).toLocaleString('fr-FR')} — ${NFC_RESULT_LABEL[h.scan_result] || h.scan_result}
-            <span style="color:var(--text-secondary);font-size:.8rem;">(${escapeHtmlV2(h.method)})</span></div>`).join('')
+            <span style="color:var(--text-secondary);font-size:.8rem;">UID <code>${escapeHtmlV2(h.uid)}</code> (${escapeHtmlV2(h.method)})</span></div>`).join('')
         : '<p style="color:var(--text-secondary);">Aucun scan pour cette carte.</p>';
     openModal('nfcScannerModal');
 }

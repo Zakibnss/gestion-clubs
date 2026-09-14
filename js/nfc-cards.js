@@ -43,7 +43,7 @@ window.NfcCards = (function () {
 
     /* ---------- Normalisation d'un identifiant de repli (admin) ---------- */
     function buildUidFromText(raw) {
-        return String(raw || '').trim().toUpperCase().replace(/\s+/g, '');
+        return String(raw || '').replace(/[\r\n\t]/g, '').trim().toUpperCase().replace(/\s+/g, '');
     }
 
     /* ---------- API base ---------- */
@@ -204,14 +204,12 @@ window.NfcCards = (function () {
 
         const fullName = `${member.last_name} ${member.first_name}`;
 
-        if (!st || !st.is_active) {
-            await insertEvent({ club_id: clubId, uid: uidClean, member_id: card.member_id,
-                scan_date: dateStr, scan_result: 'expired', method });
-            return { ok: false, uid: uidClean, result: 'expired', label: 'Abonnement expiré',
-                detail: `${fullName} n'a plus d'abonnement actif.`, member, groupName };
-        }
+        // LA PRÉSENCE EST ENREGISTRÉE MÊME SI L'ABONNEMENT EST EXPIRÉ :
+        // la carte a bien été lue et l'adhérent identifié. La seule
+        // différence visible est le statut « expired » remonté à l'UI.
+        const expired = !st || !st.is_active;
 
-        // Vérif : présence déjà enregistrée aujourd'hui ?
+        // Vérif : présence déjà enregistrée aujourd'hui ? (anti-doublon)
         if (!opts.allowDuplicate) {
             const { data: existing } = await window.supabase
                 .from('attendance')
@@ -221,11 +219,11 @@ window.NfcCards = (function () {
                 .limit(1);
             if (existing && existing.length) {
                 await insertEvent({ club_id: clubId, uid: uidClean, member_id: card.member_id,
-                    scan_date: dateStr, scan_result: 'present', method, duplicate: true });
+                    scan_date: dateStr, scan_result: expired ? 'expired' : 'present', method, duplicate: true });
                 return { ok: true, duplicate: true, result: 'present', uid: uidClean,
                     label: 'Présence déjà enregistrée',
                     detail: `${fullName} a validé sa présence à ${existing[0].attendance_time}.`,
-                    member, groupName, firstTime: existing[0].attendance_time };
+                    member, groupName, firstTime: existing[0].attendance_time, expired };
             }
         }
 
@@ -243,8 +241,14 @@ window.NfcCards = (function () {
         }
 
         await insertEvent({ club_id: clubId, uid: uidClean, member_id: card.member_id,
-            scan_date: dateStr, scan_result: 'present', method });
+            scan_date: dateStr, scan_result: expired ? 'expired' : 'present', method });
 
+        if (expired) {
+            return { ok: true, expired: true, uid: uidClean, result: 'expired',
+                label: 'Présence enregistrée (abonnement expiré)',
+                detail: `${fullName} · ${timeStr} — présence validée malgré l'abonnement expiré.`,
+                member, groupName, time: timeStr, date: dateStr };
+        }
         return { ok: true, result: 'present', uid: uidClean, label: 'Présence enregistrée',
             detail: `${fullName} · ${timeStr}`, member, groupName, time: timeStr, date: dateStr };
     }

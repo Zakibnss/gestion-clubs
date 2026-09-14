@@ -1975,6 +1975,16 @@
       </div>
     </div>
   </div>
+  <!-- Renewal Modal -->
+<div id="renewalModal" class="modal">
+    <div class="modal-content" style="max-width: 460px;">
+      <div class="modal-header">
+        <h2>🔄 Renouvellement de l'inscription</h2>
+        <button class="modal-close" onclick="closeModal('renewalModal')">&times;</button>
+      </div>
+      <div id="renewalContent" style="text-align:center; padding: 5px 0;"></div>
+    </div>
+  </div>
   <!-- Ajoutez ce modal après les autres modals -->
 <div id="notificationsModal" class="modal">
     <div class="modal-content" style="max-width: 500px;">
@@ -2252,7 +2262,7 @@
                 <div style="font-weight:700;margin-bottom:8px;">Méthode de lecture NFC</div>
                 <label style="font-weight:400;display:block;margin:4px 0;cursor:pointer;">
                     <input type="radio" name="nfcMode" value="external" checked onchange="setNfcMode('external')">
-                    🔌 Lecteur NFC externe (USB / USB OTG)
+                    🔌 Lecteur NFC externe (USB / USB OTG — HID Keyboard)
                 </label>
                 <label id="nfcIntegratedModeWrap" style="font-weight:400;display:block;margin:4px 0;cursor:pointer;">
                     <input type="radio" name="nfcMode" value="android-integrated" onchange="setNfcMode('android-integrated')">
@@ -2266,7 +2276,7 @@
                 <span style="font-size:1.2rem;">🔴</span>
                 <div>
                     <div style="font-weight:700;" id="nfcReaderStatusTitle">Lecteur non connecté</div>
-                    <div style="font-size:.8rem;color:var(--text-secondary);" id="nfcReaderStatusSub">Branchez le lecteur USB puis cliquez sur Connecter.</div>
+                    <div style="font-size:.8rem;color:var(--text-secondary);" id="nfcReaderStatusSub">Prêt automatiquement — présentez simplement une carte.</div>
                 </div>
             </div>
 
@@ -9778,6 +9788,11 @@ function displayMembersGrid(members) {
                             <span class="detail-label">🔄 Abonnement:</span>
                             <span class="detail-value">${getSubscriptionText(member.subscription)}</span>
                         </div>
+
+                        <div class="detail-item">
+                            <span class="detail-label">📆 Saison:</span>
+                            <span class="detail-value">${getMemberSeasonBadge(member)}</span>
+                        </div>
                     </div>
                     
                     <div class="member-actions">
@@ -9786,6 +9801,9 @@ function displayMembersGrid(members) {
                         </button>
                         <button class="btn btn-info btn-sm" onclick="openPhotoModal('${member.id}')" title="Changer la photo">
                             📷 Photo
+                        </button>
+                        <button class="btn btn-primary btn-sm" onclick="openRenewalModal('${member.id}')" title="Inscrire pour la prochaine saison (même adhérent, même carte NFC)">
+                            🔄 Renouveler l'inscription
                         </button>
                         <button class="btn btn-danger btn-sm" onclick="deleteMember('${member.id}')" title="Supprimer l'adhérent">
                             🗑️ Supprimer
@@ -9835,6 +9853,45 @@ function getSubscriptionText(subscription) {
         'annual': 'Annuel'
     };
     return subscriptions[subscription] || subscription;
+}
+
+// Clé de saison (même règle que la RPC SQL season_key_for_date) :
+// une saison commence en septembre (ex. sept. 2026 -> "2026/2027").
+function getSeasonKey(date) {
+    const d = date || new Date();
+    const y = d.getFullYear();
+    return (d.getMonth() + 1 >= 9) ? `${y}/${y + 1}` : `${y - 1}/${y}`;
+}
+
+// Prochaine saison après "2026/2027" -> "2027/2028"
+function nextSeasonKey(key) {
+    const years = key.split('/').map(n => parseInt(n, 10));
+    if (years.length === 2 && !isNaN(years[0])) return `${years[0] + 1}/${years[1] + 1}`;
+    return getSeasonKey(new Date(new Date().getFullYear() + 1, 8, 1));
+}
+
+// Indicatif de la saison sur la fiche : dépend de l'abonnement courant.
+function getMemberSeasonBadge(member) {
+    const current = getSeasonKey();
+    const next = nextSeasonKey(current);
+    const start = new Date(member.start_date);
+    if (isNaN(start.getTime())) return '<span class="badge badge-secondary">—</span>';
+    const end = new Date(start);
+    switch (member.subscription) {
+        case "monthly": end.setMonth(end.getMonth() + 1); break;
+        case "quarterly": end.setMonth(end.getMonth() + 3); break;
+        case "biannual": end.setMonth(end.getMonth() + 6); break;
+        case "annual": end.setFullYear(end.getFullYear() + 1); break;
+        default: end.setMonth(end.getMonth() + 1);
+    }
+    const seasonYear = start.getFullYear();
+    const seasonInscribed = (start.getMonth() + 1 >= 9) ? `${seasonYear}/${seasonYear + 1}` : `${seasonYear - 1}/${seasonYear}`;
+
+    // Inscrit pour la saison CORRENTE (la saison de son abonnement) ?
+    if (seasonInscribed === current || seasonInscribed === next) {
+        return `<span class="badge badge-success">🟢 Inscrit ${seasonInscribed}</span>`;
+    }
+    return '<span class="badge badge-warning">🟠 Non renouvelé</span>';
 }
 
 // Fonction pour formater la date
@@ -10122,6 +10179,185 @@ loadMembers().then(() => {
             } catch (error) {
                 console.error('Error deleting member:', error);
             }
+        }
+
+        // ============================================
+        // RENOUVELLEMENT D'INSCRIPTION (PAR SAISON)
+        // ============================================
+        // Même member_id, mêmes informations, même carte NFC.
+        // Une nouvelle inscription (registrations) est créée pour la
+        // nouvelle saison via la RPC renewable renew_member_registration
+        // (anti-doublon member_id+season_key à la base). L'historique
+        // de la saison précédente (présences / paiements / NFC) reste intact.
+        const RENEWAL_TYPES = {
+            'monthly': 'Mensuel',
+            'quarterly': 'Trimestriel',
+            'biannual': 'Semestriel',
+            'annual': 'Annuel'
+        };
+        let renewalMemberId = null;
+        let renewalSeasonKey = null;
+
+        async function openRenewalModal(memberId) {
+            try {
+                const { data: member, error } = await supabase
+                    .from('members').select('*').eq('id', memberId).single();
+                if (error) throw error;
+
+                // Carte NFC déjà attribuée (utilisée uniquement pour l'info)
+                let nfcInfo = '';
+                const { data: card } = await supabase
+                    .from('nfc_cards')
+                    .select('uid')
+                    .eq('member_id', memberId)
+                    .eq('status', 'assigned')
+                    .maybeSingle();
+                if (card) nfcInfo = `<div class="detail-item">
+                        <span class="detail-label">💳 Carte NFC:</span>
+                        <span class="detail-value" style="font-family:monospace;">${escapeHtml(card.uid)}</span>
+                    </div>`;
+
+                const now = new Date();
+                const currentSeason = getSeasonKey(now);
+                const newSeason = nextSeasonKey(currentSeason);
+
+                // Refus si déjà inscrit pour la nouvelle saison
+                const { data: existingReg } = await supabase
+                    .from('registrations')
+                    .select('id, season_key')
+                    .eq('member_id', memberId)
+                    .eq('season_key', newSeason)
+                    .maybeSingle();
+                if (existingReg) {
+                    alert(`Cet adhérent est déjà inscrit pour la saison ${newSeason}.`);
+                    return;
+                }
+
+                renewalMemberId = memberId;
+                renewalSeasonKey = newSeason;
+
+                const startDate = [
+                    now.getFullYear(),
+                    String(now.getMonth() + 1).padStart(2, '0'),
+                    String(now.getDate()).padStart(2, '0')
+                ].join('-');
+
+                document.getElementById('renewalContent').innerHTML = `
+                    <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 10px; text-align:center;">
+                        <p style="margin: 4px 0; font-size: 1.15rem; font-weight:700; color: var(--text-primary);">
+                            ${escapeHtml(member.last_name)} ${escapeHtml(member.first_name)}
+                        </p>
+                        <p style="margin: 2px 0; color: var(--text-secondary); font-size:.9rem;">ID: ${escapeHtml(member.id)}</p>
+                        ${nfcInfo}
+                    </div>
+
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:14px 0; text-align:center;">
+                        <div style="background: rgba(255,255,255,0.04); padding:10px; border-radius:10px;">
+                            <div style="font-size:.8rem; color: var(--text-secondary);">SAISON ACTUELLE</div>
+                            <div style="font-weight:700; margin-top:4px;">${currentSeason}</div>
+                        </div>
+                        <div style="background: rgba(40,167,69,0.12); padding:10px; border-radius:10px;">
+                            <div style="font-size:.8rem; color: var(--text-secondary);">NOUVELLE SAISON</div>
+                            <div style="font-weight:700; margin-top:4px; color: var(--success-color);">${escapeHtml(newSeason)}</div>
+                        </div>
+                    </div>
+
+                    <p style="font-size:.9rem; color: var(--text-secondary); text-align:center; margin: 8px 0 14px;">
+                        Les informations de l'adhérent seront conservées. Une nouvelle inscription
+                        sera créée pour la saison ${escapeHtml(newSeason)}. Les paiements et les
+                        présences de la nouvelle saison commenceront à zéro.
+                    </p>
+
+                    <div class="form-group" style="margin-top:10px;">
+                        <label style="display:block; text-align:left; margin-bottom:5px;">📄 Type d'abonnement</label>
+                        <select id="renewalType" class="form-control">
+                            ${Object.entries(RENEWAL_TYPES).map(([k, v]) =>
+                                `<option value="${k}" ${(member.subscription === k) ? 'selected' : ''}>${v}</option>`
+                            ).join('')}
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin-top:10px;">
+                        <label style="display:block; text-align:left; margin-bottom:5px;">📅 Date de début</label>
+                        <input type="date" id="renewalStartDate" class="form-control" value="${startDate}">
+                    </div>
+                    <div id="renewalMessage" style="margin-top:8px;"></div>
+                    <div style="display:flex; gap:10px; justify-content:center; margin-top:16px;">
+                        <button class="btn btn-secondary" onclick="closeModal('renewalModal')">Annuler</button>
+                        <button class="btn btn-success" id="renewalConfirmBtn">Confirmer le renouvellement</button>
+                    </div>
+                `;
+                document.getElementById('renewalConfirmBtn').onclick = confirmRenewal;
+                openModal('renewalModal');
+            } catch (error) {
+                console.error('Erreur ouverture renouvellement:', error);
+                alert('Erreur : ' + error.message);
+            }
+        }
+
+        async function confirmRenewal() {
+            const btn = document.getElementById('renewalConfirmBtn');
+            const msg = document.getElementById('renewalMessage');
+            if (!renewalMemberId || !renewalSeasonKey || btn.disabled) return;
+            btn.disabled = true;
+            btn.textContent = '🔄 Renouvellement en cours…';
+            msg.innerHTML = '';
+
+            const type = document.getElementById('renewalType').value;
+            const startDate = document.getElementById('renewalStartDate').value || new Date().toISOString().split('T')[0];
+
+            try {
+                // La RPC est transactionnelle et refuse le double renouvellement.
+                const { data, error } = await supabase.rpc('renew_member_registration', {
+                    p_member_id: renewalMemberId,
+                    p_season_key: renewalSeasonKey,
+                    p_subscription_type: type,
+                    p_start_date: startDate
+                });
+                if (error) {
+                    if ((error.message || '').toLowerCase().includes('déjà inscrit')) {
+                        alert(`Cet adhérent est déjà inscrit pour la saison ${renewalSeasonKey}.`);
+                    } else {
+                        alert('Erreur renouvellement : ' + error.message);
+                    }
+                    btn.disabled = false;
+                    btn.textContent = 'Confirmer le renouvellement';
+                    return;
+                }
+
+                const started = startDate.split('-').reverse().join('/');
+                document.getElementById('renewalContent').innerHTML = `
+                    <div style="text-align:center; padding: 22px 8px;">
+                        <div style="font-size:3.2rem; margin-bottom:10px;">✅</div>
+                        <h3 style="margin-bottom:12px; color: var(--success-color);">Inscription renouvelée avec succès</h3>
+                        <div style="background: rgba(255,255,255,0.05); padding:14px; border-radius:10px; font-size:.95rem; line-height:1.9;">
+                            <div><b>Saison :</b> ${escapeHtml(renewalSeasonKey)}</div>
+                            <div><b>Date de début :</b> ${started}</div>
+                            <div><b>Type :</b> ${RENEWAL_TYPES[type] || type}</div>
+                            <div><b>Présences :</b> 0 (démarrage à zéro)</div>
+                            <div><b>Paiements :</b> 0 (nouveaux mois à régler)</div>
+                        </div>
+                        <p style="color: var(--text-secondary); font-size:.85rem; margin-top:14px;">
+                            L'historique de la saison précédente et la carte NFC sont conservés.
+                        </p>
+                        <div style="margin-top:16px;">
+                            <button class="btn btn-primary" onclick="closeRenewalModal()">Terminé</button>
+                        </div>
+                    </div>
+                `;
+                closeRenewalModal();
+                loadMembers();
+                loadDashboard();
+            } catch (error) {
+                console.error('Erreur renouvellement:', error);
+                msg.innerHTML = `<div class="alert alert-danger">${escapeHtml(error.message)}</div>`;
+                btn.disabled = false;
+                btn.textContent = 'Confirmer le renouvellement';
+            }
+        }
+
+        function closeRenewalModal() {
+            closeModal('renewalModal');
+            loadMembers();
         }
 
         // ============================================

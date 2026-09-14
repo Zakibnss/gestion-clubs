@@ -19,12 +19,17 @@
 //   App -> Supabase
 //
 // Modes / adapters implémentés :
-//   1. 'driver'   — driver injecté (config.driver) : protocole RÉEL du
+//   1. 'hid'      — lecteur externe émulant un clavier HID USB (mode
+//                   normal par défaut). Le lecteur TAPE la valeur de la
+//                   carte (UID) n'importe où : on reconstruit la valeur
+//                   à partir des frappes HID rapides, sans supposer un
+//                   format hexadécimal (valeur brute capturée telle quelle).
+//   2. 'driver'   — driver injecté (config.driver) : protocole RÉEL du
 //                   lecteur (WebUSB, Serial, HID, PC/SC, …).
-//   2. 'bridge'   — window.NfcBridge (app native / serveur local).
+//   3. 'bridge'   — window.NfcBridge (app native / serveur local).
 //                   Chemin pour Android via USB OTG ET pour Windows.
-//   3. 'simulate' — simulateur de dev/test (jamais en prod).
-//   4. 'webnfc'   — [EXPERIMENTAL / FALLBACK] NFC intégré Android via
+//   4. 'simulate' — simulateur de dev/test (jamais en prod).
+//   5. 'webnfc'   — [EXPERIMENTAL / FALLBACK] NFC intégré Android via
 //                   Web NFC. NE DONNE PAS le UID brut d'une MIFARE
 //                   Classic 1K : readUid() refuse de fabriquer un UID à
 //                   partir de données NDEF. Il ne lit que des messages
@@ -47,7 +52,7 @@
 window.NFCReaderService = (function () {
 
     const DEFAULT_CONFIG = {
-        adapter: 'bridge',       // 'driver' | 'bridge' | 'simulate'
+        adapter: 'hid',          // 'hid' | 'driver' | 'bridge' | 'simulate'
         driver: null,            // objet driver optionnel (adapter='driver')
         bridge: null             // objet bridge optionnel (adapter='bridge')
     };
@@ -161,6 +166,302 @@ window.NFCReaderService = (function () {
             }, 600);
         }
         _stopLoop() { if (this._loop) { clearInterval(this._loop); this._loop = null; } }
+    }
+
+    /* ==========================================================
+       ADAPTER : 'hid' — lecteur externe émulant un clavier HID USB
+       ==========================================================
+       Le lecteur USB se comporte comme un clavier : quand une carte
+       passe, il "tape" la valeur de la carte dans l'élément focalisé
+       (ex. : "4292384500" ou "04A73291BC45"). On reconstruit la valeur
+       complète à partir des frappes, SANS supposer un format
+       hexadécimal — la valeur brute est capturée exactement telle que
+       le lecteur l'émet, puis normalisée par NFCReaderService.unify.
+
+       Règles d'or :
+         . Ne JAMAIS avaler la frappe normale d'un utilisateur : on ne
+           capture qu'une RAFALE de frappes rapides (écart inter-touche
+           < BURST_MAX_GAP), d'une longueur minimale (longueur d'une
+           carte), terminée par Entrée (lecteurs configurés avec
+           terminaison) ou par un silence / délai de vol.
+         . Anti-rebond : la même valeur détectée en continu (carte laissée
+           posée) ne produit pas de scan en double.
+         . Le mode n'est actif que si la lecture est demandée
+           (connect/readUid/startPolling/testScan) ; disconnect() retire
+           immédiatement l'écouteur global.
+       ========================================================== */
+    class HIDKeyboardAdapter {
+        constructor() {
+            this.connected = false;
+            this._listener = null;
+
+            // Écart inter-touche maximum pour considérer les frappes
+            // comme une rafale du lecteur (le clavier humain est ≥ ~80ms).
+            this.BURST_MAX_GAP = 50;
+            // Délai après la dernière frappe pour considérer la rafale finie.
+            this.BURST_IDLE_MS = 120;
+            // Délai maximum à attendre entre le début de la rafale et sa fin.
+            this.BURST_MAX_SPAN = 2500;
+            // Longueur minimale plausible d'un identifiant de carte.
+            this.MIN_VALUE_LEN = 8;
+            // Délai d'expiration d'une lecture one-shot.
+            this.READ_TIMEOUT_MS = 10000;
+
+            // Capture en cours (un seul consommateur à la fois).
+            this._active = null;   // { watchers:[...(resolve|reject|opts)], raw:'', times:[], len:0 }
+            this._burstTimer = null;
+            this._lastValue = null;     // anti-rebond
+            this._lastValueAt = 0;
+        }
+
+        /* Le lecteur clavier fournit toujours la valeur brute de la carte. */
+        supportsRawUid() { return true; }
+
+        isConnected() { return this.connected; }
+
+        async connect() {
+            if (!this._listener) {
+                this._listener = (e) => this._onGlobalKeydown(e);
+                document.addEventListener('keydown', this._listener, true);
+            }
+            // Précision : il est impossible de détecter la présence
+            // physique d'un clavier HID depuis le navigateur. On se
+            // contente d'armer la capture — vérif réelle via un scan.
+            emitStatus('connected', 'Lecteur NFC externe connecté');
+            this.connected = true;
+            return this;
+        }
+
+        async disconnect() {
+            this._clearBurstTimer();
+            if (this._listener) {
+                document.removeEventListener('keydown', this._listener, true);
+                this._listener = null;
+            }
+            // Réveiller les consommateurs en attente (abandon).
+            if (this._active) {
+                this._failAll(this._active, nfcError(NFC_ERROR_CODES.NFC_NOT_SUPPORTED, 'Lecture annulée (lecteur déconnecté).'));
+                this._active = null;
+            }
+            this.connected = false;
+            this._lastValue = null;
+            emitStatus('disconnected', 'Lecteur NFC externe déconnecté');
+        }
+
+        /* ------- Capture globale des frappes ------- */
+        _onGlobalKeydown(e) {
+            if (!this._active) return;          // jamais actif hors lecture demandée
+
+            if (e.key === 'Enter') {
+                // Fin de rafale (lecteurs avec terminaison Entrée).
+                if (this._burstTimer) this._clearBurstTimer();
+                this._finalize(true);
+                return;
+            }
+
+            const k = e.key;
+            if (k.length !== 1) return;         // touches de contrôle : ignorées
+
+            // Caractères de contrôle générés par certains lecteurs HID
+            // (ex. "\r" préfixé) : jamais considérés comme des touches de
+            // valeur. On les filtre sans casser la rafale en cours.
+            if (k === '\r' || k === '\n' || k === '\t') return;
+
+            const now = Date.now();
+
+            // Rafale jamais commencée : seule la première touche d'une
+            // séquence réelle peut la démarrer (évite d'accumuler les
+            // frappes d'un utilisateur qui tape normalement).
+            if (!this._active.raw) {
+                this._active.raw = k;
+                this._active.len = 1;
+                this._active.times = [now];
+                this._clearBurstTimer();
+                this._burstTimer = setTimeout(() => this._finalize(true), this.BURST_IDLE_MS);
+                return;
+            }
+
+            const gap = now - this._active.times[this._active.times.length - 1];
+            if (gap > this.BURST_MAX_GAP) {
+                // Frappe humaine (pause > 50ms) : la rafale est morte,
+                // on la repart à zéro sans déclencher de scan.
+                this._resetBurst();
+                return;
+            }
+
+            this._active.raw += k;
+            this._active.len += 1;
+            this._active.times.push(now);
+
+            // Garde-fou : la rafale ne doit pas dépasser BURST_MAX_SPAN ms.
+            if (now - this._active.times[0] > this.BURST_MAX_SPAN) {
+                this._finalize(true);
+                return;
+            }
+
+            // Quand la rafale est suffisamment longue, on programme la
+            // fin de capture (silence / timeout).
+            this._clearBurstTimer();
+            this._burstTimer = setTimeout(() => this._finalize(true), this.BURST_IDLE_MS);
+        }
+
+        _resetBurst() {
+            if (this._active) this._active.raw = '';
+        }
+
+        /* Normalisation d'une valeur lue par le R30 : on supprime
+           uniquement les caractères de contrôle générés par le clavier
+           HID (Entrée, Tab, retour chariot, ligne suivante) et les
+           espaces de début/fin. La valeur utile est conservée EXACTEMENT
+           telle que le lecteur l'a envoyée (jamais un format HEX forcé,
+           jamais de conversion). */
+        static normalizeCardId(raw) {
+            if (raw === null || raw === undefined) return '';
+            return String(raw)
+                .replace(/[\r\n\t]/g, '')   // caractères de contrôle
+                .replace(/\s+/g, '')        // espaces éventuels
+                .trim()
+                .toUpperCase();
+        }
+
+        _clearBurstTimer() {
+            if (this._burstTimer) { clearTimeout(this._burstTimer); this._burstTimer = null; }
+        }
+
+        _failAll(st, err) {
+            (st.watchers || []).forEach(w => { try { w.reject(err); } catch (e) {} });
+            st.watchers = [];
+        }
+
+        /* Finalise la rafale en cours si elle ressemble à un scan */
+        _finalize(forceEnd) {
+            const st = this._active;
+            if (!st) return;
+            this._clearBurstTimer();
+
+            const rawValue = st.raw;
+            st.raw = '';
+
+            const uid = HIDKeyboardAdapter.normalizeCardId(rawValue);
+            if (!uid || uid.length < this.MIN_VALUE_LEN) {
+                // Trop court pour une carte : on ignore silencieusement.
+                return;
+            }
+
+            const now = Date.now();
+
+            // Anti-rebond : même valeur déjà traitée il y a moins de 1,5s.
+            if (uid === this._lastValue && (now - this._lastValueAt) < 1500) {
+                return;
+            }
+            this._lastValue = uid;
+            this._lastValueAt = now;
+
+            const valueString = String(uid);
+            // Un scan valide alimente TOUS les consommateurs en attente :
+            // . one-shot (readUid / testScan) → résolu puis retiré ;
+            // . polling continu (startPolling) → résolu ET conservé pour
+            //   les scans suivants.
+            const kept = [];
+            (st.watchers || []).forEach(w => {
+                try { w.resolve(valueString); } catch (e) {}
+                if (w.persistent) kept.push(w);
+            });
+            st.watchers = kept;
+            st.times = [];
+            st.len = 0;
+
+            if (forceEnd && !st.watchers.length && this._active === st) {
+                this._active = null;
+            }
+        }
+
+        /* ------- Lecture one-shot ------- */
+        async readUid() {
+            if (!this.connected) throw new Error('Lecteur non connecté');
+            return new Promise((resolve, reject) => {
+                const st = this._cloneActive();
+                const w = { persistent: false };
+                const timer = setTimeout(() => {
+                    const idx = st.watchers.indexOf(w);
+                    if (idx >= 0) st.watchers.splice(idx, 1);
+                    reject(nfcError(NFC_ERROR_CODES.NFC_SCAN_CANCELLED, 'Aucune carte détectée.'));
+                }, this.READ_TIMEOUT_MS);
+                w.resolve = (v) => { clearTimeout(timer); resolve(v); };
+                w.reject  = (e) => { clearTimeout(timer); reject(e);  };
+                st.watchers.push(w);
+                if (!this._active) this._active = st;
+            });
+        }
+
+        _cloneActive() {
+            if (this._active) return this._active;
+            return { watchers: [], raw: '', times: [], len: 0 };
+        }
+
+        /* ------- Lecture continue ------- */
+        startPolling(onUid) {
+            if (!this.connected) throw new Error('Lecteur non connecté');
+            if (!onUid) return;
+            const st = this._cloneActive();
+            st.watchers.push({
+                persistent: true,           // watcher continu : conservé entre les scans
+                resolve: (v) => {
+                    if (typeof onUid === 'function') {
+                        try { onUid(v); } catch (e) { console.error(e); }
+                    }
+                },
+                reject: () => {}
+            });
+            if (!this._active) this._active = st;
+        }
+
+        /* Le polling HID n'a pas de boucle matérielle à arrêter : la
+           capture est levée par disconnect(), on remet simplement à
+           zéro l'état de capture. */
+        _stopLoop() {
+            this._clearBurstTimer();
+            if (this._active && this._active.watchers.length) {
+                // Conserver le polling actif ; aucune action nécessaire.
+            }
+        }
+
+        /* ------- Test / vérification ------- */
+        /* Vérification HID : le navigateur ne peut PAS détecter la
+           présence physique du clavier HID. On attend donc réellement
+           la frappe d'une carte (ou un timeout). */
+        async test(timeoutMs) {
+            const r = await this.testScan(timeoutMs || 10000);
+            return r && r.ok === true;
+        }
+
+        async testScan(timeoutMs) {
+            timeoutMs = timeoutMs || 10000;
+            if (!this.connected) await this.connect();
+            return new Promise((resolve) => {
+                let done = false;
+                const finish = (res) => {
+                    if (done) return;
+                    done = true;
+                    clearTimeout(timer);
+                    const idx = st.watchers.indexOf(w);
+                    if (idx >= 0) st.watchers.splice(idx, 1);
+                    resolve(res);
+                };
+                const st = this._cloneActive();
+                const timer = setTimeout(() => {
+                    finish({ ok: false, value: null, timedOut: true, message: 'Aucune lecture détectée.' });
+                }, timeoutMs);
+                const w = {
+                    resolve: (v) => {
+                        finish({ ok: true, value: String(v), timedOut: false, message: 'Lecteur opérationnel — carte détectée.' });
+                    },
+                    reject: () => {}
+                };
+                st.watchers.push(w);
+                if (!this._active) this._active = st;
+            });
+        }
     }
 
     /* ==========================================================
@@ -356,9 +657,10 @@ window.NFCReaderService = (function () {
         EXTERNAL: 'external',
         ANDROID_INTEGRATED: 'android-integrated'
     };
-    // L'adapter 'webnfc' incarne le mode 'android-integrated'.
+    // L'adapter 'hid' incarne le mode 'external' (lecteur clavier HID,
+    // comportement par défaut). 'webnfc' incarne 'android-integrated'.
     const MODE_TO_ADAPTER = {
-        [MODES.EXTERNAL]: 'bridge',          // défaut : bridge externe de l'opérateur
+        [MODES.EXTERNAL]: 'hid',            // défaut : lecteur externe HID (clavier)
         [MODES.ANDROID_INTEGRATED]: 'webnfc'
     };
 
@@ -383,6 +685,7 @@ window.NFCReaderService = (function () {
     /* ---------- Fabrique ---------- */
     function createAdapter(name) {
         switch (name) {
+            case 'hid':      return new HIDKeyboardAdapter();
             case 'driver':   return new DriverAdapter(config.driver);
             case 'bridge':   return new BridgeAdapter(config.bridge || window.NfcBridge);
             case 'simulate': return new SimulateAdapter();
@@ -408,11 +711,11 @@ window.NFCReaderService = (function () {
             config = Object.assign({}, DEFAULT_CONFIG, cfg || {});
         },
 
-        getAdapterName() { return config.adapter || 'bridge'; },
+        getAdapterName() { return config.adapter || 'hid'; },
 
         async connect() {
             await this.disconnect();
-            const adapterName = config.adapter || 'bridge';
+            const adapterName = config.adapter || 'hid';
             const mode = this.getMode();
             // Mémoriser l'adapter externe opérateur (bridge/driver…) pour
             // pouvoir le restaurer après un passage en mode NFC intégré.
@@ -465,6 +768,20 @@ window.NFCReaderService = (function () {
             }
         },
 
+        /* Test réel d'une carte (HID : on attend la frappe du lecteur).
+           Retourne { ok, value, timedOut, message }. */
+        async testScan(timeoutMs) {
+            if (!activeAdapter) {
+                try { await this.connect(); } catch (e) { return { ok: false, timedOut: false, value: '', message: e.message }; }
+            }
+            if (typeof activeAdapter.testScan !== 'function') {
+                // Adapter sans attente réelle de carte (driver/bridge) : test matériel.
+                const r = await this.testConnection();
+                return { ok: !!r.ok, timedOut: false, value: '', message: r.message || (r.ok ? 'Lecteur opérationnel' : 'Lecteur non opérationnel') };
+            }
+            return activeAdapter.testScan(timeoutMs);
+        },
+
         /* ---------- Compatibilité plateforme ---------- */
         isAndroid() {
             return /Android/i.test(navigator.userAgent);
@@ -479,7 +796,7 @@ window.NFCReaderService = (function () {
         /* Définition des modes (NFCReaderMode) */
         getModes() { return MODES; },
         getMode() {
-            const a = config.adapter || 'bridge';
+            const a = config.adapter || 'hid';
             // adapter 'webnfc' incarne le mode 'android-integrated'
             return a === 'webnfc' ? MODES.ANDROID_INTEGRATED : MODES.EXTERNAL;
         },
@@ -487,11 +804,11 @@ window.NFCReaderService = (function () {
             if (mode === MODES.ANDROID_INTEGRATED) {
                 // Mémoriser l'adapter externe pour pouvoir y revenir, puis
                 // passer en Web NFC.
-                _lastExternalAdapter = config.adapter || 'bridge';
+                _lastExternalAdapter = config.adapter || 'hid';
                 return this.setTransportConfig({ adapter: MODE_TO_ADAPTER[MODES.ANDROID_INTEGRATED] });
             }
-            // external : restaurer l'adapter externe opérateur (bridge/driver…)
-            const ext = _lastExternalAdapter || config.bridge || 'bridge';
+            // external : restaurer l'adapter externe opérateur (hid/bridge/driver…)
+            const ext = _lastExternalAdapter || config.bridge || 'hid';
             _lastExternalAdapter = null;
             return this.setTransportConfig({ adapter: ext });
         },
@@ -529,7 +846,7 @@ window.NFCReaderService = (function () {
         /* L'adapter actif peut-il fournir un UID fiable ? */
         supportsRawUid() {
             if (!activeAdapter) {
-                const a = config.adapter || 'bridge';
+                const a = config.adapter || 'hid';
                 if (a === 'webnfc') return false;
                 return true;
             }
@@ -574,10 +891,10 @@ window.NFCReaderService = (function () {
 
         normalizeUid(raw) {
             if (raw === null || raw === undefined || typeof raw !== 'string') return '';
-            return raw.trim().toUpperCase().replace(/\s+/g, '');
+            return raw.replace(/[\r\n\t]/g, '').trim().toUpperCase().replace(/\s+/g, '');
         },
         isSimulation() {
-            return (config.adapter || 'bridge') === 'simulate';
+            return (config.adapter || 'hid') === 'simulate';
         }
     };
 

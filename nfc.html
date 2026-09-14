@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NFC Validator — Kyokushin Manager Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/nfc-reader-service.js?v=20260830"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -68,8 +69,8 @@
         #bigTitle { font-size: clamp(20px, 6vw, 30px); font-weight: 800; letter-spacing: 1px; }
         #subText  { font-size: clamp(14px, 4vw, 18px); color: #aab2bd; white-space: pre-line; }
 
-        body.state-success { background: #0d2b17; }
-        body.state-success #icon { color: var(--ok); animation: none; }
+        body.state-ok, body.state-success { background: #0d2b17; }
+        body.state-ok #icon, body.state-success #icon { color: var(--ok); animation: none; }
         body.state-expired { background: #38100f; animation: shakeBg .5s; }
         body.state-expired #icon { color: var(--ko); animation: none; }
         body.state-invalid { background: #2a2113; }
@@ -107,11 +108,6 @@
             font-weight: 700;
             cursor: pointer;
         }
-        button.nfc {
-            background:#1d2330; border:1px solid #39445a; width:100%;
-            margin-bottom:10px; padding:12px; border-radius:12px;
-            color:#cfd6e4; font-weight:600; cursor:pointer;
-        }
 
         /* ---------- Historique ---------- */
         #historyWrap { width:100%; max-width:520px; padding:0 16px 40px; }
@@ -136,13 +132,17 @@
 <div id="stage">
     <div id="icon">○</div>
     <div id="bigTitle">LECTEUR NFC</div>
-    <div id="subText">En attente de carte</div>
+    <div id="subText">Prêt à scanner</div>
 </div>
 
 <div id="controls">
-    <button class="nfc" id="startNfcBtn">📲 Activer le lecteur NFC</button>
-    <input type="text" id="manualInput" placeholder="Ou ID adhérent (manuel)" autocomplete="off">
-    <button class="primary" id="manualBtn">Valider</button>
+    <details style="width:100%;font-size:.85rem;opacity:.85;">
+        <summary style="cursor:pointer;color:#8b93a1;">⌨️ Saisie manuelle (administrateur — cas exceptionnel)</summary>
+        <div style="display:flex;gap:10px;margin-top:8px;">
+            <input type="text" id="manualInput" placeholder="UID de carte" autocomplete="off" style="flex:1;padding:12px;border-radius:12px;border:2px solid #2c3340;background:#171b22;color:#fff;font-size:1rem;text-transform:uppercase;">
+            <button class="primary" id="manualBtn">Valider</button>
+        </div>
+    </details>
 </div>
 
 <div id="historyWrap">
@@ -180,14 +180,14 @@ function beep(freq, durationSec) {
 /* ---------------- États visuels ---------------- */
 function setState(state, title, sub) {
     document.body.className = 'state-' + state;
-    const icons = { waiting:'○', reading:'◉', success:'✓', expired:'⛔', invalid:'⚠️' };
+    const icons = { waiting:'🟢', reading:'◉', success:'✓', expired:'⛔', invalid:'⚠️' };
     document.getElementById('icon').textContent = icons[state] || '○';
     document.getElementById('bigTitle').textContent = title;
     document.getElementById('subText').textContent = sub || '';
 }
 
-function backToWaiting() {
-    setState('waiting', 'LECTEUR NFC', 'En attente de carte');
+function readyToScan() {
+    setState('waiting', '🟢 PRÊT À SCANNER', 'Présentez une carte au lecteur R30');
     busy = false;
 }
 
@@ -213,108 +213,185 @@ async function loadCurrentSession() {
         banner.classList.add('ok');
     } else {
         currentSession = null;
-        banner.textContent = '⛔ Aucune séance en cours — démarrez une séance dans Groupes';
+        banner.textContent = '⛔ Aucune séance en cours';
         banner.classList.remove('ok');
     }
 }
 setInterval(loadCurrentSession, 15000);
 
-/* ---------------- Traitement d'un scan ---------------- */
+/* ---------------- Traitement d'un scan R30 ----------------
+   La valeur reçue est l'UID de la CARTE (ex. 4292384500), PAS un ID
+   adhérent. Résolution : nfc_cards.uid -> member_id -> members ->
+   abonnement -> présence. Même mécanisme de lecture que « Nouvelle
+   carte NFC » (NFCReaderService / adapter HID Keyboard). */
 async function handleScan(rawId, method) {
     if (busy) return;
     busy = true;
-    const memberId = String(rawId || '').trim().toUpperCase();
+
+    const normalizedUid = (window.NFCReaderService && NFCReaderService.normalizeUid(rawId));
+    console.log('[NFC Validator] Scan reçu :', rawId);
+    console.log('[NFC Validator] UID normalisé :', normalizedUid);
+
+    if (!normalizedUid) { readyToScan(); return; }
 
     setState('reading', 'LECTURE...', '');
-    await new Promise(r => setTimeout(r, 250));
-
-    if (!currentSession) {
-        setState('invalid', 'PAS DE SÉANCE', 'Démarrez une séance dans la section Groupes');
-        beep(600, 0.4);
-        setTimeout(backToWaiting, 2500);
-        return;
-    }
+    await new Promise(r => setTimeout(r, 200));
 
     try {
-        // Adhérent connu ?
-        const { data: member } = await supabase.from('members')
-            .select('id, first_name, last_name, photo_url')
-            .eq('id', memberId)
-            .eq('club_id', CLUB_ID)
+        // 1) Carte connue ? (nfc_cards.uid)
+        const { data: card, error: cardErr } = await supabase
+            .from('nfc_cards')
+            .select('uid, member_id, status')
+            .eq('uid', normalizedUid)
             .maybeSingle();
+        if (cardErr) throw cardErr;
+        console.log('[NFC Validator] Recherche carte :', normalizedUid, '=>', card);
 
-        if (!member) {
-            addHistory('UNKNOWN', null, 'ERROR', method);
-            setState('invalid', 'CARTE INVALIDE', '');
+        // 2) Carte non attribuée / libre
+        if (!card) {
+            addHistory(normalizedUid, null, 'UNASSIGNED', method);
+            setState('invalid', '⚠ CARTE NON ATTRIBUÉE', `UID : ${normalizedUid}\nCette carte n'est associée à aucun adhérent.`);
             beep(600, 0.4);
-            setTimeout(backToWaiting, 2000);
+            setTimeout(readyToScan, 3000);
+            return;
+        }
+        if (card.status !== 'assigned' || !card.member_id) {
+            addHistory(normalizedUid, null, 'UNASSIGNED', method);
+            setState('invalid', '⚠ CARTE LIBRE', `UID : ${normalizedUid}\nCette carte n'est attribuée à aucun adhérent.`);
+            beep(600, 0.4);
+            setTimeout(readyToScan, 3000);
             return;
         }
 
-        // Statut abonnement (règle de continuité centralisée DB)
-        const { data: st } = await supabase.from('member_subscription_status')
-            .select('is_active, end_effective, days_left')
-            .eq('member_id', memberId)
+        // 3) Adhérent associé
+        const { data: member } = await supabase
+            .from('members')
+            .select('id, first_name, last_name, photo_url')
+            .eq('id', card.member_id)
             .maybeSingle();
+        if (!member) {
+            addHistory(normalizedUid, null, 'ERROR', method);
+            setState('invalid', 'ADHÉRENT INTROUVABLE', '');
+            beep(600, 0.4);
+            setTimeout(readyToScan, 2500);
+            return;
+        }
+        console.log('[NFC Validator] Adhérent :', member.last_name, member.first_name);
 
         const fullName = `${member.last_name} ${member.first_name}`;
 
-        if (!st?.is_active) {
-            const daysExpired = st?.end_effective
-                ? Math.floor((Date.now() - new Date(st.end_effective + 'T00:00:00')) / 86400000)
-                : '?';
-            addHistory(memberId, fullName, 'EXPIRED', method);
-            setState('expired', 'ABONNEMENT EXPIRÉ',
-                `${fullName}\nExpiré depuis ${daysExpired} jour(s)`);
-            beep(440, 0.8);
-            setTimeout(backToWaiting, 4000);
+        // 4) Statut abonnement (règle de continuité centralisée DB).
+        //    LA PRÉSENCE EST ENREGISTRÉE MÊME SI ABONNEMENT EXPIRÉ :
+        //    seule la présentation visuelle change (voir plus bas).
+        const { data: st } = await supabase
+            .from('member_subscription_status')
+            .select('is_active, end_effective')
+            .eq('member_id', card.member_id)
+            .maybeSingle();
+        const expired = !st || !st.is_active;
+        const subDays = st?.end_effective
+            ? Math.floor((Date.now() - new Date(st.end_effective + 'T00:00:00')) / 86400000)
+            : null;
+        const now = new Date();
+        const timeStr = now.toTimeString().slice(0, 8);
+        const dateStr = now.toISOString().slice(0, 10);
+        // Vérif anti-doublon sur la journée (global — valable séance ou hors séance)
+        const { data: existing } = await supabase
+            .from('attendance')
+            .select('id, attendance_time')
+            .eq('member_id', card.member_id)
+            .eq('attendance_date', dateStr)
+            .limit(1);
+        if (existing && existing.length) {
+            addHistory(normalizedUid, fullName, 'SUCCESS', method);
+            setState('ok', 'ℹ DÉJÀ VALIDÉ',
+                `${fullName}\nPrésence déjà enregistrée à ${existing[0].attendance_time}`);
+            beep(880, 0.2);
+            setTimeout(readyToScan, 2000);
             return;
         }
 
-        // Enregistrement présence liée à la séance (+ miroir legacy pour rapports mensuels)
-        const now = new Date();
-        const timeStr = now.toTimeString().slice(0, 8);
-
-        const { error } = await supabase.from('session_attendances').insert({
-            session_id: currentSession.id,
-            member_id: memberId,
-            club_id: CLUB_ID,
-            check_in_time: timeStr,
-            status: 'PRESENT',
-            scan_method: method,
-            subscription_status: 'ACTIVE'
-        });
-
-        if (error) {
-            if (error.code === '23505') {           // déjà pointé sur cette séance
-                addHistory(memberId, fullName, 'SUCCESS', method);
-                setState('success', 'DÉJÀ POINTÉ', fullName);
-                beep(880, 0.2);
-                setTimeout(backToWaiting, 2000);
-                return;
-            }
-            throw error;
-        }
-
-        // Miroir table attendance historique (dashboard / présences mensuelles existantes)
+        // 5) Enregistrement de la présence (miroir table attendance)
         await supabase.from('attendance').insert({
-            member_id: memberId,
+            member_id: card.member_id,
             club_id: CLUB_ID,
-            attendance_date: now.toISOString().slice(0, 10),
+            attendance_date: dateStr,
             attendance_time: timeStr,
             month: now.toISOString().slice(0, 7)
         });
 
-        addHistory(memberId, fullName, 'SUCCESS', method);
-        setState('success', 'CARTE VALIDÉE', fullName);
+        // 6) Séance : enregistrer la présence en session (si disponible)
+        let sessionOk = false;
+        if (currentSession) {
+            const { error } = await supabase.from('session_attendances').insert({
+                session_id: currentSession.id,
+                member_id: card.member_id,
+                club_id: CLUB_ID,
+                check_in_time: timeStr,
+                status: 'PRESENT',
+                scan_method: method,
+                subscription_status: expired ? 'EXPIRED' : 'ACTIVE'
+            });
+            if (error) {
+                if (error.code === '23505') {
+                    // Déjà pointé sur cette séance — doublon malgré l'anti-
+                    // doublon global (collision séance présentée en parallèle) :
+                    // on considère le doublon comme succès car la présence
+                    // existe déjà globalement dans attendance.
+                    addHistory(normalizedUid, fullName, 'SUCCESS', method);
+                    setState('ok', 'ℹ DÉJÀ VALIDÉ', fullName + '\nPrésence déjà enregistrée');
+                    beep(880, 0.2);
+                    setTimeout(readyToScan, 2000);
+                    return;
+                }
+                throw error;
+            }
+            sessionOk = true;
+        }
+
+        // 7) Affichage du résultat (même si abonnement expiré : présence marquée)
+        if (expired) {
+            addHistory(normalizedUid, fullName, 'EXPIRED', method);
+            setState('expired', '⚠ PRÉSENCE ENREGISTRÉE',
+                `${fullName}\n${timeStr}\nAbonnement expiré — mais la présence a bien été enregistrée.${sessionOk ? '' : '\n(Aucune séance en cours — validée hors séance)'}`);
+        } else {
+            addHistory(normalizedUid, fullName, 'SUCCESS', method);
+            setState('success', '✓ PRÉSENCE VALIDÉE',
+                `${fullName}\n${timeStr}${sessionOk ? '' : '\n(Aucune séance en cours — validée hors séance)'}`);
+        }
         beep(880, 0.2);
-        setTimeout(backToWaiting, 2000);
+        setTimeout(readyToScan, 2500);
     } catch (err) {
         console.error(err);
-        addHistory(memberId || '???', null, 'ERROR', method);
+        addHistory(normalizedUid || '???', null, 'ERROR', method);
         setState('invalid', 'ERREUR', err.message);
         beep(600, 0.4);
-        setTimeout(backToWaiting, 3000);
+        setTimeout(readyToScan, 3000);
+    }
+}
+
+/* ---------------- Écoute automatique du lecteur R30 ----------------
+   Le R30 est un clavier HID : NFCReaderService arme l'écoute dès la
+   page ouverte (aucun bouton « Activer », aucune connexion à faire).
+   Chaque présentation d'une carte est traitée automatiquement. */
+let nfcPollingStarted = false;
+function armReader() {
+    if (nfcPollingStarted) return;
+    try {
+        NFCReaderService.connect()
+            .then(() => {
+                NFCReaderService.startPolling(uid => {
+                    if (typeof uid === 'string' && uid) handleScan(uid, 'NFC');
+                });
+                nfcPollingStarted = true;
+                console.log('[NFC Validator] Lecteur R30 (HID Keyboard) armé — écoute active.');
+            })
+            .catch(err => {
+                console.error('[NFC Validator] Armement lecteur :', err);
+                setState('invalid', 'LECTEUR INACTIF', err.message);
+            });
+    } catch (e) {
+        console.error('[NFC Validator] Armement lecteur (sync) :', e);
     }
 }
 
@@ -333,51 +410,26 @@ function addHistory(id, name, status, method) {
 }
 
 function renderHistory() {
-    const cls = { SUCCESS: 's-ok', EXPIRED: 's-ko', ERROR: 's-un' };
+    const cls = { SUCCESS: 's-ok', EXPIRED: 's-ko', UNASSIGNED: 's-un', ERROR: 's-un' };
     document.querySelector('#historyList tbody').innerHTML = history.map(h => `
         <tr>
-            <td>${h.id}</td>
             <td>${h.time}</td>
+            <td>${escapeHtml(h.label)}</td>
+            <td>${escapeHtml(h.id)}</td>
             <td class="${cls[h.status] || ''}">${h.status}</td>
-            <td>${h.method}</td>
+            <td>${escapeHtml(h.method)}</td>
         </tr>`).join('');
 }
 
-/* ---------------- Web NFC ---------------- */
-async function startNfc() {
-    if (!('NDEFReader' in window)) {
-        alert('Web NFC non supporté sur cet appareil/navigateur.\nUtilisez Chrome sur Android, ou la saisie manuelle.');
-        return;
-    }
-    try {
-        const ndef = new NDEFReader();
-        await ndef.scan();
-        setState('waiting', 'LECTEUR NFC', 'NFC actif — présentez une carte');
-        ndef.addEventListener('error', () => {
-            addHistory('UNKNOWN', null, 'ERROR', 'NFC');
-            setState('invalid', 'CARTE INVALIDE', '');
-            beep(600, 0.4);
-            setTimeout(backToWaiting, 2000);
-        });
-        ndef.addEventListener('reading', ({ message }) => {
-            let text = '';
-            for (const record of message.records) {
-                if (record.recordType === 'text') {
-                    text += new TextDecoder(record.encoding).decode(record.data);
-                }
-            }
-            handleScan(text.split('\n')[0], 'NFC');
-        });
-    } catch (err) {
-        alert('Impossible de démarrer le lecteur NFC : ' + err.message);
-    }
+function escapeHtml(s) {
+    return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-document.getElementById('startNfcBtn').addEventListener('click', startNfc);
+/* ---------------- Saisie manuelle (admin, secours) ---- */
 document.getElementById('manualBtn').addEventListener('click', () => {
     const val = document.getElementById('manualInput').value;
     if (val.trim()) {
-        handleScan(val, 'MANUAL');
+        handleScan(val.trim(), 'MANUAL');
         document.getElementById('manualInput').value = '';
     }
 });
@@ -386,7 +438,8 @@ document.getElementById('manualInput').addEventListener('keydown', e => {
 });
 
 loadCurrentSession();
-setState('waiting', 'LECTEUR NFC', 'En attente de carte');
+armReader();
+readyToScan();
 </script>
 </body>
 </html>
