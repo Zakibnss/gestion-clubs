@@ -2253,20 +2253,20 @@
 <div id="nfcScannerModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h2>📡 Validation de présence (lecteur NFC)</h2>
+            <h2>📡 التحقق من الحضور (قارئ NFC)</h2>
             <button class="modal-close" onclick="closeNfcScanner()">&times;</button>
         </div>
         <div id="nfcScannerBody">
             <!-- Sélecteur de mode de lecture -->
             <div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);">
-                <div style="font-weight:700;margin-bottom:8px;">Méthode de lecture NFC</div>
+                <div style="font-weight:700;margin-bottom:8px;">طريقة قراءة NFC</div>
                 <label style="font-weight:400;display:block;margin:4px 0;cursor:pointer;">
                     <input type="radio" name="nfcMode" value="external" checked onchange="setNfcMode('external')">
-                    🔌 Lecteur NFC externe (USB / USB OTG — HID Keyboard)
+                    🔌 قارئ NFC خارجي (USB / USB OTG — HID Keyboard)
                 </label>
                 <label id="nfcIntegratedModeWrap" style="font-weight:400;display:block;margin:4px 0;cursor:pointer;">
                     <input type="radio" name="nfcMode" value="android-integrated" onchange="setNfcMode('android-integrated')">
-                    📱 NFC intégré du smartphone (Web NFC, expérimental)
+                    📱 NFC مدمج في الهاتف (Web NFC، تجريبي)
                 </label>
                 <div id="nfcWebNfcStatus" style="margin-top:8px;font-size:.85rem;color:var(--text-secondary);"></div>
             </div>
@@ -2275,35 +2275,35 @@
             <div id="nfcReaderStatus" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:rgba(220,53,69,.1);border:1px solid #dc3545;margin-bottom:12px;">
                 <span style="font-size:1.2rem;">🔴</span>
                 <div>
-                    <div style="font-weight:700;" id="nfcReaderStatusTitle">Lecteur non connecté</div>
-                    <div style="font-size:.8rem;color:var(--text-secondary);" id="nfcReaderStatusSub">Prêt automatiquement — présentez simplement une carte.</div>
+                    <div style="font-weight:700;" id="nfcReaderStatusTitle">القارئ غير متصل</div>
+                    <div style="font-size:.8rem;color:var(--text-secondary);" id="nfcReaderStatusSub">جاهز تلقائياً — قدّم البطاقة فقط.</div>
                 </div>
             </div>
 
             <div style="display:flex;gap:10px;margin:12px 0;flex-wrap:wrap;">
-                <button class="btn btn-primary" id="nfcConnectBtn" onclick="connectNfcReader()">🔌 Connecter le lecteur</button>
-                <button class="btn btn-secondary" id="nfcTestBtn" onclick="testNfcReader()">🧪 Tester le lecteur</button>
-                <button class="btn btn-secondary" id="nfcDisconnectBtn" style="display:none;" onclick="disconnectNfcReader()">⏹ Déconnecter</button>
+                <button class="btn btn-primary" id="nfcConnectBtn" onclick="connectNfcReader()">🔌 توصيل القارئ</button>
+                <button class="btn btn-secondary" id="nfcTestBtn" onclick="testNfcReader()">🧪 اختبار القارئ</button>
+                <button class="btn btn-secondary" id="nfcDisconnectBtn" style="display:none;" onclick="disconnectNfcReader()">⏹ قطع الاتصال</button>
             </div>
 
             <!-- Cœur du scanner -->
             <div id="nfcScannerCore" style="text-align:center;padding:22px 8px;border-radius:14px;background:rgba(255,255,255,.03);border:1px dashed var(--border);display:none;">
                 <div style="font-size:2.4rem;">📡</div>
-                <div style="font-size:1.15rem;font-weight:700;margin-top:6px;" id="nfcScannerTitle">Prêt à scanner</div>
-                <div style="color:var(--text-secondary);margin-top:4px;" id="nfcScannerSub">Placez la carte NFC sur le lecteur externe.</div>
+                <div style="font-size:1.15rem;font-weight:700;margin-top:6px;" id="nfcScannerTitle">جاهز للمسح</div>
+                <div style="color:var(--text-secondary);margin-top:4px;" id="nfcScannerSub">ضع البطاقة على القارئ الخارجي.</div>
                 <div id="nfcScanResult" style="margin-top:14px;"></div>
             </div>
 
             <details style="margin-top:14px;font-size:.85rem;">
-                <summary style="cursor:pointer;color:var(--text-secondary);">⌨️ Saisie manuelle (administrateur — cas exceptionnel)</summary>
-                <div style="display:flex;gap:8px;margin-top:8px;">
-                    <input type="text" id="nfcScanInput" class="form-control" placeholder="UID de la carte" autocomplete="off">
-                    <button class="btn btn-secondary" onclick="performNfcScan()">Valider</button>
+                <summary style="cursor:pointer;color:var(--text-secondary);">⌨️ إدخال يدوي (للمسؤول فقط — حالات استثنائية)</summary>
+                <div style="display:flex;gap:8px;margin-top:8px;direction:rtl;">
+                    <input type="text" id="nfcScanInput" class="form-control" placeholder="معرّف البطاقة UID" autocomplete="off" style="direction:ltr;text-align:left;">
+                    <button class="btn btn-secondary" onclick="performNfcScan()">تأكيد</button>
                 </div>
             </details>
 
             <hr style="margin:16px 0;border:none;border-top:1px solid var(--border);">
-            <h3 style="font-size:.95rem;">🕓 Derniers scans</h3>
+            <h3 style="font-size:.95rem;">🕓 آخر عمليات المسح</h3>
             <div id="nfcScanHistory" style="margin-top:10px;max-height:260px;overflow-y:auto;"></div>
         </div>
     </div>
@@ -10198,6 +10198,60 @@ loadMembers().then(() => {
         let renewalMemberId = null;
         let renewalSeasonKey = null;
 
+        // Libellé des mois payés automatiquement : de septembre de la saison
+        // jusqu'au mois du renouvellement INCLUS (ex. "sept. 2026 → nov. 2026").
+        function renewalMonthsLabel(seasonKey, startDateStr) {
+            const startYear = parseInt(seasonKey.split('/')[0], 10);
+            const end = new Date(startDateStr + 'T00:00:00');
+            const label = [];
+            const cur = new Date(startYear, 8, 1); // 1er septembre de la saison
+            while (cur <= end) {
+                label.push(cur.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' }));
+                cur.setMonth(cur.getMonth() + 1);
+            }
+            return label.join(' → ');
+        }
+
+        // Recalcule la saison visée + l'aperçu des mois payés selon la date
+        // choisie dans la modale, et bloque si déjà inscrit pour cette saison.
+        async function renderRenewalPreview(memberId) {
+            if (!renewalMemberId) return;
+            const dateEl = document.getElementById('renewalStartDate');
+            const box = document.getElementById('renewalTargetSeason');
+            const preview = document.getElementById('renewalMonthsPreview');
+            const msg = document.getElementById('renewalMessage');
+            const startDate = dateEl ? dateEl.value : '';
+            if (!startDate || !box || !msg) return;
+
+            const season = getSeasonKey(new Date(startDate + 'T00:00:00'));
+            renewalSeasonKey = season;
+            box.textContent = season;
+
+            // Anti-doublon : refus si une inscription existe déjà pour cette saison
+            const { data: existingReg } = await supabase
+                .from('registrations')
+                .select('id')
+                .eq('member_id', memberId)
+                .eq('season_key', season)
+                .maybeSingle();
+
+            if (existingReg) {
+                renewalSeasonKey = null;
+                msg.innerHTML = `<div class="alert alert-warning">Cet adhérent est déjà inscrit pour la saison ${season}.</div>`;
+                if (preview) preview.innerHTML = '';
+                return;
+            }
+
+            msg.innerHTML = '';
+            if (preview) {
+                const paid = renewalMonthsLabel(season, startDate);
+                const paidOn = new Date(startDate + 'T00:00:00').toLocaleDateString('fr-FR');
+                preview.innerHTML = `<div style="font-size:.85rem; color: var(--success-color); text-align:center;">
+                    ✅ Mois réglés automatiquement (${season}) : <b>${paid}</b> — payés le ${paidOn}
+                </div>`;
+            }
+        }
+
         async function openRenewalModal(memberId) {
             try {
                 const { data: member, error } = await supabase
@@ -10219,28 +10273,19 @@ loadMembers().then(() => {
 
                 const now = new Date();
                 const currentSeason = getSeasonKey(now);
-                const newSeason = nextSeasonKey(currentSeason);
-
-                // Refus si déjà inscrit pour la nouvelle saison
-                const { data: existingReg } = await supabase
-                    .from('registrations')
-                    .select('id, season_key')
-                    .eq('member_id', memberId)
-                    .eq('season_key', newSeason)
-                    .maybeSingle();
-                if (existingReg) {
-                    alert(`Cet adhérent est déjà inscrit pour la saison ${newSeason}.`);
-                    return;
-                }
-
-                renewalMemberId = memberId;
-                renewalSeasonKey = newSeason;
-
-                const startDate = [
+                const defaultStartDate = [
                     now.getFullYear(),
                     String(now.getMonth() + 1).padStart(2, '0'),
                     String(now.getDate()).padStart(2, '0')
                 ].join('-');
+
+                // SAISON VISÉE = saison de la date de renouvellement choisie
+                // (règle : la saison commence en septembre — getSeasonKey).
+                const startDate = defaultStartDate;
+                const targetSeason = getSeasonKey(new Date(startDate + 'T00:00:00'));
+
+                renewalMemberId = memberId;
+                renewalSeasonKey = targetSeason;
 
                 document.getElementById('renewalContent').innerHTML = `
                     <div style="background: rgba(255,255,255,0.05); padding: 16px; border-radius: 10px; text-align:center;">
@@ -10257,15 +10302,17 @@ loadMembers().then(() => {
                             <div style="font-weight:700; margin-top:4px;">${currentSeason}</div>
                         </div>
                         <div style="background: rgba(40,167,69,0.12); padding:10px; border-radius:10px;">
-                            <div style="font-size:.8rem; color: var(--text-secondary);">NOUVELLE SAISON</div>
-                            <div style="font-weight:700; margin-top:4px; color: var(--success-color);">${escapeHtml(newSeason)}</div>
+                            <div style="font-size:.8rem; color: var(--text-secondary);">SAISON VISÉE (selon date)</div>
+                            <div id="renewalTargetSeason" style="font-weight:700; margin-top:4px; color: var(--success-color);">${escapeHtml(targetSeason)}</div>
                         </div>
                     </div>
 
                     <p style="font-size:.9rem; color: var(--text-secondary); text-align:center; margin: 8px 0 14px;">
-                        Les informations de l'adhérent seront conservées. Une nouvelle inscription
-                        sera créée pour la saison ${escapeHtml(newSeason)}. Les paiements et les
-                        présences de la nouvelle saison commenceront à zéro.
+                        Les informations de l'adhérent seront conservées (même carte NFC).
+                        Une nouvelle inscription sera créée pour la saison ${escapeHtml(targetSeason)}.
+                        Tous les mois de septembre jusqu'au mois du renouvellement inclus
+                        seront marqués payés automatiquement. Les présences de la nouvelle
+                        saison démarreront à zéro, l'historique précédent reste intact.
                     </p>
 
                     <div class="form-group" style="margin-top:10px;">
@@ -10281,12 +10328,15 @@ loadMembers().then(() => {
                         <input type="date" id="renewalStartDate" class="form-control" value="${startDate}">
                     </div>
                     <div id="renewalMessage" style="margin-top:8px;"></div>
+                    <div id="renewalMonthsPreview" style="margin-top:8px;"></div>
                     <div style="display:flex; gap:10px; justify-content:center; margin-top:16px;">
                         <button class="btn btn-secondary" onclick="closeModal('renewalModal')">Annuler</button>
                         <button class="btn btn-success" id="renewalConfirmBtn">Confirmer le renouvellement</button>
                     </div>
                 `;
                 document.getElementById('renewalConfirmBtn').onclick = confirmRenewal;
+                document.getElementById('renewalStartDate').addEventListener('change', () => renderRenewalPreview(memberId));
+                renderRenewalPreview(memberId);
                 openModal('renewalModal');
             } catch (error) {
                 console.error('Erreur ouverture renouvellement:', error);
@@ -10306,16 +10356,20 @@ loadMembers().then(() => {
             const startDate = document.getElementById('renewalStartDate').value || new Date().toISOString().split('T')[0];
 
             try {
+                // Saison dérivée de la date choisie (même règle que la RPC) :
+                // un renouvellement ne peut jamais créer un doublon en base.
+                const season = getSeasonKey(new Date(startDate + 'T00:00:00'));
+                renewalSeasonKey = season;
                 // La RPC est transactionnelle et refuse le double renouvellement.
                 const { data, error } = await supabase.rpc('renew_member_registration', {
                     p_member_id: renewalMemberId,
-                    p_season_key: renewalSeasonKey,
+                    p_season_key: season,
                     p_subscription_type: type,
                     p_start_date: startDate
                 });
                 if (error) {
                     if ((error.message || '').toLowerCase().includes('déjà inscrit')) {
-                        alert(`Cet adhérent est déjà inscrit pour la saison ${renewalSeasonKey}.`);
+                        alert(`Cet adhérent est déjà inscrit pour la saison ${season}.`);
                     } else {
                         alert('Erreur renouvellement : ' + error.message);
                     }
@@ -10325,16 +10379,20 @@ loadMembers().then(() => {
                 }
 
                 const started = startDate.split('-').reverse().join('/');
+                const end = computeEndDate({ start_date: startDate, subscription: type });
+                const ended = end ? end.toLocaleDateString('fr-FR') : '—';
+                const paidMonths = renewalMonthsLabel(season, startDate);
                 document.getElementById('renewalContent').innerHTML = `
                     <div style="text-align:center; padding: 22px 8px;">
                         <div style="font-size:3.2rem; margin-bottom:10px;">✅</div>
                         <h3 style="margin-bottom:12px; color: var(--success-color);">Inscription renouvelée avec succès</h3>
                         <div style="background: rgba(255,255,255,0.05); padding:14px; border-radius:10px; font-size:.95rem; line-height:1.9;">
-                            <div><b>Saison :</b> ${escapeHtml(renewalSeasonKey)}</div>
+                            <div><b>Saison :</b> ${escapeHtml(season)}</div>
                             <div><b>Date de début :</b> ${started}</div>
+                            <div><b>Date de fin :</b> ${ended}</div>
                             <div><b>Type :</b> ${RENEWAL_TYPES[type] || type}</div>
                             <div><b>Présences :</b> 0 (démarrage à zéro)</div>
-                            <div><b>Paiements :</b> 0 (nouveaux mois à régler)</div>
+                            <div><b>Paiements :</b> ${paidMonths} payés automatiquement</div>
                         </div>
                         <p style="color: var(--text-secondary); font-size:.85rem; margin-top:14px;">
                             L'historique de la saison précédente et la carte NFC sont conservés.

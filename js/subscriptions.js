@@ -64,10 +64,15 @@ async function openMemberMonths(memberId) {
     const startMonth = (member.start_date || new Date().toISOString().slice(0, 10)).slice(0, 7);
     const nowMonth = new Date().toISOString().slice(0, 7);
 
-    // Fenêtre : du mois de début au mois courant (+11 mois pour prépaiement)
-    const months = [];
+    // Fenêtre : du début de la SAISON (septembre) au mois courant (+11 mois
+    // pour prépaiement). Les mois antérieurs à la date de début d'abonnement
+    // ne sont affichés que s'ils existent comme PAYÉ dans la base
+    // (règle : renouvellement → septembre jusqu'au mois du renouvellement).
     let [y, mo] = startMonth.split('-').map(Number);
     const [cy, cm] = nowMonth.split('-').map(Number);
+    const seasonStartY = mo >= 9 ? y : y - 1;
+    y = seasonStartY; mo = 9;
+    const months = [];
     while (y < cy + 1 || (y === cy + 1 && mo <= cm)) {
         months.push(`${y}-${String(mo).padStart(2, '0')}`);
         mo++; if (mo > 12) { mo = 1; y++; }
@@ -98,6 +103,11 @@ async function openMemberMonths(memberId) {
     }
     const startMonthOfMember = (member.start_date || '').slice(0, 7);
 
+    // Mois réellement affichés : tout mois >= début d'abonnement, plus les
+    // mois de début de saison confirmés comme PAYÉ en base (renouvellement).
+    const visibleMonths = months.filter(m => m >= startMonthOfMember ||
+        ((payMap[m] || {}).status === 'PAYE'));
+
     // Un mois est-il payé ? (paiement enregistré OU couvert par la période)
     function isMonthPaid(m) {
         const p = payMap[m];
@@ -108,7 +118,7 @@ async function openMemberMonths(memberId) {
 
     const grid = document.getElementById('memberMonthsGrid');
     grid.className = 'sub-month-grid';
-    grid.innerHTML = months.map(m => {
+    grid.innerHTML = visibleMonths.map(m => {
         const p = payMap[m];
         const paid = isMonthPaid(m);
         const legacyOnly = paid && !(p && p.status === 'PAYE');
@@ -126,10 +136,10 @@ async function openMemberMonths(memberId) {
         </div>`;
     }).join('');
 
-    const paidCount = months.filter(isMonthPaid).length;
+    const paidCount = visibleMonths.filter(isMonthPaid).length;
     document.getElementById('monthsSummary').innerHTML =
         `<span class="stat-pill">Mois payés : <b>${paidCount}</b></span>
-         <span class="stat-pill">Mois impayés : <b>${months.length - paidCount}</b></span>`;
+         <span class="stat-pill">Mois impayés : <b>${visibleMonths.length - paidCount}</b></span>`;
 }
 
 async function togglePayment(memberId, periodMonth, currentState) {

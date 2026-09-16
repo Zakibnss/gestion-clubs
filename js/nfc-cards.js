@@ -178,11 +178,16 @@ window.NfcCards = (function () {
                 detail: 'Cette carte n\'est attribuée à aucun adhérent.', member: null };
         }
 
-        // Adhérent + groupe courant
-        const { data: member } = await window.supabase.from('members')
-            .select('id, first_name, last_name, photo_url, current_group_id, club_id')
+        // Adhérent + groupe courant (une seule requête via join REST)
+        const { data: member, error: memberErr } = await window.supabase
+            .from('members')
+            .select(`
+                id, first_name, last_name, photo_url, current_group_id, club_id,
+                groups:current_group_id ( name )
+            `)
             .eq('id', card.member_id)
             .maybeSingle();
+        if (memberErr) throw memberErr;
         if (!member) {
             await insertEvent({ club_id: clubId, uid: uidClean, member_id: card.member_id,
                 scan_date: dateStr, scan_result: 'unknown', method });
@@ -190,18 +195,30 @@ window.NfcCards = (function () {
                 detail: 'La carte est attribuée à un adhérent absent.', member: null };
         }
 
-        let groupName = null;
-        if (member.current_group_id) {
-            const { data: g } = await window.supabase.from('groups')
-                .select('name').eq('id', member.current_group_id).maybeSingle();
-            groupName = g ? g.name : null;
-        }
+        const groupName = (member.groups && member.groups.name) || null;
 
-        const { data: st } = await window.supabase.from('member_subscription_status')
-            .select('is_active, end_effective')
-            .eq('member_id', card.member_id)
-            .maybeSingle();
+        // Abonnement + présence existante du jour : requêtes PARALLÈLES
+        // (au lieu de 3 requêtes séquentielles -> réponse plus rapide).
+        const [stRes, dupRes] = await Promise.all([
+            window.supabase
+                .from('member_subscription_status')
+                .select('is_active, end_effective')
+                .eq('member_id', card.member_id)
+                .maybeSingle(),
+            opts.allowDuplicate ? Promise.resolve({ data: null }) :
+                (() => {
+                    let q = window.supabase
+                        .from('attendance')
+                        .select('id, attendance_time')
+                        .eq('member_id', card.member_id)
+                        .eq('attendance_date', dateStr);
+                    if (clubId) q = q.eq('club_id', clubId);
+                    return q.limit(1);
+                })()
+        ]);
 
+        const st = stRes.data;
+        const existing = dupRes.data;
         const fullName = `${member.last_name} ${member.first_name}`;
 
         // LA PRÉSENCE EST ENREGISTRÉE MÊME SI L'ABONNEMENT EST EXPIRÉ :
@@ -211,14 +228,8 @@ window.NfcCards = (function () {
 
         // Vérif : présence déjà enregistrée aujourd'hui ? (anti-doublon)
         if (!opts.allowDuplicate) {
-            const { data: existing } = await window.supabase
-                .from('attendance')
-                .select('id, attendance_time')
-                .eq('member_id', card.member_id)
-                .eq('attendance_date', dateStr)
-                .limit(1);
             if (existing && existing.length) {
-                await insertEvent({ club_id: clubId, uid: uidClean, member_id: card.member_id,
+                insertEvent({ club_id: clubId, uid: uidClean, member_id: card.member_id,
                     scan_date: dateStr, scan_result: expired ? 'expired' : 'present', method, duplicate: true });
                 return { ok: true, duplicate: true, result: 'present', uid: uidClean,
                     label: 'Présence déjà enregistrée',
@@ -227,21 +238,21 @@ window.NfcCards = (function () {
             }
         }
 
-        // Insert présence (miroir des rapports mensuels legacy)
-        // Nécessite un club identifié ; sinon on enregistre uniquement l'évènement.
+        // Insert présence + évènement : exécutés EN PARALLÈLE (non bloquant).
+        // L'UI affiche immédiatement le résultat, les écritures DB suivent.
+        const writes = [];
         if (clubId) {
-            const { error: insErr } = await window.supabase.from('attendance').insert({
+            writes.push(window.supabase.from('attendance').insert({
                 member_id: card.member_id,
                 club_id: clubId,
                 attendance_date: dateStr,
                 attendance_time: timeStr,
                 month
-            });
-            if (insErr) throw insErr;
+            }).then(({ error }) => { if (error) throw error; }));
         }
-
-        await insertEvent({ club_id: clubId, uid: uidClean, member_id: card.member_id,
-            scan_date: dateStr, scan_result: expired ? 'expired' : 'present', method });
+        writes.push(insertEvent({ club_id: clubId, uid: uidClean, member_id: card.member_id,
+            scan_date: dateStr, scan_result: expired ? 'expired' : 'present', method }));
+        await Promise.all(writes);
 
         if (expired) {
             return { ok: true, expired: true, uid: uidClean, result: 'expired',
