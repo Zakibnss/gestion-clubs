@@ -89,6 +89,18 @@
         .m-mid { background:#fff6dd; color:#9a7b00; }
         .m-ko  { background:#ffecec; color:#c0392b; }
 
+        .week { padding:4px 24px 20px; display:flex; flex-direction:column; gap:8px; }
+        .wrow {
+            display:flex; justify-content:space-between; align-items:center;
+            padding:10px 14px; border-radius:12px;
+            background:#f6f7fb; font-size:14px;
+        }
+        .wrow .wd { font-weight:700; }
+        .wrow .wt { color:#c8102e; font-weight:800; }
+        .wrow .wx { font-size:11px; color:#9a7b00; background:#fff6dd;
+                    border-radius:20px; padding:2px 8px; margin-left:8px; }
+        .empty-week { color:#aaa; font-size:13px; padding:0 24px 18px; }
+
         .footer {
             text-align:center;
             font-size:11.5px;
@@ -157,6 +169,9 @@ async function load() {
     const active = m.sub_status === 'ACTIF';
     const absences = m.absences && typeof m.absences === 'object'
         ? Object.entries(m.absences) : [];
+    const week = Array.isArray(m.week_sessions) ? m.week_sessions : [];
+    const DAYS = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+    const weekdayFr = (d) => DAYS[new Date(d + 'T00:00:00').getDay()];
 
     app.innerHTML = `
         <div class="card-head">
@@ -169,6 +184,7 @@ async function load() {
         <div class="rows">
             <div class="row"><span class="k">Date de naissance</span><span class="v">${frDate(m.dob)}</span></div>
             <div class="row"><span class="k">Groupe</span><span class="v">${esc(m.group_name || '—')}</span></div>
+            ${m.rein_date ? `<div class="row"><span class="k">Inscrit depuis</span><span class="v">${frDate(m.rein_date)}</span></div>` : ''}
             ${!active ? `<div class="row"><span class="k">Expiré le</span><span class="v">${frDate(m.sub_end)}</span></div>` : ''}
             <div class="row"><span class="k">Prochaine séance</span>
                 <span class="v">${m.next_session_date
@@ -177,6 +193,16 @@ async function load() {
             <div class="row"><span class="k">Présences ce mois</span>
                 <span class="v">${m.month_present ?? '—'} / ${m.month_target ?? '—'}</span></div>
         </div>
+
+        <h3 class="sec">Séances de la semaine</h3>
+        ${week.length ? `
+        <div class="week">
+            ${week.map(s => `
+            <div class="wrow">
+                <span class="wd">${weekdayFr(s.date)} ${frDate(s.date)}${s.extra ? '<span class="wx">séance en plus</span>' : ''}</span>
+                <span class="wt">${String(s.time || '').slice(0, 5)}</span>
+            </div>`).join('')}
+        </div>` : '<div class="empty-week">Aucune séance cette semaine.</div>'}
 
         ${absences.length ? `
         <h3 class="sec">Absences par mois</h3>

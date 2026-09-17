@@ -57,7 +57,7 @@ async function runIndividualReport() {
 
     try {
         const { data: member } = await supabase.from('members')
-            .select('id, first_name, last_name, current_group_id').eq('id', memberId).single();
+            .select('id, first_name, last_name, current_group_id, start_date').eq('id', memberId).single();
 
         let groupId = member.current_group_id;
         if (!groupId) {
@@ -66,56 +66,70 @@ async function runIndividualReport() {
             groupId = gm?.[0]?.group_id;
         }
 
-        const [sessionsRes, attRes, legacyRes, groupRes] = await Promise.all([
-            supabase.from('sessions')
-                .select('id, group_id, session_date, start_time, status')
-                .eq('club_id', clubId)
-                .gte('session_date', from).lte('session_date', to)
-                .neq('status', 'cancelled')
-                .order('session_date'),
-            supabase.from('session_attendances')
-                .select('session_id, check_in_time, status')
-                .eq('member_id', memberId),
-            // Pointages legacy (scanner QR / validation manuelle / NFC miroir)
+        // Date de réinscription : aucune présence/absence avant (source unique)
+        const { data: regs } = await supabase.from('registrations')
+            .select('start_date')
+            .eq('member_id', memberId)
+            .eq('is_active', true)
+            .order('start_date', { ascending: false })
+            .limit(1);
+        const rein = (regs?.[0]?.start_date || member.start_date || null);
+        const effFrom = (rein && rein > from) ? rein : from;
+
+        const [groupRes, attLegacyRes] = await Promise.all([
+            groupId ? supabase.from('groups').select('name').eq('id', groupId).single()
+                    : Promise.resolve({ data: null }),
             supabase.from('attendance')
                 .select('attendance_date, attendance_time')
                 .eq('member_id', memberId)
-                .gte('attendance_date', from).lte('attendance_date', to),
-            groupId ? supabase.from('groups').select('name').eq('id', groupId).single()
-                    : Promise.resolve({ data: null })
+                .gte('attendance_date', from).lte('attendance_date', to)
         ]);
 
-        // Index des présences legacy par date
+        // Présences legacy par date (NFC / scan manuel / pointage)
         const legacyTimes = {};
-        (legacyRes.data || []).forEach(a => {
+        (attLegacyRes.data || []).forEach(a => {
             legacyTimes[a.attendance_date] = (a.attendance_time || '').slice(0, 5);
         });
 
-        const groupSessions = groupId
-            ? (sessionsRes.data || []).filter(s => s.group_id === groupId)
-            : (sessionsRes.data || []);
+        // Présences enregistrées au niveau des séances (session_attendances)
+        let sessionPresenceDates = new Set();
+        if (groupId) {
+            const { data: sa } = await supabase.from('session_attendances')
+                .select('session_id')
+                .eq('member_id', memberId)
+                .neq('status', 'ABSENT');
+            const saIds = (sa || []).map(x => x.session_id);
+            if (saIds.length) {
+                const { data: sRows } = await supabase.from('sessions')
+                    .select('session_date')
+                    .in('id', saIds)
+                    .gte('session_date', from).lte('session_date', to)
+                    .eq('group_id', groupId);
+                (sRows || []).forEach(r => sessionPresenceDates.add(r.session_date));
+            }
+        }
 
-        const attMap = {};
-        (attRes.data || []).forEach(a => attMap[a.session_id] = a);
+        // Séances planifiées du groupe (source unique : planning + extras − pauses − annulées)
+        const planned = groupId ? await getGroupSessions(groupId, effFrom, to) : [];
 
         let rows;
-        if (groupSessions.length) {
-            rows = groupSessions.map(s => {
-                const a = attMap[s.id];
-                const legacyTime = legacyTimes[s.session_date];
-                const present = (!!a && a.status !== 'ABSENT') || !!legacyTime;
+        if (planned.length) {
+            rows = planned.map(s => {
+                const present = legacyTimes[s.session_date] || sessionPresenceDates.has(s.session_date);
                 return {
                     date: s.session_date,
-                    time: (a?.check_in_time || legacyTime || '').slice(0, 5),
-                    present
+                    time: (legacyTimes[s.session_date] || '').slice(0, 5),
+                    present: !!present,
+                    extra: s.source === 'extra'
                 };
             });
         } else {
-            // Aucune séance planifiée sur la période → utiliser les pointages legacy
+            // Aucune séance planifiée sur la période → pointages legacy
             rows = Object.keys(legacyTimes).sort().map(d => ({
                 date: d,
                 time: legacyTimes[d],
-                present: true
+                present: true,
+                extra: false
             }));
         }
 
@@ -130,6 +144,7 @@ async function runIndividualReport() {
 
         document.getElementById('individualReportResult').innerHTML = `
             <h3 style="color:var(--primary-color)">👤 ${escapeHtmlV2(memberName)} — ${escapeHtmlV2(groupName)}</h3>
+            ${rein ? `<p style="color:var(--text-secondary);font-size:.85rem">ℹ️ Objectif compté depuis la réinscription : ${fmtDateV2(rein)}.</p>` : ''}
             <div class="report-stats">
                 <span class="stat-pill">Séances : <b>${rows.length}</b></span>
                 <span class="stat-pill">Présences : <b>${present}</b></span>
@@ -141,7 +156,7 @@ async function runIndividualReport() {
                     <thead><tr><th>Date</th><th>Pointage</th><th>Statut</th></tr></thead>
                     <tbody>${rows.map(r => `
                         <tr>
-                            <td class="row-label">${fmtDateV2(r.date)}</td>
+                            <td class="row-label">${fmtDateV2(r.date)}${r.extra ? ' <span class="session-status live">+ extra</span>' : ''}</td>
                             <td>${r.time || '-'}</td>
                             <td class="${r.present ? 'cell-p' : 'cell-a'}">${r.present ? 'Présent' : 'Absent'}</td>
                         </tr>`).join('')}
@@ -151,7 +166,8 @@ async function runIndividualReport() {
 
         setLastReport('Rapport de présence — ' + memberName, headers, csvRows,
             [`Adhérent : ${memberName}`, `Groupe : ${groupName}`,
-             `Période : ${fmtDateV2(from)} → ${fmtDateV2(to)}`],
+             `Période : ${fmtDateV2(from)} → ${fmtDateV2(to)}`,
+             rein ? `Réinscription : ${fmtDateV2(rein)}` : null],
             [['Séances', rows.length], ['Présences', present], ['Absences', rows.length - present], ['Taux', rate.toFixed(2) + ' %']],
             buildDetailHtml(rows));
     } catch (err) {
@@ -177,7 +193,7 @@ async function runGroupMatrix() {
         const [groupRes, sessionsRes, gmRes] = await Promise.all([
             supabase.from('groups').select('name').eq('id', groupId).single(),
             supabase.from('sessions')
-                .select('id, session_date, start_time')
+                .select('id, session_date')
                 .eq('group_id', groupId)
                 .gte('session_date', from).lte('session_date', to)
                 .neq('status', 'cancelled')
@@ -187,7 +203,7 @@ async function runGroupMatrix() {
                 .eq('group_id', groupId)
         ]);
 
-        // Membres qui appartenaient au groupe durant la période (§30 historique)
+        // Membres qui appartenaient au groupe durant la période
         const memberIds = (gmRes.data || [])
             .filter(gm => gm.start_date <= to && (!gm.end_date || gm.end_date >= from))
             .map(gm => gm.member_id);
@@ -197,33 +213,60 @@ async function runGroupMatrix() {
             return;
         }
 
-        const [membersRes, saRes, legacyRes] = await Promise.all([
-            supabase.from('members').select('id, first_name, last_name').in('id', memberIds),
+        const [membersRes, saRes, legacyRes, regsRes] = await Promise.all([
+            supabase.from('members').select('id, first_name, last_name, start_date').in('id', memberIds),
             supabase.from('session_attendances')
                 .select('member_id, session_id, check_in_time, status')
                 .in('session_id', (sessionsRes.data || []).map(s => s.id)),
-            // Pointages legacy par date (QR / manuel)
+            // Pointages legacy par date (QR / manuel / NFC miroir)
             supabase.from('attendance')
                 .select('member_id, attendance_date')
                 .in('member_id', memberIds)
-                .gte('attendance_date', from).lte('attendance_date', to)
+                .gte('attendance_date', from).lte('attendance_date', to),
+            supabase.from('registrations')
+                .select('member_id, start_date')
+                .eq('is_active', true)
+                .in('member_id', memberIds)
         ]);
+
+        // Séances planifiées = source unique (planning + extras − pauses − annulées)
+        const planned = await getGroupSessions(groupId, from, to);
+        const sessionDateById = {};
+        (sessionsRes.data || []).forEach(s => sessionDateById[s.id] = s.session_date);
 
         // Clés "member|date" présentes dans le système legacy
         const legacySet = new Set(
             (legacyRes.data || []).map(a => a.member_id + '|' + a.attendance_date)
         );
 
-        const attBySession = {};
+        // Présences niveau séance : member_id -> Set(session_date)
+        const presDateByMember = {};
         (saRes.data || []).forEach(a => {
-            (attBySession[a.session_id] = attBySession[a.session_id] || []).push(a);
+            if (a.status === 'ABSENT') return;
+            const d = sessionDateById[a.session_id];
+            if (!d) return;
+            (presDateByMember[a.member_id] = presDateByMember[a.member_id] || new Set()).add(d);
         });
+        const presentOn = (mid, d) =>
+            (presDateByMember[mid] && presDateByMember[mid].has(d)) || legacySet.has(mid + '|' + d);
+
+        // Date de réinscription par membre (source unique)
+        const reinOf = {};
+        (membersRes.data || []).forEach(m => reinOf[m.id] = m.start_date || null);
+        (regsRes.data || []).forEach(r => {
+            if (!reinOf[r.member_id] || r.start_date > reinOf[r.member_id]) reinOf[r.member_id] = r.start_date;
+        });
+        const startOfMembership = {};
+        (gmRes.data || []).forEach(gm => {
+            startOfMembership[gm.member_id] = gm.start_date;
+        });
+
         const nameOf = {};
         (membersRes.data || []).forEach(m =>
             nameOf[m.id] = `${m.last_name} ${m.first_name}`);
         memberIds.sort((a, b) => (nameOf[a] || '').localeCompare(nameOf[b] || ''));
 
-        const sessions = sessionsRes.data || [];
+        const sessions = planned;
         const headers = ['Adhérent', ...sessions.map(s => fmtDateV2(s.session_date)), 'Présent', 'Absent'];
 
         const bodyRows = [];
@@ -231,26 +274,21 @@ async function runGroupMatrix() {
             ${sessions.map(s => `<th>${fmtDateV2(s.session_date)}</th>`).join('')}<th>P</th><th>A</th></tr></thead><tbody>`;
 
         memberIds.forEach(mid => {
+            const candidates = [from, reinOf[mid], startOfMembership[mid]].filter(Boolean).sort();
+            const effStart = candidates.length ? candidates[candidates.length - 1] : from;
             let pCount = 0;
             const cells = sessions.map(s => {
-                const rec = (attBySession[s.id] || []).find(a => a.member_id === mid);
-                const legacy = legacySet.has(mid + '|' + s.session_date);
-                if ((rec && rec.status !== 'ABSENT') || legacy) {
+                if (s.session_date < effStart) return '<td class="cell-extra">·</td>';
+                if (presentOn(mid, s.session_date)) {
                     pCount++;
-                    return `<td class="cell-p">P${rec && rec.check_in_time ? ' ' + rec.check_in_time.slice(0, 5) : ''}</td>`;
+                    return `<td class="cell-p">P</td>`;
                 }
                 return '<td class="cell-a">A</td>';
             }).join('');
-            const absent = sessions.length - pCount;
+            const absent = sessions.filter(s => s.session_date >= effStart).length - pCount;
             html += `<tr><td class="row-label">${escapeHtmlV2(nameOf[mid] || mid)}</td>${cells}<td><b>${pCount}</b></td><td><b>${absent}</b></td></tr>`;
             bodyRows.push([nameOf[mid] || mid,
-                ...sessions.map(s => {
-                    const rec = (attBySession[s.id] || []).find(a => a.member_id === mid);
-                    const legacyOk = legacySet.has(mid + '|' + s.session_date);
-                    return ((rec && rec.status !== 'ABSENT') || legacyOk)
-                        ? `P${rec && rec.check_in_time ? ' ' + rec.check_in_time.slice(0, 5) : ''}`
-                        : 'A';
-                }),
+                ...sessions.map(s => (s.session_date < effStart) ? '·' : (presentOn(mid, s.session_date) ? 'P' : 'A')),
                 pCount, absent]);
         });
         html += '</tbody></table>';
@@ -258,13 +296,14 @@ async function runGroupMatrix() {
         document.getElementById('groupMatrixResult').innerHTML = `
             <h3 style="color:var(--primary-color)">🥊 ${escapeHtmlV2(groupRes.data?.name || '')}</h3>
             <div class="report-stats">
-                <span class="stat-pill">Nombre de séances : <b>${sessions.length}</b></span>
+                <span class="stat-pill">Séances planifiées : <b>${sessions.length}</b></span>
                 <span class="stat-pill">Adhérents : <b>${memberIds.length}</b></span>
             </div>
+            <p style="color:var(--text-secondary);font-size:.8rem">« · » = avant la réinscription / l'affectation au groupe (non compté).</p>
             <div class="table-responsive">${html}</div>`;
 
         setLastReport('Rapport de groupe — ' + (groupRes.data?.name || ''), headers, bodyRows,
-            [`Groupe : ${groupRes.data?.name || ''}`, `Période : ${fmtDateV2(from)} → ${fmtDateV2(to)}`, `Séances : ${sessions.length}`],
+            [`Groupe : ${groupRes.data?.name || ''}`, `Période : ${fmtDateV2(from)} → ${fmtDateV2(to)}`, `Séances planifiées : ${sessions.length}`],
             [], null);
     } catch (err) {
         showMessage('reportsMessage', err.message, 'danger');

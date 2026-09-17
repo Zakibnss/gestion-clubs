@@ -71,6 +71,8 @@ async function loadGroups() {
                     <span>📅 ${fmtDateV2(g.start_date)} → ${g.end_date ? fmtDateV2(g.end_date) : '…'}</span>
                     <span>🎯 ${g.planned_sessions_count ?? '—'} séances prévues</span>
                     <span>🗂️ ${perGroup[g.id] || 0} séances créées</span>
+                    ${g.pause_start_date ? `<span>⏸️ Pause ${fmtDateV2(g.pause_start_date)} → ${g.pause_end_date ? fmtDateV2(g.pause_end_date) : '…'}</span>` : ''}
+                    ${(g.extra_sessions || []).length ? `<span>➕ ${g.extra_sessions.length} séance(s) en plus</span>` : ''}
                 </div>
                 ${g.description ? `<p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:10px">${escapeHtmlV2(g.description)}</p>` : ''}
                 ${chips ? `<div class="group-schedule">${chips}</div>` : ''}
@@ -105,12 +107,97 @@ function fmtDateV2(d) {
 
 /* ---------- Création / modification ---------- */
 
+/* ---------- Planning : pause + séances en plus ---------- */
+
+const GROUP_EXTRA_DAYS = [
+    { idx: 0, key: 'dimanche', label: 'Dimanche' },
+    { idx: 1, key: 'lundi',    label: 'Lundi' },
+    { idx: 2, key: 'mardi',    label: 'Mardi' },
+    { idx: 3, key: 'mercredi', label: 'Mercredi' },
+    { idx: 4, key: 'jeudi',    label: 'Jeudi' },
+    { idx: 5, key: 'vendredi', label: 'Vendredi' },
+    { idx: 6, key: 'samedi',   label: 'Samedi' }
+];
+
+let groupExtras = [];
+
+function populateGroupExtraDayOptions() {
+    const sel = document.getElementById('groupExtraDay');
+    if (!sel || sel.options.length > 1) return;
+    GROUP_EXTRA_DAYS.forEach(d => {
+        sel.add(new Option(d.label, String(d.idx)));
+    });
+}
+
+function ymd(dt) {
+    const y = dt.getFullYear();
+    const m = String(dt.getMonth() + 1).padStart(2, '0');
+    const d = String(dt.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+}
+
+// Rentrée (1er septembre) de la saison en cours
+function currentSeasonStartYmd() {
+    const now = new Date();
+    const y = now.getMonth() + 1 >= 9 ? now.getFullYear() : now.getFullYear() - 1;
+    return `${y}-09-01`;
+}
+
+function addDays(dateStr, n) {
+    const dt = new Date(dateStr + 'T00:00:00');
+    dt.setDate(dt.getDate() + n);
+    return ymd(dt);
+}
+
+function nextOccurrence(dayIdx) {
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    let diff = (dayIdx - t.getDay() + 7) % 7;
+    if (diff === 0) diff = 7;     // strictement après aujourd'hui
+    t.setDate(t.getDate() + diff);
+    return ymd(t);
+}
+
+function renderGroupExtras() {
+    const wrap = document.getElementById('groupExtrasList');
+    if (!wrap) return;
+    groupExtras.sort((a, b) => a.date.localeCompare(b.date));
+    wrap.innerHTML = groupExtras.map((e, i) => `
+        <div class="schedule-row" style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+            <span style="min-width:120px;font-weight:600;">${fmtDateV2(e.date)}</span>
+            <span>${e.time}</span>
+            <button type="button" class="btn btn-danger btn-sm" onclick="removeGroupExtra(${i})">✖</button>
+        </div>`).join('')
+        || '<span style="color:var(--text-secondary);font-size:.85rem;">Aucune séance en plus.</span>';
+}
+
+function addGroupExtraWeeks() {
+    const daySel = document.getElementById('groupExtraDay');
+    const time = document.getElementById('groupExtraTime').value;
+    const weeks = parseInt(document.getElementById('groupExtraWeeks').value, 10) || 1;
+    const dayIdx = parseInt(daySel.value, 10);
+    if (isNaN(dayIdx)) { alert('Choisissez un jour.'); return; }
+    if (!time) { alert('Choisissez une heure.'); return; }
+    let d = nextOccurrence(dayIdx);
+    for (let i = 0; i < weeks; i++) {
+        groupExtras.push({ date: d, time });
+        d = addDays(d, 7);
+    }
+    renderGroupExtras();
+}
+
+function removeGroupExtra(index) {
+    groupExtras.splice(index, 1);
+    renderGroupExtras();
+}
+
 function openGroupModal(groupId) {
     const modal = document.getElementById('groupModal');
     const form = document.getElementById('groupForm');
     form.reset();
     document.getElementById('groupId').value = groupId || '';
     document.getElementById('groupModalTitle').textContent = groupId ? '✏️ Modifier le groupe' : '➕ Nouveau groupe';
+    populateGroupExtraDayOptions();
 
     if (groupId) {
         const card = findGroupCache(groupId);
@@ -120,6 +207,8 @@ function openGroupModal(groupId) {
             document.getElementById('groupStartDate').value = card.start_date || '';
             document.getElementById('groupEndDate').value = card.end_date || '';
             document.getElementById('groupPlannedCount').value = card.planned_sessions_count ?? '';
+            document.getElementById('groupPauseStart').value = card.pause_start_date || '';
+            document.getElementById('groupPauseEnd').value = card.pause_end_date || '';
             const sched = card.schedule || {};
             V2_DAYS.forEach(d => {
                 const cb = document.getElementById('sched_' + d.key);
@@ -127,12 +216,21 @@ function openGroupModal(groupId) {
                 cb.checked = !!sched[d.key];
                 tm.value = sched[d.key] || '';
             });
+            groupExtras = Array.isArray(card.extra_sessions)
+                ? card.extra_sessions.map(e => ({ date: e.date, time: e.time }))
+                : [];
+            renderGroupExtras();
         }
     } else {
         V2_DAYS.forEach(d => {
             document.getElementById('sched_' + d.key).checked = false;
             document.getElementById('schedtime_' + d.key).value = '';
         });
+        document.getElementById('groupStartDate').value = currentSeasonStartYmd();
+        document.getElementById('groupPauseStart').value = '';
+        document.getElementById('groupPauseEnd').value = '';
+        groupExtras = [];
+        renderGroupExtras();
     }
     openModal('groupModal');
 }
@@ -154,6 +252,13 @@ async function handleGroupSubmit(e) {
         if (cb.checked && tm.value) schedule[d.key] = tm.value;
     });
 
+    const pauseStart = document.getElementById('groupPauseStart').value || null;
+    const pauseEnd = document.getElementById('groupPauseEnd').value || null;
+    if (pauseStart && pauseEnd && pauseStart > pauseEnd) {
+        showMessage('groupMessage', 'La fin de pause doit être après son début.', 'danger');
+        return;
+    }
+
     const payload = {
         club_id: clubId,
         name: document.getElementById('groupName').value.trim(),
@@ -161,6 +266,9 @@ async function handleGroupSubmit(e) {
         start_date: document.getElementById('groupStartDate').value || null,
         end_date: document.getElementById('groupEndDate').value || null,
         planned_sessions_count: parseInt(document.getElementById('groupPlannedCount').value, 10) || null,
+        pause_start_date: pauseStart,
+        pause_end_date: pauseEnd,
+        extra_sessions: groupExtras,
         schedule
     };
 
@@ -330,6 +438,7 @@ async function viewGroupSessions(groupId, groupName) {
                 ${s.status === 'live' ? `<button class="btn btn-secondary btn-sm" onclick="setSessionStatus('${s.id}','paused')">⏸ Pause</button>` : ''}
                 ${s.status === 'paused' ? `<button class="btn btn-success btn-sm" onclick="setSessionStatus('${s.id}','live')">▶ Reprendre</button>` : ''}
                 ${(s.status === 'live' || s.status === 'paused') ? `<button class="btn btn-danger btn-sm" onclick="setSessionStatus('${s.id}','completed')">⏹ Terminer</button>` : ''}
+                ${(s.status === 'waiting' || s.status === 'paused') ? `<button class="btn btn-warning btn-sm" onclick="setSessionStatus('${s.id}','cancelled')">⛔ Annuler</button>` : ''}
             </td>
         </tr>`        ).join('') || '<tr><td colspan="5">Aucune séance. Utilisez « Générer » pour créer le planning.</td></tr>';
 }
@@ -337,52 +446,19 @@ async function viewGroupSessions(groupId, groupName) {
 async function generateSessionsForGroup() {
     const g = findGroupCache(currentSessionsGroup);
     if (!g) return;
-    if (!g.schedule || !Object.keys(g.schedule).length) {
-        alert("Définissez d'abord un planning (jours + heures) dans le groupe.");
+    const hasSchedule = !!(g.schedule && Object.keys(g.schedule).length);
+    const hasExtras = Array.isArray(g.extra_sessions) && g.extra_sessions.length;
+    if (!hasSchedule && !hasExtras) {
+        alert("Définissez d'abord un planning du groupe (jours + heures) ou des séances en plus.");
         return;
     }
-    if (!confirm('Générer les séances manquantes depuis le planning du groupe ?')) return;
+    if (!confirm('Générer les séances manquantes depuis le planning centralisé ?\n(Saison en cours, pauses et séances annulées respectées — rien n\'est supprimé.)')) return;
 
-    const dayIdxByKey = {};
-    V2_DAYS.forEach(d => dayIdxByKey[d.key] = d.idx);
-
-    const start = new Date(g.start_date + 'T00:00:00');
-    const end = g.end_date ? new Date(g.end_date + 'T00:00:00')
-                           : new Date(start.getTime() + 180 * 86400000);
-
-    const rows = [];
-    const cursor = new Date(start);
-    while (cursor <= end && rows.length < 400) {
-        const key = V2_DAYS.find(d => d.idx === cursor.getDay())?.key;
-        const time = g.schedule[key];
-        if (time) {
-            rows.push({
-                club_id: g.club_id,
-                group_id: g.id,
-                session_date: cursor.toISOString().slice(0, 10),
-                start_time: time,
-                status: 'waiting',
-                group_type: g.name
-            });
-        }
-        cursor.setDate(cursor.getDate() + 1);
-    }
-
-    // Limiter au nombre planifié si défini
-    const limited = g.planned_sessions_count ? rows.slice(0, g.planned_sessions_count) : rows;
-    if (!limited.length) { alert('Aucune séance à générer.'); return; }
-
-    const { error } = await supabase.from('sessions').insert(limited);
-    if (error) {
-        // Certains doublons éventuels : réessayer un par un
-        let ok = 0;
-        for (const r of limited) {
-            const { error: e2 } = await supabase.from('sessions').insert(r);
-            if (!e2) ok++;
-        }
-        alert(`${ok} séance(s) créée(s) (doublons ignorés).`);
+    const created = await generateGroupSessions(currentSessionsGroup);
+    if (created === 0) {
+        alert('Aucune nouvelle séance à générer : toutes les dates planifiées existent déjà.');
     } else {
-        alert(`${limited.length} séance(s) générée(s).`);
+        alert(`${created} séance(s) générée(s).`);
     }
     viewGroupSessions(g.id, g.name);
 }
@@ -413,6 +489,10 @@ async function setSessionStatus(sessionId, action) {
     } else if (action === 'completed') {
         patch.status = 'completed';
         patch.session_ended_at = now;
+    } else if (action === 'cancelled') {
+        if (!confirm('Annuler cette séance ? Les présences déjà pointées sont conservées (historique).')) return;
+        patch.status = 'cancelled';
+        patch.session_ended_at = now;
     }
 
     const { error } = await supabase.from('sessions').update(patch).eq('id', sessionId);
@@ -425,4 +505,5 @@ async function setSessionStatus(sessionId, action) {
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('groupForm')?.addEventListener('submit', handleGroupSubmit);
+    populateGroupExtraDayOptions();
 });
