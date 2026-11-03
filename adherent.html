@@ -818,6 +818,11 @@
                         }
                         return true;
                     });
+
+                    // Tant que l'abonnement est actif, il n'y a pas de mois
+                    // impayé : le mois en cours reste couvert jusqu'à la date
+                    // d'expiration (ex. fin 27/11 → novembre n'est pas impayé).
+                    if (results.isActive) results.unpaidMonths = [];
                 }
 
                 // Présences par mois
@@ -912,8 +917,8 @@
                 document.getElementById('memberPhotoPlaceholder').style.display = 'flex';
             }
 
-            // Mois non payés
-            const unpaid = extra.unpaidMonths;
+            // Mois non payés (un abonnement actif n'en affiche aucun)
+            const unpaid = extra.isActive ? [] : extra.unpaidMonths;
             const countBadge = document.getElementById('unpaidCount');
             countBadge.textContent = unpaid.length;
             countBadge.className = 'count-badge' + (unpaid.length === 0 ? ' zero' : '');
