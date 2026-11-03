@@ -40,11 +40,16 @@ async function loadGroups() {
         if (error) throw error;
         v2GroupsCache = groups || [];
 
-        const { count: membersCount } = await supabase
+        const { data: groupMembers } = await supabase
             .from('group_members')
-            .select('id', { count: 'exact', head: true })
+            .select('group_id')
             .eq('club_id', clubId)
             .is('end_date', null);
+
+        const membersPerGroup = {};
+        (groupMembers || []).forEach(r => {
+            membersPerGroup[r.group_id] = (membersPerGroup[r.group_id] || 0) + 1;
+        });
 
         const { data: sessionCounts } = await supabase
             .from('sessions')
@@ -69,6 +74,7 @@ async function loadGroups() {
                 </h3>
                 <div class="group-meta">
                     <span>📅 ${fmtDateV2(g.start_date)} → ${g.end_date ? fmtDateV2(g.end_date) : '…'}</span>
+                    <span>👥 ${membersPerGroup[g.id] || 0} adhérent(s)</span>
                     <span>🎯 ${g.planned_sessions_count ?? '—'} séances prévues</span>
                     <span>🗂️ ${perGroup[g.id] || 0} séances créées</span>
                 </div>
@@ -195,6 +201,24 @@ async function deleteGroup(groupId) {
 let assignGroupId = null;
 let assignSelection = new Set();
 
+// Sécurité : si la page HTML est une ancienne version en cache, le bouton
+// d'enregistrement peut manquer. On le crée alors dynamiquement.
+function ensureAssignFooter() {
+    if (document.getElementById('assignSaveBtn')) return;
+    const modal = document.getElementById('assignModal');
+    const content = modal && modal.querySelector('.modal-content');
+    if (!content) return;
+
+    const footer = document.createElement('div');
+    footer.style.cssText = 'display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap;';
+    footer.innerHTML = `
+        <button type="button" class="btn btn-secondary" onclick="closeModal('assignModal')">Annuler</button>
+        <button type="button" class="btn btn-success" id="assignSaveBtn" onclick="saveAssignments()">
+            💾 Enregistrer les affectations
+        </button>`;
+    content.appendChild(footer);
+}
+
 async function openAssignModal(groupId) {
     assignGroupId = groupId;
     assignSelection = new Set();
@@ -232,6 +256,7 @@ async function openAssignModal(groupId) {
         }).join('') || '<p style="padding:15px">Aucun adhérent.</p>';
 
         updateAssignCount();
+        ensureAssignFooter();
         openModal('assignModal');
     } catch (err) {
         alert('Erreur: ' + err.message);
@@ -253,51 +278,97 @@ function updateAssignCount() {
 async function saveAssignments() {
     const clubId = v2GetActiveClubId();
     if (!clubId || !assignGroupId) return;
+
+    const btn = document.getElementById('assignSaveBtn');
+    if (btn) {
+        if (btn.disabled) return;
+        btn.disabled = true;
+        btn.textContent = '💾 Enregistrement…';
+    }
+
+    const today = new Date();
+    const todayKey = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
     try {
-        // Clôturer les affectations actuelles du groupe qui ne sont plus sélectionnées
-        const { data: current } = await supabase
+        // Affectations actuellement actives dans ce groupe
+        const { data: current, error: curErr } = await supabase
             .from('group_members')
             .select('id, member_id')
             .eq('group_id', assignGroupId)
             .is('end_date', null);
+        if (curErr) throw curErr;
+        const currentRows = current || [];
 
-        const toClose = (current || []).filter(r => !assignSelection.has(r.member_id));
-        for (const row of toClose) {
-            await supabase
+        const currentIds = new Set(currentRows.map(r => r.member_id));
+        const toClose = currentRows.filter(r => !assignSelection.has(r.member_id));
+        const toAdd = [...assignSelection].filter(id => !currentIds.has(id));
+
+        // 1) Clôturer les affectations décochées de CE groupe
+        if (toClose.length) {
+            const { error } = await supabase
                 .from('group_members')
-                .update({ end_date: new Date().toISOString().slice(0, 10) })
-                .eq('id', row.id);
+                .update({ end_date: todayKey })
+                .in('id', toClose.map(r => r.id));
+            if (error) throw error;
         }
 
-        // Ajouter les nouveaux
-        const existingIds = new Set((current || []).map(r => r.member_id));
-        const toAdd = [...assignSelection].filter(id => !existingIds.has(id));
+        // 2) Un adhérent n'a qu'un seul groupe courant : clôturer ses
+        //    éventuelles affectations actives dans d'autres groupes.
+        if (assignSelection.size) {
+            const { error: closeOtherErr } = await supabase
+                .from('group_members')
+                .update({ end_date: todayKey })
+                .in('member_id', [...assignSelection])
+                .neq('group_id', assignGroupId)
+                .is('end_date', null);
+            if (closeOtherErr) throw closeOtherErr;
+        }
 
+        // 3) Ajouter les nouveaux membres
         if (toAdd.length) {
             const rows = toAdd.map(mid => ({
                 club_id: clubId,
                 group_id: assignGroupId,
                 member_id: mid,
-                start_date: new Date().toISOString().slice(0, 10)
+                start_date: todayKey
             }));
             const { error } = await supabase.from('group_members').insert(rows);
             if (error) throw error;
         }
 
-        // Mettre à jour le groupe courant des membres
-        const allTouched = [...toAdd, ...toClose.map(r => r.member_id)];
-        for (const mid of allTouched) {
-            const stillHere = assignSelection.has(mid);
-            await supabase
+        // 4) Mettre à jour le groupe courant : tous les membres sélectionnés
+        //    pointent vers ce groupe.
+        if (assignSelection.size) {
+            const { error } = await supabase
                 .from('members')
-                .update({ current_group_id: stillHere ? assignGroupId : null })
-                .eq('id', mid);
+                .update({ current_group_id: assignGroupId })
+                .in('id', [...assignSelection]);
+            if (error) throw error;
+        }
+
+        // 5) Les membres retirés du groupe ne doivent plus le référencer.
+        const removedIds = toClose
+            .map(r => r.member_id)
+            .filter(mid => !assignSelection.has(mid));
+        if (removedIds.length) {
+            const { error } = await supabase
+                .from('members')
+                .update({ current_group_id: null })
+                .in('id', removedIds)
+                .eq('current_group_id', assignGroupId);
+            if (error) throw error;
         }
 
         closeModal('assignModal');
+        await loadGroups();
         alert('Affectations enregistrées.');
     } catch (err) {
-        alert('Erreur: ' + err.message);
+        alert('Erreur: ' + (err.message || err));
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '💾 Enregistrer les affectations';
+        }
     }
 }
 
