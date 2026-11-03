@@ -790,6 +790,9 @@
                     const startMonthOfMember = member.start_date.slice(0, 7);
                     const [sy, sm] = startMonthOfMember.split('-').map(Number);
                     const startIdx = sy * 12 + (sm - 1);
+                    const startDay = new Date(member.start_date + 'T00:00:00').getDate();
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
                     const dur = { monthly: 1, quarterly: 3, biannual: 6, annual: 12 }[member.subscription] || 1;
                     let legacyLastIdx = startIdx + dur - 1;
 
@@ -803,12 +806,29 @@
                         }
                     });
 
+                    // Début du cycle d'un mois : le jour du début d'abonnement
+                    // (ex. début le 27 → le cycle d'octobre commence le 27/10).
+                    const cycleStartFor = (m) => {
+                        const idx = (typeof v2ParseMonthIndex === 'function')
+                            ? v2ParseMonthIndex(m)
+                            : null;
+                        if (idx === null) return null;
+                        if (typeof v2DateInMonth === 'function') {
+                            return v2DateInMonth(idx, startDay);
+                        }
+                        const d = new Date(member.start_date + 'T00:00:00');
+                        d.setMonth(d.getMonth() + (idx - startIdx));
+                        return d;
+                    };
+
                     results.unpaidMonths = months.filter(m => {
                         const status = payMap[m];
-                        if (status === 'PAYE') return false;
-                        if (status) return true;
 
-                        if (legacyLastIdx >= startIdx) {
+                        // Mois explicitement payé
+                        if (status === 'PAYE') return false;
+
+                        // Mois couvert par la période initiale (start_date + durée)
+                        if (!status && legacyLastIdx >= startIdx) {
                             const idx = (typeof v2ParseMonthIndex === 'function')
                                 ? v2ParseMonthIndex(m)
                                 : null;
@@ -816,7 +836,14 @@
                                 return false;
                             }
                         }
-                        return true;
+
+                        // Un mois n'est impayé qu'une fois son échéance atteinte.
+                        // Ex. début 27/09 avec 1 mois payé → fin 27/10 : en
+                        // novembre, seul octobre est impayé ; novembre ne le
+                        // devient qu'à partir du 27/11.
+                        const cycleStart = cycleStartFor(m);
+                        if (!cycleStart) return true;
+                        return cycleStart <= today;
                     });
 
                     // Tant que l'abonnement est actif, il n'y a pas de mois
