@@ -6,19 +6,115 @@
 
 let v2LastReport = null;
 
+/* ---------- Filtres du rapport de paiement ---------- */
+
+/* Sélecteur de club du rapport de paiement (comptes admin uniquement).
+   Permet de générer un rapport global « tous les clubs ». */
+async function v2InitPayClubFilter() {
+    const wrap = document.getElementById('payClubWrap');
+    const sel = document.getElementById('payClub');
+    if (!wrap || !sel) return;
+
+    if (!v2IsAdmin()) {
+        wrap.style.display = 'none';
+        return;
+    }
+    wrap.style.display = '';
+
+    if (!Array.isArray(window.v2AdminClubs) || !window.v2AdminClubs.length) {
+        const { data } = await supabase.from('clubs').select('id, name').order('name');
+        window.v2AdminClubs = data || [];
+    }
+
+    const hadOptions = sel.options.length > 0;
+    const current = sel.value;
+    sel.innerHTML = '<option value="">🌍 Tous les clubs (global)</option>' +
+        (window.v2AdminClubs || []).map(c =>
+            `<option value="${c.id}">${escapeHtmlV2(c.name)}</option>`).join('');
+
+    if (hadOptions && [...sel.options].some(o => o.value === current)) {
+        sel.value = current;
+    } else {
+        const active = v2GetActiveClubId();
+        sel.value = active || '';
+    }
+}
+
+/* Recharge la liste des événements selon le club choisi pour le rapport.
+   En mode global, le nom du club est ajouté au libellé de l'événement. */
+async function v2LoadPayEventOptions() {
+    const sel = document.getElementById('payEvent');
+    if (!sel) return;
+
+    const isAdmin = v2IsAdmin();
+    const payClub = document.getElementById('payClub');
+    const globalScope = isAdmin && payClub && !payClub.value;
+    const clubId = globalScope ? null
+        : (isAdmin ? (payClub?.value || v2GetActiveClubId()) : v2GetActiveClubId());
+
+    if (!globalScope && !clubId) {
+        sel.innerHTML = '<option value="">Tous les événements</option>';
+        return;
+    }
+
+    let q = supabase.from('events')
+        .select('id, title, event_date, club_id')
+        .order('event_date', { ascending: false });
+    if (!globalScope) q = q.eq('club_id', clubId);
+
+    const { data, error } = await q;
+    if (error) { console.error('[rapport paiement] événements:', error.message); return; }
+
+    const clubName = {};
+    if (globalScope) {
+        (window.v2AdminClubs || []).forEach(c => clubName[c.id] = c.name);
+        const missingIds = [...new Set((data || []).map(ev => ev.club_id))]
+            .filter(id => id && !clubName[id]);
+        if (missingIds.length) {
+            const { data: clubs } = await supabase.from('clubs')
+                .select('id, name').in('id', missingIds);
+            (clubs || []).forEach(c => clubName[c.id] = c.name);
+        }
+    }
+
+    sel.innerHTML = '<option value="">Tous les événements</option>' +
+        (data || []).map(ev => {
+            const suffix = globalScope && clubName[ev.club_id]
+                ? ' (' + escapeHtmlV2(clubName[ev.club_id]) + ')' : '';
+            return `<option value="${ev.id}">${escapeHtmlV2(ev.title)} — ${fmtDateV2(ev.event_date)}${suffix}</option>`;
+        }).join('');
+}
+
 async function initReports() {
     if (currentClub === 'admin') await v2PopulateAdminClubSelect('reportsToolbar');
+    await v2InitPayClubFilter();
     const clubId = v2GetActiveClubId();
+
+    // Dates par défaut : renseignées même sans club sélectionné pour que
+    // le rapport de paiement global (admin) soit utilisable directement.
+    const today = new Date().toISOString().slice(0, 10);
+    const firstOfMonth = today.slice(0, 8) + '01';
+    document.getElementById('repFrom').value = firstOfMonth;
+    document.getElementById('repTo').value = today;
+    document.getElementById('srFrom').value = today.slice(0, 4) + '-01';
+    document.getElementById('srTo').value = today.slice(0, 7);
+    document.getElementById('evFrom').value = firstOfMonth;
+    document.getElementById('evTo').value = today;
+    if (document.getElementById('payFrom')) {
+        document.getElementById('payFrom').value = firstOfMonth;
+        document.getElementById('payTo').value = today;
+    }
+
+    await v2LoadPayEventOptions();
+
     if (!clubId) return;
 
     try {
-        const [membersRes, groupsRes, eventsRes] = await Promise.all([
+        const [membersRes, groupsRes] = await Promise.all([
             supabase.from('members').select('id, first_name, last_name')
                 .eq('club_id', clubId).order('last_name'),
             supabase.from('groups').select('id, name')
-                .eq('club_id', clubId).order('name'),
-            supabase.from('events').select('id, title, event_date')
-                .eq('club_id', clubId).order('event_date', { ascending: false })
+                .eq('club_id', clubId).order('name')
         ]);
 
         const opt = (list) => (list || [])
@@ -28,27 +124,6 @@ async function initReports() {
         document.getElementById('repMember').innerHTML = '<option value="">— Choisir —</option>' + opt(membersRes.data);
         document.getElementById('repGroup').innerHTML = '<option value="">— Choisir —</option>' + opt(groupsRes.data);
         document.getElementById('srMember').innerHTML = '<option value="">Tous les adhérents</option>' + opt(membersRes.data);
-
-        const payEvent = document.getElementById('payEvent');
-        if (payEvent) {
-            payEvent.innerHTML = '<option value="">Tous les événements</option>' +
-                (eventsRes.data || []).map(ev =>
-                    `<option value="${ev.id}">${escapeHtmlV2(ev.title)} — ${fmtDateV2(ev.event_date)}</option>`
-                ).join('');
-        }
-
-        const today = new Date().toISOString().slice(0, 10);
-        const firstOfMonth = today.slice(0, 8) + '01';
-        document.getElementById('repFrom').value = firstOfMonth;
-        document.getElementById('repTo').value = today;
-        document.getElementById('srFrom').value = today.slice(0, 4) + '-01';
-        document.getElementById('srTo').value = today.slice(0, 7);
-        document.getElementById('evFrom').value = firstOfMonth;
-        document.getElementById('evTo').value = today;
-        if (document.getElementById('payFrom')) {
-            document.getElementById('payFrom').value = firstOfMonth;
-            document.getElementById('payTo').value = today;
-        }
     } catch (err) {
         showMessage('reportsMessage', 'Erreur init rapports: ' + err.message, 'danger');
     }
@@ -551,21 +626,47 @@ async function runEventPaymentsReport() {
     const from = document.getElementById('payFrom').value;
     const to = document.getElementById('payTo').value;
     const eventFilter = document.getElementById('payEvent')?.value || '';
-    const clubId = v2GetActiveClubId();
+
+    const isAdmin = v2IsAdmin();
+    const payClubSel = document.getElementById('payClub');
+    // Mode global : admin + « Tous les clubs » sélectionné.
+    const globalScope = isAdmin && payClubSel && !payClubSel.value;
+    const scopeClubId = globalScope ? null
+        : (isAdmin ? (payClubSel?.value || v2GetActiveClubId()) : v2GetActiveClubId());
 
     if (!from || !to || from > to) { alert('Période invalide'); return; }
-    if (!clubId) { showMessage('reportsMessage', 'Aucun club sélectionné.', 'danger'); return; }
+    if (!globalScope && !scopeClubId) {
+        showMessage('reportsMessage', 'Aucun club sélectionné.', 'danger');
+        return;
+    }
+
+    const scopeLabel = globalScope ? 'Tous les clubs'
+        : (isAdmin && payClubSel?.selectedOptions?.[0]
+            ? payClubSel.selectedOptions[0].textContent
+            : (currentClub?.name || ''));
 
     try {
-        const { data: evData, error: evErr } = await supabase.from('events')
-            .select('*')
-            .eq('club_id', clubId);
+        let evQuery = supabase.from('events').select('*').order('event_date');
+        if (!globalScope) evQuery = evQuery.eq('club_id', scopeClubId);
+        const { data: evData, error: evErr } = await evQuery;
         if (evErr) throw evErr;
 
+        const events = (evData || []).map(v2NormalizeEvent);
         const eventById = {};
-        (evData || []).map(v2NormalizeEvent).forEach(ev => eventById[ev.id] = ev);
+        events.forEach(ev => eventById[ev.id] = ev);
 
-        // Participants rattachés aux événements du club (indépendant de
+        // Noms des clubs (utile en mode global).
+        const clubNameOf = {};
+        (window.v2AdminClubs || []).forEach(c => clubNameOf[c.id] = c.name);
+        const missingClubIds = [...new Set(events.map(ev => ev.club_id))]
+            .filter(id => id && !clubNameOf[id]);
+        if (missingClubIds.length) {
+            const { data: clubs } = await supabase.from('clubs')
+                .select('id, name').in('id', missingClubIds);
+            (clubs || []).forEach(c => clubNameOf[c.id] = c.name);
+        }
+
+        // Participants rattachés aux événements (indépendant de
         // event_participants.club_id qui peut être null sur d'anciennes lignes).
         const eventIds = Object.keys(eventById);
         const { data: partData, error: partsErr } = eventIds.length
@@ -612,57 +713,113 @@ async function runEventPaymentsReport() {
                 paid_on: pay.paid_on,
                 event: ev ? ev.title : '—',
                 event_date: ev ? ev.event_date : null,
+                event_id: p.event_id,
+                club_id: ev ? ev.club_id : null,
+                club: ev ? (clubNameOf[ev.club_id] || '—') : '—',
+                member_id: p.member_id,
                 member: nameOf[p.member_id] || p.member_id,
                 amount: Number(pay.amount ?? ev?.price ?? 0),
                 by: pay.changed_by || '—'
             };
         }).sort((a, b) =>
             (b.paid_on || '').localeCompare(a.paid_on || '') ||
+            (globalScope ? a.club.localeCompare(b.club) : 0) ||
             a.member.localeCompare(b.member));
 
         const totalAmount = lines.reduce((s, l) => s + l.amount, 0);
         const eventsCount = new Set(paidParts.map(p => p.event_id)).size;
         const membersCount = new Set(paidParts.map(p => p.member_id)).size;
+        const clubsCount = new Set(lines.map(l => l.club_id).filter(Boolean)).size;
 
         if (!lines.length) {
             document.getElementById('eventPaymentsResult').innerHTML =
                 `<p style="color:var(--text-secondary);margin-top:10px;">
-                    Aucun paiement encaissé sur la période sélectionnée.</p>`;
+                    Aucun paiement encaissé sur la période sélectionnée${globalScope ? ' (tous les clubs)' : ''}.</p>`;
             return;
         }
 
-        const rows = lines.map(l => [
-            fmtDateV2(l.paid_on), l.event, l.member,
-            l.amount.toLocaleString('fr-FR') + ' DA', l.by
-        ]);
+        const columns = ['Date paiement'];
+        if (globalScope) columns.push('Club');
+        columns.push('Événement', 'Adhérent', 'Montant', 'Encaissé par');
+
+        const rows = lines.map(l => {
+            const row = [fmtDateV2(l.paid_on)];
+            if (globalScope) row.push(l.club);
+            row.push(l.event, l.member, l.amount.toLocaleString('fr-FR') + ' DA', l.by);
+            return row;
+        });
 
         let html = `<table class="matrix-table"><thead><tr>
-            <th>Date paiement</th><th class="row-label">Événement</th><th>Adhérent</th>
+            <th>Date paiement</th>${globalScope ? '<th>Club</th>' : ''}
+            <th class="row-label">Événement</th><th>Adhérent</th>
             <th>Montant</th><th>Encaissé par</th></tr></thead><tbody>`;
         html += lines.map(l => `<tr>
             <td>${fmtDateV2(l.paid_on)}</td>
+            ${globalScope ? `<td>${escapeHtmlV2(l.club)}</td>` : ''}
             <td class="row-label">${escapeHtmlV2(l.event)}</td>
             <td>${escapeHtmlV2(l.member)}</td>
             <td class="cell-p"><b>${l.amount.toLocaleString('fr-FR')} DA</b></td>
             <td>${escapeHtmlV2(l.by)}</td>
         </tr>`).join('');
-        html += `</tbody></table>
-            <div class="report-stats" style="margin-top:10px">
+        html += `</tbody></table>`;
+
+        // Mode global : synthèse par club puis total général.
+        if (globalScope) {
+            const byClub = {};
+            lines.forEach(l => {
+                const key = l.club_id || '—';
+                const row = byClub[key] = byClub[key] || {
+                    club: l.club, payments: 0,
+                    members: new Set(), events: new Set(), amount: 0
+                };
+                row.payments++;
+                row.members.add(l.member_id);
+                row.events.add(l.event_id);
+                row.amount += l.amount;
+            });
+
+            html += `<h4 style="margin:16px 0 8px;">🏟️ Totaux par club</h4>
+                <table class="matrix-table"><thead><tr>
+                    <th class="row-label">Club</th><th>Paiements</th><th>Adhérents</th>
+                    <th>Événements</th><th>Total encaissé</th></tr></thead><tbody>`;
+            Object.values(byClub)
+                .sort((a, b) => b.amount - a.amount)
+                .forEach(r => {
+                    html += `<tr>
+                        <td class="row-label">${escapeHtmlV2(r.club)}</td>
+                        <td>${r.payments}</td><td>${r.members.size}</td><td>${r.events.size}</td>
+                        <td class="cell-p"><b>${r.amount.toLocaleString('fr-FR')} DA</b></td>
+                    </tr>`;
+                });
+            html += `<tr><td class="row-label"><b>TOTAL GÉNÉRAL</b></td>
+                <td><b>${lines.length}</b></td><td><b>${membersCount}</b></td>
+                <td><b>${eventsCount}</b></td>
+                <td class="cell-p"><b>${totalAmount.toLocaleString('fr-FR')} DA</b></td></tr>
+                </tbody></table>`;
+        }
+
+        html += `<div class="report-stats" style="margin-top:10px">
                 <span class="stat-pill">Paiements : <b>${lines.length}</b></span>
                 <span class="stat-pill">Adhérents : <b>${membersCount}</b></span>
                 <span class="stat-pill">Événements : <b>${eventsCount}</b></span>
+                ${globalScope ? `<span class="stat-pill">Clubs : <b>${clubsCount}</b></span>` : ''}
                 <span class="stat-pill">Total encaissé : <b>${totalAmount.toLocaleString('fr-FR')} DA</b></span>
             </div>`;
 
         document.getElementById('eventPaymentsResult').innerHTML =
-            `<h3 style="color:var(--primary-color)">🧾 Paiements ${fmtDateV2(from)} → ${fmtDateV2(to)}</h3>` + html;
+            `<h3 style="color:var(--primary-color)">🧾 Paiements — ${escapeHtmlV2(scopeLabel)} — ${fmtDateV2(from)} → ${fmtDateV2(to)}</h3>` + html;
+
+        const stats = [['Paiements', lines.length], ['Adhérents', membersCount],
+            ['Événements', eventsCount]];
+        if (globalScope) stats.push(['Clubs', clubsCount]);
+        stats.push(['Total encaissé', totalAmount.toLocaleString('fr-FR') + ' DA']);
 
         setLastReport('Rapport de paiement — événements',
-            ['Date paiement', 'Événement', 'Adhérent', 'Montant', 'Encaissé par'], rows,
+            columns, rows,
             ['Période : ' + fmtDateV2(from) + ' → ' + fmtDateV2(to),
+             'Portée : ' + scopeLabel,
              eventFilter ? 'Événement : ' + (eventById[eventFilter]?.title || '—') : 'Tous les événements'],
-            [['Paiements', lines.length], ['Adhérents', membersCount],
-             ['Événements', eventsCount], ['Total encaissé', totalAmount.toLocaleString('fr-FR') + ' DA']]);
+            stats);
     } catch (err) {
         showMessage('reportsMessage', err.message, 'danger');
     }

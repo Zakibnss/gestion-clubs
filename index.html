@@ -2134,6 +2134,10 @@
                 Montants réellement encaissés (dernier paiement de chaque participant).
             </p>
             <div class="report-filters">
+                <div class="form-group" id="payClubWrap" style="display:none;">
+                    <label>Club</label>
+                    <select id="payClub" class="form-control" onchange="v2LoadPayEventOptions()"></select>
+                </div>
                 <div class="form-group"><label>Du</label>
                     <input type="date" id="payFrom" class="form-control"></div>
                 <div class="form-group"><label>Au</label>
@@ -13031,7 +13035,7 @@ async function exportCardAsPNG(cardElement, fileName) {
     <!-- Modules V2 : Groupes / Abonnements / Rapports / Paiements + navigation NFC -->
     <script src="js/groups.js?v=20261108e"></script>
     <script src="js/subscriptions.js?v=20261103b"></script>
-    <script src="js/reports.js?v=20261108e"></script>
+    <script src="js/reports.js?v=20261108f"></script>
     <script src="js/events.js?v=20261108f"></script>
     <script src="js/nfc-reader-service.js?v=20260830"></script>
     <script src="js/nfc-cards.js?v=20260830"></script>
