@@ -12,11 +12,13 @@ async function initReports() {
     if (!clubId) return;
 
     try {
-        const [membersRes, groupsRes] = await Promise.all([
+        const [membersRes, groupsRes, eventsRes] = await Promise.all([
             supabase.from('members').select('id, first_name, last_name')
                 .eq('club_id', clubId).order('last_name'),
             supabase.from('groups').select('id, name')
-                .eq('club_id', clubId).order('name')
+                .eq('club_id', clubId).order('name'),
+            supabase.from('events').select('id, title, event_date')
+                .eq('club_id', clubId).order('event_date', { ascending: false })
         ]);
 
         const opt = (list) => (list || [])
@@ -27,6 +29,14 @@ async function initReports() {
         document.getElementById('repGroup').innerHTML = '<option value="">— Choisir —</option>' + opt(groupsRes.data);
         document.getElementById('srMember').innerHTML = '<option value="">Tous les adhérents</option>' + opt(membersRes.data);
 
+        const payEvent = document.getElementById('payEvent');
+        if (payEvent) {
+            payEvent.innerHTML = '<option value="">Tous les événements</option>' +
+                (eventsRes.data || []).map(ev =>
+                    `<option value="${ev.id}">${escapeHtmlV2(ev.title)} — ${fmtDateV2(ev.event_date)}</option>`
+                ).join('');
+        }
+
         const today = new Date().toISOString().slice(0, 10);
         const firstOfMonth = today.slice(0, 8) + '01';
         document.getElementById('repFrom').value = firstOfMonth;
@@ -35,6 +45,10 @@ async function initReports() {
         document.getElementById('srTo').value = today.slice(0, 7);
         document.getElementById('evFrom').value = firstOfMonth;
         document.getElementById('evTo').value = today;
+        if (document.getElementById('payFrom')) {
+            document.getElementById('payFrom').value = firstOfMonth;
+            document.getElementById('payTo').value = today;
+        }
     } catch (err) {
         showMessage('reportsMessage', 'Erreur init rapports: ' + err.message, 'danger');
     }
@@ -414,13 +428,13 @@ async function runEventsReport() {
     try {
         const [evRes, ] = await Promise.all([
             supabase.from('events')
-                .select('id, title, event_date, event_time, lieu, price, type')
+                .select('*')
                 .eq('club_id', clubId)
                 .gte('event_date', from).lte('event_date', to)
                 .order('event_date')
         ]);
 
-        const events = evRes.data || [];
+        const events = (evRes.data || []).map(v2NormalizeEvent);
         if (!events.length) {
             document.getElementById('eventsReportResult').innerHTML =
                 '<p>Aucun événement sur cette période.</p>';
@@ -428,14 +442,36 @@ async function runEventsReport() {
         }
 
         const { data: parts } = await supabase.from('event_participants')
-            .select('event_id, member_id')
+            .select('id, event_id, member_id')
             .in('event_id', events.map(e => e.id));
 
+        // Paiements réels des participants (dernier paiement = statut courant)
+        const participantIds = (parts || []).map(p => p.id);
+        const { data: payments } = participantIds.length
+            ? await supabase.from('event_payments')
+                .select('participant_id, status, amount, created_at')
+                .in('participant_id', participantIds)
+                .order('created_at')
+            : { data: [] };
+
+        const lastPay = {};
+        (payments || []).forEach(p => { lastPay[p.participant_id] = p; });
+        const eventById = {};
+        events.forEach(e => eventById[e.id] = e);
+
         const countByEvent = {};
+        const paidByEvent = {};
+        const revenueByEvent = {};
         const membersByEvent = {};
         (parts || []).forEach(p => {
             countByEvent[p.event_id] = (countByEvent[p.event_id] || 0) + 1;
-            (membersByEvent[p.event_id] = membersByEvent[p.event_id] || []).push(p.member_id);
+            (membersByEvent[p.event_id] = membersByEvent[p.event_id] || []).push({ pid: p.id, mid: p.member_id });
+            const pay = lastPay[p.id];
+            if (pay?.status === 'PAYE') {
+                paidByEvent[p.event_id] = (paidByEvent[p.event_id] || 0) + 1;
+                revenueByEvent[p.event_id] = (revenueByEvent[p.event_id] || 0) +
+                    Number(pay.amount ?? eventById[p.event_id]?.price ?? 0);
+            }
         });
 
         // Noms des participants
@@ -449,17 +485,20 @@ async function runEventsReport() {
 
         const typeLabel = { stage: 'Stage', competition: 'Compétition', exam: 'Examen', other: 'Autre' };
         let totalParticipants = 0;
+        let totalPaid = 0;
         let totalRevenue = 0;
 
         const rows = [];
         let html = `<table class="matrix-table"><thead><tr>
             <th class="row-label">Événement</th><th>Date</th><th>Type</th><th>Lieu</th>
-            <th>Prix</th><th>Participants</th><th>Recette</th></tr></thead><tbody>`;
+            <th>Prix</th><th>Participants</th><th>Payés</th><th>Recette</th></tr></thead><tbody>`;
 
         events.forEach(ev => {
             const n = countByEvent[ev.id] || 0;
-            const revenue = n * (ev.price || 0);
+            const paid = paidByEvent[ev.id] || 0;
+            const revenue = revenueByEvent[ev.id] || 0;
             totalParticipants += n;
+            totalPaid += paid;
             totalRevenue += revenue;
             html += `<tr><td class="row-label">${escapeHtmlV2(ev.title)}</td>
                 <td>${fmtDateV2(ev.event_date)}${ev.event_time ? ' ' + ev.event_time.slice(0,5) : ''}</td>
@@ -467,22 +506,27 @@ async function runEventsReport() {
                 <td>${escapeHtmlV2(ev.lieu || '-')}</td>
                 <td>${ev.price || 0} DA</td>
                 <td><b>${n}</b></td>
-                <td class="cell-p"><b>${revenue} DA</b></td></tr>`;
+                <td><b>${paid}</b></td>
+                <td class="cell-p"><b>${revenue.toLocaleString('fr-FR')} DA</b></td></tr>`;
             rows.push([ev.title,
                 fmtDateV2(ev.event_date) + (ev.event_time ? ' ' + ev.event_time.slice(0, 5) : ''),
                 typeLabel[ev.type] || ev.type || '-', ev.lieu || '-',
-                (ev.price || 0) + ' DA', n, revenue + ' DA']);
+                (ev.price || 0) + ' DA', n, paid, revenue.toLocaleString('fr-FR') + ' DA']);
         });
         html += `</tbody></table>
             <div class="report-stats" style="margin-top:10px">
                 <span class="stat-pill">Événements : <b>${events.length}</b></span>
                 <span class="stat-pill">Participations : <b>${totalParticipants}</b></span>
-                <span class="stat-pill">Recette totale : <b>${totalRevenue} DA</b></span>
+                <span class="stat-pill">Payés : <b>${totalPaid}</b></span>
+                <span class="stat-pill">Recette totale : <b>${totalRevenue.toLocaleString('fr-FR')} DA</b></span>
             </div>`;
 
         // Détail des participants par événement (pour le PDF)
         const detail = events.map(ev => {
-            const names = (membersByEvent[ev.id] || []).map(id => nameOf[id] || id).sort();
+            const names = (membersByEvent[ev.id] || []).map(({ pid, mid }) => {
+                const paid = lastPay[pid]?.status === 'PAYE';
+                return (nameOf[mid] || mid) + (paid ? ' ✅' : ' ❌');
+            }).sort();
             return `<h4 style="margin:10px 0 4px">${escapeHtmlV2(ev.title)} — ${fmtDateV2(ev.event_date)} (${names.length} participant(s))</h4>
                 <p style="font-size:12px">${names.length ? escapeHtmlV2(names.join(', ')) : '<i>Aucun participant</i>'}</p>`;
         }).join('');
@@ -491,13 +535,151 @@ async function runEventsReport() {
             `<h3 style="color:var(--primary-color)">💰 Période ${fmtDateV2(from)} → ${fmtDateV2(to)}</h3>` + html;
 
         setLastReport('Rapport événements & recettes',
-            ['Événement', 'Date', 'Type', 'Lieu', 'Prix', 'Participants', 'Recette'], rows,
+            ['Événement', 'Date', 'Type', 'Lieu', 'Prix', 'Participants', 'Payés', 'Recette'], rows,
             ['Période : ' + fmtDateV2(from) + ' → ' + fmtDateV2(to)],
-            [['Événements', events.length], ['Participations', totalParticipants], ['Recette totale', totalRevenue + ' DA']],
+            [['Événements', events.length], ['Participations', totalParticipants],
+             ['Payés', totalPaid], ['Recette totale', totalRevenue.toLocaleString('fr-FR') + ' DA']],
             detail);
     } catch (err) {
         showMessage('reportsMessage', err.message, 'danger');
     }
+}
+
+/* ================= RAPPORT DE PAIEMENT — ÉVÉNEMENTS ================= */
+
+async function runEventPaymentsReport() {
+    const from = document.getElementById('payFrom').value;
+    const to = document.getElementById('payTo').value;
+    const eventFilter = document.getElementById('payEvent')?.value || '';
+    const clubId = v2GetActiveClubId();
+
+    if (!from || !to || from > to) { alert('Période invalide'); return; }
+    if (!clubId) { showMessage('reportsMessage', 'Aucun club sélectionné.', 'danger'); return; }
+
+    try {
+        const { data: evData, error: evErr } = await supabase.from('events')
+            .select('*')
+            .eq('club_id', clubId);
+        if (evErr) throw evErr;
+
+        const eventById = {};
+        (evData || []).map(v2NormalizeEvent).forEach(ev => eventById[ev.id] = ev);
+
+        // Participants rattachés aux événements du club (indépendant de
+        // event_participants.club_id qui peut être null sur d'anciennes lignes).
+        const eventIds = Object.keys(eventById);
+        const { data: partData, error: partsErr } = eventIds.length
+            ? await supabase.from('event_participants')
+                .select('id, event_id, member_id')
+                .in('event_id', eventIds)
+            : { data: [], error: null };
+        if (partsErr) throw partsErr;
+
+        let parts = partData || [];
+        if (eventFilter) parts = parts.filter(p => p.event_id === eventFilter);
+
+        const participantIds = parts.map(p => p.id);
+        const { data: payments, error: payErr } = participantIds.length
+            ? await supabase.from('event_payments')
+                .select('participant_id, status, amount, paid_on, created_at, changed_by')
+                .in('participant_id', participantIds)
+                .order('created_at')
+            : { data: [], error: null };
+        if (payErr) throw payErr;
+
+        // Dernier paiement = statut courant du participant.
+        const lastPay = {};
+        (payments || []).forEach(p => { lastPay[p.participant_id] = p; });
+
+        const paidParts = parts.filter(p => {
+            const pay = lastPay[p.id];
+            return pay && pay.status === 'PAYE' &&
+                pay.paid_on && pay.paid_on >= from && pay.paid_on <= to;
+        });
+
+        const memberIds = [...new Set(paidParts.map(p => p.member_id))];
+        const nameOf = {};
+        if (memberIds.length) {
+            const { data: mems } = await supabase.from('members')
+                .select('id, first_name, last_name').in('id', memberIds);
+            (mems || []).forEach(m => nameOf[m.id] = m.last_name + ' ' + m.first_name);
+        }
+
+        const lines = paidParts.map(p => {
+            const pay = lastPay[p.id];
+            const ev = eventById[p.event_id];
+            return {
+                paid_on: pay.paid_on,
+                event: ev ? ev.title : '—',
+                event_date: ev ? ev.event_date : null,
+                member: nameOf[p.member_id] || p.member_id,
+                amount: Number(pay.amount ?? ev?.price ?? 0),
+                by: pay.changed_by || '—'
+            };
+        }).sort((a, b) =>
+            (b.paid_on || '').localeCompare(a.paid_on || '') ||
+            a.member.localeCompare(b.member));
+
+        const totalAmount = lines.reduce((s, l) => s + l.amount, 0);
+        const eventsCount = new Set(paidParts.map(p => p.event_id)).size;
+        const membersCount = new Set(paidParts.map(p => p.member_id)).size;
+
+        if (!lines.length) {
+            document.getElementById('eventPaymentsResult').innerHTML =
+                `<p style="color:var(--text-secondary);margin-top:10px;">
+                    Aucun paiement encaissé sur la période sélectionnée.</p>`;
+            return;
+        }
+
+        const rows = lines.map(l => [
+            fmtDateV2(l.paid_on), l.event, l.member,
+            l.amount.toLocaleString('fr-FR') + ' DA', l.by
+        ]);
+
+        let html = `<table class="matrix-table"><thead><tr>
+            <th>Date paiement</th><th class="row-label">Événement</th><th>Adhérent</th>
+            <th>Montant</th><th>Encaissé par</th></tr></thead><tbody>`;
+        html += lines.map(l => `<tr>
+            <td>${fmtDateV2(l.paid_on)}</td>
+            <td class="row-label">${escapeHtmlV2(l.event)}</td>
+            <td>${escapeHtmlV2(l.member)}</td>
+            <td class="cell-p"><b>${l.amount.toLocaleString('fr-FR')} DA</b></td>
+            <td>${escapeHtmlV2(l.by)}</td>
+        </tr>`).join('');
+        html += `</tbody></table>
+            <div class="report-stats" style="margin-top:10px">
+                <span class="stat-pill">Paiements : <b>${lines.length}</b></span>
+                <span class="stat-pill">Adhérents : <b>${membersCount}</b></span>
+                <span class="stat-pill">Événements : <b>${eventsCount}</b></span>
+                <span class="stat-pill">Total encaissé : <b>${totalAmount.toLocaleString('fr-FR')} DA</b></span>
+            </div>`;
+
+        document.getElementById('eventPaymentsResult').innerHTML =
+            `<h3 style="color:var(--primary-color)">🧾 Paiements ${fmtDateV2(from)} → ${fmtDateV2(to)}</h3>` + html;
+
+        setLastReport('Rapport de paiement — événements',
+            ['Date paiement', 'Événement', 'Adhérent', 'Montant', 'Encaissé par'], rows,
+            ['Période : ' + fmtDateV2(from) + ' → ' + fmtDateV2(to),
+             eventFilter ? 'Événement : ' + (eventById[eventFilter]?.title || '—') : 'Tous les événements'],
+            [['Paiements', lines.length], ['Adhérents', membersCount],
+             ['Événements', eventsCount], ['Total encaissé', totalAmount.toLocaleString('fr-FR') + ' DA']]);
+    } catch (err) {
+        showMessage('reportsMessage', err.message, 'danger');
+    }
+}
+
+/* Ouvre la section Rapports et génère directement le rapport de paiement. */
+function openEventPaymentsReport() {
+    const navBtn = [...document.querySelectorAll('#navTabs .nav-tab')]
+        .find(b => b.dataset.section === 'reportsSection');
+    if (navBtn) navBtn.click();
+
+    Promise.resolve(initReports())
+        .then(() => {
+            document.getElementById('payFrom')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return runEventPaymentsReport();
+        })
+        .catch(err => console.error(err));
 }
 
 /* ================= RAPPORT ÉTAT DES ADHÉRENTS ================= */

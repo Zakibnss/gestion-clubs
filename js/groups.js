@@ -109,6 +109,49 @@ function fmtDateV2(d) {
     return new Date(d + 'T00:00:00').toLocaleDateString('fr-FR');
 }
 
+/* ---------- Métadonnées événement (lieu / prix) ----------
+   La table `events` peut ne pas encore posséder les colonnes `lieu` et
+   `price` (migration sql/017). En attendant, ces valeurs sont stockées
+   dans un bloc invisible en fin de `description`. Dès que les colonnes
+   existent, elles ont la priorité ; le bloc reste toléré et masqué. */
+const V2_EVENT_META_RE = /(?:\r?\n)*<!--KM_EVENT_META:([\s\S]*?)-->\s*$/;
+
+function v2StripEventMeta(description) {
+    return String(description || '').replace(V2_EVENT_META_RE, '').trimEnd();
+}
+
+function v2EncodeEventMeta(description, lieu, price) {
+    const clean = v2StripEventMeta(description);
+    const p = Number(price) || 0;
+    if (!lieu && !p) return clean || null;
+    const meta = JSON.stringify({ lieu: lieu || null, price: p });
+    return (clean ? clean + '\n\n' : '') + '<!--KM_EVENT_META:' + meta + '-->';
+}
+
+function v2ParseEventMeta(ev) {
+    ev = ev || {};
+    let lieu = ev.lieu ?? null;
+    let price = (ev.price === null || ev.price === undefined) ? null : Number(ev.price);
+    const description = v2StripEventMeta(ev.description);
+
+    const m = String(ev.description || '').match(V2_EVENT_META_RE);
+    if (m) {
+        try {
+            const meta = JSON.parse(m[1]);
+            if (lieu === null && meta.lieu) lieu = String(meta.lieu);
+            if (price === null && meta.price !== null && meta.price !== undefined) {
+                price = Number(meta.price) || 0;
+            }
+        } catch (e) { /* bloc illisible : ignoré */ }
+    }
+    return { lieu, price: Number(price || 0), description };
+}
+
+function v2NormalizeEvent(ev) {
+    const meta = v2ParseEventMeta(ev);
+    return { ...ev, lieu: meta.lieu, price: meta.price, description: meta.description };
+}
+
 /* ---------- Création / modification ---------- */
 
 function openGroupModal(groupId) {
