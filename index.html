@@ -12,6 +12,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- Socle commun de calcul des abonnements (fin effective depuis les mois payés) -->
+<script src="js/subscription-core.js?v=20261103"></script>
     <style>
         * {
             margin: 0;
@@ -2129,6 +2131,29 @@
         <hr style="border-color:var(--border-color)">
 
         <div style="margin-top:15px;">
+            <h3 style="color:var(--primary-color)">🧾 Rapport de paiement — Événements</h3>
+            <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:8px;">
+                Montants réellement encaissés (dernier paiement de chaque participant).
+            </p>
+            <div class="report-filters">
+                <div class="form-group" id="payClubWrap" style="display:none;">
+                    <label>Club</label>
+                    <select id="payClub" class="form-control" onchange="v2LoadPayEventOptions()"></select>
+                </div>
+                <div class="form-group"><label>Du</label>
+                    <input type="date" id="payFrom" class="form-control"></div>
+                <div class="form-group"><label>Au</label>
+                    <input type="date" id="payTo" class="form-control"></div>
+                <div class="form-group"><label>Événement (vide = tous)</label>
+                    <select id="payEvent" class="form-control"></select></div>
+                <button class="btn btn-primary" onclick="runEventPaymentsReport()">Générer</button>
+            </div>
+            <div id="eventPaymentsResult"></div>
+        </div>
+
+        <hr style="border-color:var(--border-color)">
+
+        <div style="margin-top:15px;">
             <h3 style="color:var(--primary-color)">👥 État des adhérents</h3>
             <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:8px;">
                 Vue globale : abonnement, groupe et ancienneté de chaque adhérent.
@@ -2144,7 +2169,10 @@
     <div class="card">
         <div class="card-header">
             <h2 class="card-title">💰 Événements & Participations</h2>
-            <button class="btn btn-primary" onclick="openEventModal()">+ Nouvel événement</button>
+            <div>
+                <button class="btn btn-info" onclick="openEventPaymentsReport()">🧾 Rapport de paiement</button>
+                <button class="btn btn-primary" onclick="openEventModal()">+ Nouvel événement</button>
+            </div>
         </div>
         <div class="v2-toolbar" id="eventsToolbar"></div>
         <div id="eventsMessage" style="margin-top:10px;"></div>
@@ -2454,7 +2482,13 @@
             <button class="modal-close" onclick="closeModal('assignModal')">&times;</button>
         </div>
         <div id="assignCount" style="margin-bottom:10px;font-weight:600;"></div>
-        <div id="assignMembersList" style="max-height:400px;overflow-y:auto;"></div>
+        <div id="assignMembersList" class="assign-list"></div>
+        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px; flex-wrap:wrap;">
+            <button type="button" class="btn btn-secondary" onclick="closeModal('assignModal')">Annuler</button>
+            <button type="button" class="btn btn-success" id="assignSaveBtn" onclick="saveAssignments()">
+                💾 Enregistrer les affectations
+            </button>
+        </div>
     </div>
 </div>
 
@@ -2477,6 +2511,7 @@
             <h2 id="eventModalTitle">➕ Nouvel événement</h2>
             <button class="modal-close" onclick="closeModal('eventModal')">&times;</button>
         </div>
+        <div id="eventMessage"></div>
         <form id="eventForm">
             <input type="hidden" id="eventId">
             <div class="form-group">
@@ -2532,17 +2567,53 @@
 
 <!-- Modal Participations événement -->
 <div id="eventParticipantsModal" class="modal">
-    <div class="modal-content" style="max-width:700px;">
+    <div class="modal-content" style="max-width:900px;">
         <div class="modal-header">
             <h2 id="epTitle">👥 Participations</h2>
             <button class="modal-close" onclick="closeModal('eventParticipantsModal')">&times;</button>
         </div>
+        <div id="epMessage"></div>
+
+        <!-- Paiement par carte NFC : inscrit + encaisse automatiquement -->
+        <div style="padding:12px;margin-bottom:14px;border:1px solid var(--border-color);border-radius:10px;background:rgba(23,162,184,.06);">
+            <h4 style="margin-bottom:6px;">📡 Paiement par carte NFC</h4>
+            <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:8px;">
+                Présentez la carte de l'adhérent sur le lecteur : il sera automatiquement inscrit
+                à cet événement et marqué <b>payé</b>.
+            </p>
+            <div id="epNfcStatus" class="alert alert-info" style="margin-bottom:8px;">
+                Scanner en attente — présentez une carte.
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <button type="button" class="btn btn-info btn-sm" id="epNfcConnectBtn"
+                        onclick="armEventNfcScanner(true)">📡 Connecter le lecteur</button>
+                <input type="text" id="epNfcManualUid" class="form-control"
+                       style="max-width:210px;" placeholder="UID (saisie de secours)"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();eventNfcManualScan();}">
+                <button type="button" class="btn btn-secondary btn-sm"
+                        onclick="eventNfcManualScan()">Valider UID</button>
+            </div>
+        </div>
+
         <h4 style="margin-bottom:8px;">Sélection des participants</h4>
-        <div id="epMembersList" style="max-height:250px;overflow-y:auto;margin-bottom:15px;"></div>
-        <h4 style="margin-bottom:8px;">Liste des participations</h4>
+        <div id="epMembersList" style="max-height:220px;overflow-y:auto;margin-bottom:12px;"></div>
+        <button class="btn btn-success btn-sm" id="epSaveParticipantsBtn"
+                onclick="saveParticipants()" style="margin-bottom:16px;">
+            💾 Enregistrer les participations
+        </button>
+
+        <h4 style="margin-bottom:8px;">Paiements des participants</h4>
+        <div id="epPaySummary" class="report-stats" style="margin-bottom:10px;"></div>
         <div class="table-responsive">
-            <table>
-                <thead><tr><th>Adhérent</th><th>Groupe</th><th>Action</th></tr></thead>
+            <table class="matrix-table">
+                <thead><tr>
+                    <th class="row-label">Adhérent</th>
+                    <th>Groupe</th>
+                    <th>Montant</th>
+                    <th>Statut</th>
+                    <th>Date paiement</th>
+                    <th>Action</th>
+                </tr></thead>
                 <tbody id="epParticipantsTable"></tbody>
             </table>
         </div>
@@ -6838,12 +6909,6 @@ async function viewCompetitionDetails(competitionId) {
     }
 }
 
-// Initialiser la section compétitions au chargement
-document.addEventListener('DOMContentLoaded', function() {
-    // Ajouter dans la fonction setupNavigation()
-    if (section === 'competitionsSection') initCompetitionsSection();
-});
-
 
 async function loadWilayasForPreferences() {
     const prefWilayaSelect = document.getElementById('prefWilaya');
@@ -8456,6 +8521,15 @@ async function loadMembersForSMS() {
 
         if (error) throw error;
 
+        // Statut réel = mois payés (pour le badge Actif/Expiré des SMS).
+        if (members && members.length) {
+            await loadMemberPaymentStates(
+                (currentUser !== 'admin' && currentClub && currentClub.id)
+                    ? { clubId: currentClub.id }
+                    : { memberIds: members.map(m => m.id) }
+            );
+        }
+
         if (!members || members.length === 0) {
             container.innerHTML = `
                 <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
@@ -9209,6 +9283,13 @@ async function checkExpiredSubscriptions() {
             return;
         }
 
+        // Statut réel = mois payés (évite de notifier « expiré » à tort).
+        await loadMemberPaymentStates(
+            (currentUser !== 'admin' && currentClub && currentClub.id)
+                ? { clubId: currentClub.id }
+                : { memberIds: members.map(m => m.id) }
+        );
+
         const now = new Date();
         const expiredMembers = [];
         const expiringSoonMembers = [];
@@ -9228,7 +9309,8 @@ async function checkExpiredSubscriptions() {
                     return;
                 }
 
-                const endDate = computeEndDate(member);
+                const state = getMemberSubscriptionState(member);
+                const endDate = state ? state.end : computeEndDate(member);
                 if (!endDate || isNaN(endDate.getTime())) {
                     console.log(`❌ Date de fin invalide pour ${member.id}`);
                     return;
@@ -9589,7 +9671,52 @@ function startSubscriptionMonitoring() {
         }
       
 
-        async function loadMembers() {
+        // Cache des paiements par adhérent : sert à calculer la fin effective
+// réelle (mois payés) dans la liste des adhérents, les SMS et le scan.
+let memberPaymentsCache = {};
+
+/**
+ * Charge les paiements d'un club (ou de quelques adhérents) et alimente
+ * memberPaymentsCache. Ne bloque jamais l'interface en cas d'erreur.
+ */
+async function loadMemberPaymentStates(options = {}) {
+    try {
+        let query = supabase
+            .from('subscription_payments')
+            .select('member_id, period_month, status');
+
+        if (Array.isArray(options.memberIds) && options.memberIds.length) {
+            query = query.in('member_id', options.memberIds);
+        } else if (options.clubId) {
+            query = query.eq('club_id', options.clubId);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+
+        const grouped = (typeof v2GroupPaymentsByMember === 'function')
+            ? v2GroupPaymentsByMember(data)
+            : {};
+
+        if (Array.isArray(options.memberIds) && options.memberIds.length) {
+            options.memberIds.forEach(id => {
+                memberPaymentsCache[id] = grouped[id] || [];
+            });
+        } else {
+            memberPaymentsCache = grouped;
+        }
+    } catch (err) {
+        console.warn('Paiements non chargés (statut abonnement):', err.message || err);
+    }
+}
+
+/* État calculé d'un adhérent (fin / statut), ou null si indisponible. */
+function getMemberSubscriptionState(member) {
+    if (!member || typeof v2ComputeSubscriptionState !== 'function') return null;
+    return v2ComputeSubscriptionState(member, memberPaymentsCache[member.id] || []);
+}
+
+async function loadMembers() {
     try {
         showLoading('membersGrid', 'Chargement des adhérents...');
 
@@ -9610,6 +9737,16 @@ function startSubscriptionMonitoring() {
         
         if (error) {
             throw new Error(`Erreur de base de données: ${error.message}`);
+        }
+
+        // Statut réel = mois payés (même règle que la section Abonnements).
+        // Cela évite d'afficher « Expiré » alors que des mois ont été payés.
+        if (members && members.length) {
+            await loadMemberPaymentStates(
+                (currentUser !== 'admin' && currentClub && currentClub.id)
+                    ? { clubId: currentClub.id }
+                    : { memberIds: members.map(m => m.id) }
+            );
         }
 
         // Appliquer les filtres
@@ -9639,28 +9776,9 @@ function applyFilters(members) {
     if (members && members.length > 0) {
         filteredMembers = members.filter(member => {
             try {
-                // Filtre par statut d'abonnement
-                const start = new Date(member.start_date);
-                const end = new Date(start);
-                
-                switch (member.subscription) {
-                    case "monthly": 
-                        end.setMonth(end.getMonth() + 1); 
-                        break;
-                    case "quarterly": 
-                        end.setMonth(end.getMonth() + 3); 
-                        break;
-                    case "biannual": 
-                        end.setMonth(end.getMonth() + 6); 
-                        break;
-                    case "annual": 
-                        end.setFullYear(end.getFullYear() + 1); 
-                        break;
-                    default:
-                        end.setMonth(end.getMonth() + 1);
-                }
-                
-                const isActive = new Date() <= end;
+                // Filtre par statut d'abonnement : calcul basé sur les mois
+                // payés (identique à la liste et à la section Abonnements).
+                const isActive = calculateMemberStatus(member).isActive;
                 
                 // Appliquer le filtre de statut
                 let statusMatch = true;
@@ -9871,6 +9989,17 @@ function displayMembersGrid(members) {
 // Fonction pour calculer le statut d'un membre
 function calculateMemberStatus(member) {
     try {
+        // Priorité aux mois payés (fin effective réelle).
+        const state = getMemberSubscriptionState(member);
+        if (state) {
+            return {
+                status: state.isActive ? 'active' : 'expired',
+                endDate: state.end.toLocaleDateString('fr-FR'),
+                badgeClass: state.isActive ? 'badge-success' : 'badge-danger',
+                isActive: state.isActive
+            };
+        }
+
         const start = new Date(member.start_date);
         const end = new Date(start);
         
@@ -10246,7 +10375,40 @@ loadMembers().then(() => {
             'annual': 'Annuel'
         };
         let renewalMemberId = null;
+        let renewalMemberClubId = null;
         let renewalSeasonKey = null;
+
+        // Filet de sécurité : même si la RPC SQL installée est une ancienne
+        // version (ou si les paiements n'ont pas été générés côté base), on
+        // enregistre les mois de septembre → mois du renouvellement comme PAYÉ.
+        async function markRenewalMonthsPaid(clubId, memberId, seasonKey, startDateStr) {
+            if (!clubId || !memberId || !seasonKey) return;
+            const startYear = parseInt(seasonKey.split('/')[0], 10);
+            if (isNaN(startYear)) return;
+            const end = new Date(startDateStr + 'T00:00:00');
+            if (isNaN(end.getTime())) return;
+
+            const rows = [];
+            const cur = new Date(startYear, 8, 1); // 1er septembre de la saison
+            while (cur <= end && rows.length < 24) {
+                rows.push({
+                    club_id: clubId,
+                    member_id: memberId,
+                    period_month: `${cur.getFullYear()}-${String(cur.getMonth() + 1).padStart(2, '0')}`,
+                    previous_status: 'NON PAYE',
+                    changed_by: 'renewal',
+                    status: 'PAYE',
+                    paid_on: startDateStr
+                });
+                cur.setMonth(cur.getMonth() + 1);
+            }
+            if (!rows.length) return;
+
+            const { error } = await supabase
+                .from('subscription_payments')
+                .upsert(rows, { onConflict: 'member_id,period_month' });
+            if (error) console.warn('Mois de renouvellement non enregistrés:', error.message);
+        }
 
         // Libellé des mois payés automatiquement : de septembre de la saison
         // jusqu'au mois du renouvellement INCLUS (ex. "sept. 2026 → nov. 2026").
@@ -10335,6 +10497,7 @@ loadMembers().then(() => {
                 const targetSeason = getSeasonKey(new Date(startDate + 'T00:00:00'));
 
                 renewalMemberId = memberId;
+                renewalMemberClubId = member.club_id || (typeof v2GetActiveClubId === 'function' ? v2GetActiveClubId() : null);
                 renewalSeasonKey = targetSeason;
 
                 document.getElementById('renewalContent').innerHTML = `
@@ -10428,6 +10591,10 @@ loadMembers().then(() => {
                     return;
                 }
 
+                // S'assurer que les mois de la saison sont bien payés (la RPC
+                // récente le fait déjà ; ceci couvre les anciennes versions).
+                await markRenewalMonthsPaid(renewalMemberClubId, renewalMemberId, season, startDate);
+
                 const started = startDate.split('-').reverse().join('/');
                 const end = computeEndDate({ start_date: startDate, subscription: type });
                 const ended = end ? end.toLocaleDateString('fr-FR') : '—';
@@ -10455,6 +10622,7 @@ loadMembers().then(() => {
                 closeRenewalModal();
                 loadMembers();
                 loadDashboard();
+                if (typeof loadSubscriptions === 'function') loadSubscriptions();
             } catch (error) {
                 console.error('Erreur renouvellement:', error);
                 msg.innerHTML = `<div class="alert alert-danger">${escapeHtml(error.message)}</div>`;
@@ -10800,6 +10968,10 @@ async function importExcel() {
 // ============================================
 function isSubscriptionActive(member) {
     try {
+        // Priorité aux mois payés (fin effective réelle).
+        const state = getMemberSubscriptionState(member);
+        if (state) return state.isActive;
+
         if (!member.start_date) return false;
         
         const startDate = new Date(member.start_date);
@@ -10843,6 +11015,9 @@ function isSubscriptionActive(member) {
             showMessage('validationMessage', '❌ Adhérent introuvable', 'danger');
             return false;
         }
+
+        // Charger les mois payés pour calculer le statut réel
+        await loadMemberPaymentStates({ memberIds: [memberId] });
 
         // Vérifier si l'abonnement est actif
         if (!isSubscriptionActive(member)) {
@@ -11781,6 +11956,9 @@ async function validateAttendanceFromScan(memberId) {
             showMessage('scanResult', `❌ Adhérent "${memberId}" introuvable`, 'danger');
             return false;
         }
+
+        // Charger les mois payés pour calculer le statut réel
+        await loadMemberPaymentStates({ memberIds: [memberId] });
 
         // Vérifier si l'abonnement est actif
         const isActive = isSubscriptionActive(member);
@@ -12955,6 +13133,12 @@ async function exportCardAsPNG(cardElement, fileName) {
         // ============================================
         function showMessage(elementId, message, type) {
             const element = document.getElementById(elementId);
+            if (!element) {
+                // Ne jamais casser le flux métier si le conteneur de message
+                // n'existe pas dans la page ; le message reste dans la console.
+                console.warn('[showMessage] conteneur introuvable:', elementId, message);
+                return;
+            }
             element.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
             setTimeout(() => {
                 element.innerHTML = '';
@@ -12971,13 +13155,13 @@ async function exportCardAsPNG(cardElement, fileName) {
     </script>
 
     <!-- Modules V2 : Groupes / Abonnements / Rapports / Paiements + navigation NFC -->
-    <script src="js/groups.js?v=20260917"></script>
+    <script src="js/groups.js?v=20260824"></script>
     <script src="js/subscriptions.js?v=20260824"></script>
-    <script src="js/reports.js?v=20261110"></script>
-    <script src="js/events.js?v=20261110"></script>
+    <script src="js/reports.js?v=20260824"></script>
+    <script src="js/events.js?v=20260824"></script>
     <script src="js/nfc-reader-service.js?v=20260830"></script>
-    <script src="js/nfc-cards.js?v=20261110"></script>
-    <script src="js/nfc-cards-ui.js?v=20261110"></script>
+    <script src="js/nfc-cards.js?v=20260830"></script>
+    <script src="js/nfc-cards-ui.js?v=20260830"></script>
     <script src="js/v2-bootstrap.js?v=20260824"></script>
     <script src="js/sessions-core.js?v=20260917"></script>
 </body>

@@ -266,6 +266,9 @@ let nfcProcessing = false;
 let nfcAutoResetTimer = null;
 
 async function onScannedUid(rawUid) {
+    // Le watcher HID reste armé globalement : ne traiter la carte comme une
+    // présence que si le scanner de présence est réellement ouvert.
+    if (!document.getElementById('nfcScannerModal')?.classList.contains('active')) return;
     if (nfcProcessing) return;
     nfcProcessing = true;
 
