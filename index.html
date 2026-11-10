@@ -1812,8 +1812,10 @@
                                     <th>ID</th>
                                     <th>Nom</th>
                                     <th>Prénom</th>
+                                    <th>Groupe</th>
                                     <th>Mois</th>
-                                    <th>Séances (sur 8)</th>
+                                    <th>Présences</th>
+                                    <th>Absences</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -2299,6 +2301,17 @@
                 <div id="nfcWebNfcStatus" style="margin-top:8px;font-size:.85rem;color:var(--text-secondary);"></div>
             </div>
 
+            <!-- Paiement d'événement par carte (optionnel) -->
+            <div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);">
+                <label style="font-weight:700;display:block;margin-bottom:6px;">💰 Paiement d'événement (optionnel)</label>
+                <select id="nfcScanEvent" class="form-control">
+                    <option value="">— Présence seulement —</option>
+                </select>
+                <div style="font-size:.78rem;color:var(--text-secondary);margin-top:4px;">
+                    اختر حدثاً لتسجيل الدفع تلقائياً عند مسح البطاقة. الأحداث العامة تقبل بطاقات جميع الأندية.
+                </div>
+            </div>
+
             <!-- État du lecteur -->
             <div id="nfcReaderStatus" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:rgba(220,53,69,.1);border:1px solid #dc3545;margin-bottom:12px;">
                 <span style="font-size:1.2rem;">🔴</span>
@@ -2427,6 +2440,34 @@
             })();
             </script>
             </div>
+            <div class="form-group">
+                <label>⏸️ Pause de séances (optionnel)</label>
+                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                    <input type="date" id="groupPauseStart" class="form-control" style="flex:1;min-width:130px;">
+                    <span style="color:var(--text-secondary)">→</span>
+                    <input type="date" id="groupPauseEnd" class="form-control" style="flex:1;min-width:130px;">
+                </div>
+                <small style="color:var(--text-secondary);">
+                    Aucune séance n'est générée ni comptée pendant cette période (vacances, stage obligatoire, fermeture…).
+                </small>
+            </div>
+            <div class="form-group">
+                <label>➕ Séances en plus</label>
+                <div id="groupExtrasList" class="schedule-grid"></div>
+                <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+                    <select id="groupExtraDay" class="form-control" style="width:auto;">
+                        <option value="">Jour…</option>
+                    </select>
+                    <input type="time" id="groupExtraTime" class="form-control" style="width:auto;"
+                           onchange="" oninput="">
+                    <input type="number" id="groupExtraWeeks" class="form-control" style="width:90px;"
+                           min="1" max="12" value="1" title="Nombre de semaines">
+                    <button type="button" class="btn btn-info btn-sm" onclick="addGroupExtraWeeks()">➕ Ajouter</button>
+                </div>
+                <small style="color:var(--text-secondary);">
+                    Ajoute les prochaines occurrences du jour choisi (ex. « Samedi 10:00 pendant 4 semaines » → 4 dates).
+                </small>
+            </div>
             <div id="groupMessage" style="margin-top:10px;"></div>
             <button type="submit" class="btn btn-success">💾 Enregistrer le groupe</button>
         </form>
@@ -2505,6 +2546,15 @@
                     <option value="exam">Examen</option>
                     <option value="other">Autre</option>
                 </select>
+            </div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label>Portée</label>
+                    <select id="eventScope" class="form-control">
+                        <option value="local">🏠 Local — ce club uniquement</option>
+                        <option value="general">🌍 Général — tous les clubs</option>
+                    </select>
+                </div>
             </div>
             <div class="form-group">
                 <label>Description</label>
@@ -12298,50 +12348,122 @@ function stopScanner() {
             if (!month) return;
 
             try {
-                const query = supabase
+                const clubId = currentUser !== 'admin' ? currentClub.id : null;
+                const monthStart = month + '-01';
+                const lastDay = new Date(Number(month.slice(0, 4)), Number(month.slice(5, 7)), 0).getDate();
+                const monthEnd = month + '-' + String(lastDay).padStart(2, '0');
+
+                // Présences enregistrées (NFC / scan manuel)
+                let attQuery = supabase
                     .from('attendance')
-                    .select('member_id, month')
+                    .select('member_id, month, attendance_date')
                     .eq('month', month);
+                if (clubId) attQuery = attQuery.eq('club_id', clubId);
+                const { data: attendances } = await attQuery;
 
-                if (currentUser !== 'admin') {
-                    query.eq('club_id', currentClub.id);
-                }
-
-                const { data: attendances } = await query;
-
-                // Group by member
-                const memberStats = {};
-                attendances.forEach(att => {
-                    if (!memberStats[att.member_id]) {
-                        memberStats[att.member_id] = 0;
-                    }
-                    memberStats[att.member_id]++;
+                const attByMember = {};
+                (attendances || []).forEach(att => {
+                    (attByMember[att.member_id] = attByMember[att.member_id] || []).push(att.attendance_date);
                 });
 
-                // Get member details
-                const memberIds = Object.keys(memberStats);
+                // Groupes + affectations actives du club
+                let groupsQuery = supabase.from('groups').select('id, name, start_date, end_date');
+                if (clubId) groupsQuery = groupsQuery.eq('club_id', clubId);
+                const { data: groups } = await groupsQuery;
+                const gids = (groups || []).map(g => g.id);
+
+                let gmRows = [];
+                if (gids.length) {
+                    const { data: gm } = await supabase
+                        .from('group_members')
+                        .select('member_id, group_id')
+                        .is('end_date', null)
+                        .in('group_id', gids);
+                    gmRows = gm || [];
+                }
+
+                // Membres concernés : présents OU affectés à un groupe
+                const ids = new Set([...Object.keys(attByMember), ...gmRows.map(r => r.member_id)]);
+                if (!ids.size) {
+                    document.getElementById('attendanceList').innerHTML =
+                        '<tr><td colspan="8">Aucun adhérent pour ce mois.</td></tr>';
+                    return;
+                }
+
                 const { data: members } = await supabase
                     .from('members')
-                    .select('*')
-                    .in('id', memberIds);
+                    .select('id, first_name, last_name, current_group_id, start_date')
+                    .in('id', [...ids]);
+
+                // Date de réinscription : inscription active la plus récente
+                let regRows = [];
+                const { data: regs } = await supabase
+                    .from('registrations')
+                    .select('member_id, start_date')
+                    .eq('is_active', true)
+                    .in('member_id', [...ids]);
+                regRows = regs || [];
+
+                // Séances planifiées de chaque groupe sur le mois (source unique)
+                const plannedByGroup = {};
+                await Promise.all((groups || []).map(async g => {
+                    const rows = await getGroupSessions(g.id, monthStart, monthEnd);
+                    plannedByGroup[g.id] = (rows || []).map(s => s.session_date);
+                }));
+
+                const groupNameOf = {};
+                (groups || []).forEach(g => groupNameOf[g.id] = g.name);
+                const groupOfMember = {};
+                gmRows.forEach(gm => {
+                    if (!groupOfMember[gm.member_id]) groupOfMember[gm.member_id] = gm.group_id;
+                });
+
+                const reinOf = (m) => {
+                    const mine = regRows
+                        .filter(r => r.member_id === m.id)
+                        .sort((a, b) => (a.start_date > b.start_date ? -1 : 1));
+                    return (mine.length && mine[0].start_date) ? mine[0].start_date : (m.start_date || null);
+                };
+
+                const rows = (members || []).map(m => {
+                    const groupId = m.current_group_id || groupOfMember[m.id] || null;
+                    const rein = reinOf(m);
+                    // Ne conserver que les planifiées postérieures à la réinscription
+                    const planned = (plannedByGroup[groupId] || [])
+                        .filter(d => !rein || d >= rein);
+                    // Présences uniquement à partir de la réinscription
+                    const present = (attByMember[m.id] || [])
+                        .filter(d => !rein || !d || d >= rein).length;
+                    const plannedCount = Math.max(present, planned.length);
+                    const absences = Math.max(0, plannedCount - present);
+                    return { id: m.id, last: m.last_name || '', first: m.first_name || '',
+                        group: groupId ? (groupNameOf[groupId] || '—') : '—',
+                        present, planned: plannedCount, absences };
+                }).filter(r => r.present > 0 || r.planned > 0)
+                  .sort((a, b) => (a.last + a.first).localeCompare(b.last + b.first));
 
                 const list = document.getElementById('attendanceList');
-                list.innerHTML = members.map(member => {
-                    const count = memberStats[member.id];
-                    const badgeClass = count >= 8 ? 'badge-success' : count >= 6 ? 'badge-warning' : 'badge-danger';
+                list.innerHTML = rows.map(r => {
+                    const badgeClass = r.absences === 0 ? 'badge-success'
+                        : r.absences <= 2 ? 'badge-warning' : 'badge-danger';
                     return `
                         <tr>
-                            <td>${member.id}</td>
-                            <td>${member.last_name}</td>
-                            <td>${member.first_name}</td>
+                            <td>${r.id}</td>
+                            <td>${r.last}</td>
+                            <td>${r.first}</td>
+                            <td>${r.group}</td>
                             <td>${month}</td>
-                            <td><span class="badge ${badgeClass}">${count} / 8</span></td>
+                            <td><span class="badge badge-info">${r.present} / ${r.planned}</span></td>
+                            <td><span class="badge ${badgeClass}">${r.absences}</span></td>
                             <td>
-                                <button class="btn btn-info btn-sm" onclick="showHistory('${member.id}', '${month}')">📋 Historique</button>
+                                <button class="btn btn-info btn-sm" onclick="showHistory('${r.id}', '${month}')">📋 Historique</button>
                             </td>
                         </tr>
                     `;
                 }).join('');
+                if (!rows.length) {
+                    list.innerHTML = '<tr><td colspan="8">Aucun adhérent sur cette période.</td></tr>';
+                }
             } catch (error) {
                 console.error('Error loading attendance:', error);
             }
@@ -13033,13 +13155,14 @@ async function exportCardAsPNG(cardElement, fileName) {
     </script>
 
     <!-- Modules V2 : Groupes / Abonnements / Rapports / Paiements + navigation NFC -->
-    <script src="js/groups.js?v=20261108e"></script>
-    <script src="js/subscriptions.js?v=20261103b"></script>
-    <script src="js/reports.js?v=20261108f"></script>
-    <script src="js/events.js?v=20261108f"></script>
+    <script src="js/groups.js?v=20260824"></script>
+    <script src="js/subscriptions.js?v=20260824"></script>
+    <script src="js/reports.js?v=20260824"></script>
+    <script src="js/events.js?v=20260824"></script>
     <script src="js/nfc-reader-service.js?v=20260830"></script>
     <script src="js/nfc-cards.js?v=20260830"></script>
-    <script src="js/nfc-cards-ui.js?v=20261108b"></script>
+    <script src="js/nfc-cards-ui.js?v=20260830"></script>
     <script src="js/v2-bootstrap.js?v=20260824"></script>
+    <script src="js/sessions-core.js?v=20260917"></script>
 </body>
 </html>

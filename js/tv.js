@@ -223,13 +223,24 @@ async function loadSidePanels() {
             <span class="dim">${fmtShortDate(s.session_date)} · ${String(s.start_time || '').slice(0, 5)}</span>
         </li>`).join('') || '<li class="empty">لا توجد حصص قادمة</li>';
 
-    // Prochain événement
-    const { data: events } = await supabaseClient.from('events')
-        .select('title, event_date, event_time, lieu')
-        .eq('club_id', CLUB_ID)
+    // Prochain événement : ceux du club + les événements généraux (tous clubs)
+    let evQ = supabaseClient.from('events')
+        .select('title, event_date, event_time, lieu, scope')
+        .or(`club_id.eq.${CLUB_ID},scope.eq.general`)
         .gte('event_date', today)
         .order('event_date')
         .limit(1);
+    let { data: events, error: evErr } = await evQ;
+    if (evErr) {
+        // Repli si la colonne `scope` n'est pas encore migrée (017).
+        const fb = await supabaseClient.from('events')
+            .select('title, event_date, event_time, lieu')
+            .eq('club_id', CLUB_ID)
+            .gte('event_date', today)
+            .order('event_date')
+            .limit(1);
+        events = fb.data;
+    }
 
     document.getElementById('eventList').innerHTML = (events || []).map(e => `
         <li>

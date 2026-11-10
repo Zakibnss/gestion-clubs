@@ -363,7 +363,8 @@ async function handleScan(rawId, method) {
         ]);
         const st = stRes.data;
         const existing = dupRes.data;
-        const expired = !st || !st.is_active;
+        // Abonnement expiré : inactif (is_active = false) ou fin effective nulle/dépassée (effective = 0)
+        const expired = !st || !st.is_active || !st.end_effective || st.end_effective < dateStr;
         const timeStr = now.toTimeString().slice(0, 8);
         if (existing && existing.length) {
             addHistory(normalizedUid, fullName, 'SUCCESS', method);
@@ -414,8 +415,8 @@ async function handleScan(rawId, method) {
         // 7) Affichage du résultat (même si abonnement expiré : présence marquée)
         if (expired) {
             addHistory(normalizedUid, fullName, 'EXPIRED', method);
-            setState('expired', '⚠️ تم تسجيل الحضور',
-                `${fullName}\n${timeStr}\nالاشتراك منتهٍ — لكن تم تسجيل الحضور بنجاح.${sessionOk ? '' : '\n(لا توجد حصة جارية — سُجّل خارج الحصة)'}`);
+            setState('expired', '🔴 الاشتراك منتهي',
+                `${fullName}\n${timeStr}\nالاشتراك منتهي — تم تسجيل الحضور رغم انتهاء الاشتراك.${sessionOk ? '' : '\n(لا توجد حصة جارية — سُجّل خارج الحصة)'}`);
         } else {
             addHistory(normalizedUid, fullName, 'SUCCESS', method);
             setState('success', '✓ تم تسجيل الحضور',
