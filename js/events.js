@@ -8,20 +8,34 @@ let currentEventId = null;
 async function loadEvents() {
     if (currentClub === 'admin') await v2PopulateAdminClubSelect('eventsToolbar');
     const clubId = v2GetActiveClubId();
-    if (!clubId) return;
 
     try {
-        const { data: events, error } = await supabase
-            .from('events')
-            .select('*')
-            .eq('club_id', clubId)
-            .order('event_date', { ascending: false });
-        if (error) throw error;
+        // Événements du club actif + TOUS les événements généraux (inter-clubs).
+        // Si l'admin n'a sélectionné aucun club : on affiche tout.
+        let q = supabase.from('events').select('*').order('event_date', { ascending: false });
+        if (clubId) q = q.or(`club_id.eq.${clubId},scope.eq.general`);
+
+        let { data: events, error } = await q;
+        if (error) {
+            if (!clubId) throw error;
+            // Repli si la colonne `scope` n'est pas encore migrée (017).
+            const fb = await supabase.from('events').select('*')
+                .eq('club_id', clubId).order('event_date', { ascending: false });
+            if (fb.error) throw fb.error;
+            events = fb.data;
+        }
         v2EventsCache = events || [];
 
-        document.getElementById('eventsGrid').innerHTML = v2EventsCache.map(ev => `
+        document.getElementById('eventsGrid').innerHTML = v2EventsCache.map(ev => {
+            const isGeneral = ev.scope === 'general';
+            const scopeBadge = isGeneral
+                ? '<span class="badge badge-info">🌍 Général — tous les clubs</span>'
+                : '<span class="badge" style="background:rgba(255,255,255,.12)">🏠 Local</span>';
+            // Un club ne modifie/supprime que SES événements (l'admin peut tout).
+            const canManage = v2IsAdmin() || !clubId || ev.club_id === clubId;
+            return `
             <div class="event-card">
-                <h3 style="color:var(--primary-color)">${escapeHtmlV2(ev.title)}</h3>
+                <h3 style="color:var(--primary-color)">${escapeHtmlV2(ev.title)} ${scopeBadge}</h3>
                 <div class="group-meta">
                     <span>📅 ${fmtDateV2(ev.event_date)}${ev.event_time ? ' ' + ev.event_time.slice(0, 5) : ''}</span>
                     ${ev.lieu ? `<span>📍 ${escapeHtmlV2(ev.lieu)}</span>` : ''}
@@ -31,10 +45,11 @@ async function loadEvents() {
                 ${ev.description ? `<p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:12px">${escapeHtmlV2(ev.description)}</p>` : ''}
                 <div class="group-actions">
                     <button class="btn btn-primary btn-sm" onclick="openParticipantsModal('${ev.id}')">👥 Participations</button>
-                    <button class="btn btn-secondary btn-sm" onclick="openEventModal('${ev.id}')">✏️ Modifier</button>
-                    <button class="btn btn-danger btn-sm" onclick="deleteEvent('${ev.id}')">🗑️</button>
+                    ${canManage ? `<button class="btn btn-secondary btn-sm" onclick="openEventModal('${ev.id}')">✏️ Modifier</button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteEvent('${ev.id}')">🗑️</button>` : ''}
                 </div>
-            </div>`).join('') || '<p>Aucun événement. Créez-en un.</p>';
+            </div>`;
+        }).join('') || '<p>Aucun événement. Créez-en un.</p>';
     } catch (err) {
         showMessage('eventsMessage', 'Erreur: ' + err.message, 'danger');
     }
@@ -47,6 +62,9 @@ function openEventModal(eventId) {
     document.getElementById('eventModalTitle').textContent =
         eventId ? '✏️ Modifier l\'événement' : '➕ Nouvel événement';
 
+    const scopeEl = document.getElementById('eventScope');
+    if (scopeEl) scopeEl.value = 'local';
+
     if (eventId) {
         const ev = v2EventsCache.find(e => e.id === eventId);
         if (ev) {
@@ -57,6 +75,7 @@ function openEventModal(eventId) {
             document.getElementById('eventPrice').value = ev.price ?? 0;
             document.getElementById('eventDescription').value = ev.description || '';
             document.getElementById('eventType').value = ev.type || 'stage';
+            if (scopeEl) scopeEl.value = ev.scope || 'local';
         }
     }
     openModal('eventModal');
@@ -65,7 +84,10 @@ function openEventModal(eventId) {
 async function handleEventSubmit(e) {
     e.preventDefault();
     const clubId = v2GetActiveClubId();
-    if (!clubId) return;
+    if (!clubId) {
+        showMessage('eventMessage', 'Sélectionnez un club avant de créer un événement.', 'warning');
+        return;
+    }
 
     const payload = {
         club_id: clubId,
@@ -75,7 +97,8 @@ async function handleEventSubmit(e) {
         lieu: document.getElementById('eventLieu').value.trim() || null,
         price: parseFloat(document.getElementById('eventPrice').value) || 0,
         description: document.getElementById('eventDescription').value.trim() || null,
-        type: document.getElementById('eventType').value || 'stage'
+        type: document.getElementById('eventType').value || 'stage',
+        scope: document.getElementById('eventScope')?.value || 'local'
     };
 
     const id = document.getElementById('eventId').value;
@@ -106,26 +129,42 @@ async function openParticipantsModal(eventId) {
     currentEventId = eventId;
     const ev = v2EventsCache.find(e => e.id === eventId);
     const clubId = v2GetActiveClubId();
+    // Événement local : le club de référence est celui qui l'a créé (utile
+    // quand l'admin consulte sans club sélectionné).
+    const localClubId = ev?.club_id || clubId;
 
-    document.getElementById('epTitle').textContent = `👥 Participations — ${ev?.title || ''}`;
+    const isGeneral = ev?.scope === 'general';
+    document.getElementById('epTitle').textContent =
+        `👥 Participations — ${ev?.title || ''}${isGeneral ? ' 🌍 (tous les clubs)' : ''}`;
     document.getElementById('epMembersList').innerHTML = '<div class="spinner"></div>';
     document.getElementById('epParticipantsTable').innerHTML = '';
     openModal('eventParticipantsModal');
 
     try {
-        const [membersRes, partsRes] = await Promise.all([
-            supabase.from('members')
-                .select('id, first_name, last_name, current_group_id')
-                .eq('club_id', clubId).order('last_name'),
+        // Événement général : adhérents de TOUS les clubs/groupes.
+        // Événement local : adhérents du club actif uniquement.
+        let membersQ = supabase.from('members')
+            .select('id, first_name, last_name, current_group_id, club_id')
+            .order('last_name');
+        if (!isGeneral) membersQ = membersQ.eq('club_id', localClubId);
+
+        let groupsQ = supabase.from('groups').select('id, name');
+        if (!isGeneral) groupsQ = groupsQ.eq('club_id', localClubId);
+
+        const [membersRes, partsRes, groupsRes, clubsRes] = await Promise.all([
+            membersQ,
             supabase.from('event_participants')
                 .select('id, member_id')
-                .eq('event_id', eventId)
+                .eq('event_id', eventId),
+            groupsQ,
+            supabase.from('clubs').select('id, name')
         ]);
 
         const partSet = new Set((partsRes.data || []).map(p => p.member_id));
-        const groupsRes = await supabase.from('groups').select('id, name').eq('club_id', clubId);
         const groupNameOf = {};
         (groupsRes.data || []).forEach(g => groupNameOf[g.id] = g.name);
+        const clubNameOf = {};
+        (clubsRes.data || []).forEach(c => clubNameOf[c.id] = c.name);
 
         document.getElementById('epMembersList').innerHTML =
             (membersRes.data || []).map(m => `
@@ -133,6 +172,7 @@ async function openParticipantsModal(eventId) {
                 <input type="checkbox" data-mid="${m.id}" ${partSet.has(m.id) ? 'checked' : ''}
                        onchange="this.closest('.assign-item').classList.toggle('selected', this.checked)">
                 <span><b>${escapeHtmlV2(m.last_name)}</b> ${escapeHtmlV2(m.first_name)}</span>
+                ${isGeneral ? `<span class="badge badge-secondary">${escapeHtmlV2(clubNameOf[m.club_id] || '—')}</span>` : ''}
                 <span class="badge badge-info" style="margin-left:auto">
                     ${groupNameOf[m.current_group_id] || 'Sans groupe'}
                 </span>
@@ -225,9 +265,16 @@ async function saveParticipants() {
         // Ajouts
         const toAdd = checked.filter(id => !currentIds.has(id));
         if (toAdd.length) {
+            // Rattacher chaque participant à SON club (événement général :
+            // adhérents issus de clubs différents).
+            const { data: mems } = await supabase.from('members')
+                .select('id, club_id').in('id', toAdd);
+            const clubOf = {};
+            (mems || []).forEach(m => clubOf[m.id] = m.club_id);
+
             const { error } = await supabase.from('event_participants')
                 .insert(toAdd.map(mid => ({
-                    club_id: clubId, event_id: currentEventId,
+                    club_id: clubOf[mid] || clubId, event_id: currentEventId,
                     member_id: mid, group_id: null
                 })));
             if (error) throw error;

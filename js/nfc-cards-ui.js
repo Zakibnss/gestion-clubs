@@ -282,7 +282,8 @@ async function onScannedUid(rawUid) {
     setNfcScannerState('reading');
 
     try {
-        const res = await NfcCards.scanPresence(uid, v2GetActiveClubId(), { method: 'NFC' });
+        const eventId = document.getElementById('nfcScanEvent')?.value || null;
+        const res = await NfcCards.scanPresence(uid, v2GetActiveClubId(), { method: 'NFC', eventId });
         renderNfcScanResult(res);
         loadNfcScannerHistory();
         // Retour automatique court pour l'adhérent suivant : la lecture
@@ -306,6 +307,37 @@ function scheduleNfcAutoReset(delayMs) {
         nfcProcessing = false;
         setNfcScannerState('ready');
     }, delayMs);
+}
+
+/* Bloc HTML affichant le résultat du paiement d'événement (si demandé). */
+function eventPaymentHtml(payment) {
+    if (!payment) return '';
+    if (payment.reason === 'not_participant') {
+        const title = payment.event?.title || 'Événement';
+        return `<div class="alert alert-warning" style="margin-top:8px;">
+            ⚠ <strong>${escapeHtmlV2(title)}</strong><br>
+            Cet adhérent n'est pas inscrit à cet événement — aucun paiement enregistré.
+        </div>`;
+    }
+    if (payment.reason === 'event_not_found') {
+        return `<div class="alert alert-danger" style="margin-top:8px;">Événement introuvable.</div>`;
+    }
+    if (payment.reason === 'error') {
+        return `<div class="alert alert-danger" style="margin-top:8px;">Erreur paiement : ${escapeHtmlV2(payment.message || 'inconnue')}</div>`;
+    }
+    const title = payment.event?.title || 'Événement';
+    if (payment.alreadyPaid) {
+        return `<div class="alert alert-info" style="margin-top:8px;">
+            ℹ️ Paiement déjà enregistré — <strong>${escapeHtmlV2(title)}</strong> (${payment.amount} DA).
+        </div>`;
+    }
+    if (payment.paid) {
+        return `<div class="alert alert-success" style="margin-top:8px;">
+            💰 Paiement encaissé : <strong>${payment.amount} DA</strong><br>
+            <span style="font-size:.9rem;">${escapeHtmlV2(title)}</span>
+        </div>`;
+    }
+    return '';
 }
 
 function renderNfcScanResult(res) {
@@ -347,7 +379,7 @@ function renderNfcScanResult(res) {
                     الحضور :<br><strong>${dateFmt} — ${escapeHtmlV2(res.time)}</strong><br>
                     <span style="color:var(--warn);">الاشتراك منتهي — تم التحقق من الحضور مع ذلك.</span>
                 </div>
-            </div>`;
+            </div>${eventPaymentHtml(res.payment)}`;
         return;
     }
 
@@ -355,7 +387,7 @@ function renderNfcScanResult(res) {
         title.textContent = '⛔ الاشتراك منتهي';
         sub.textContent = escapeHtmlV2(res.member ? res.member.last_name + ' ' + res.member.first_name : '');
         document.getElementById('nfcScanResult').innerHTML =
-            `<div class="alert alert-danger"><strong>الاشتراك منتهي</strong><br>${escapeHtmlV2(res.detail)}</div>`;
+            `<div class="alert alert-danger"><strong>الاشتراك منتهي</strong><br>${escapeHtmlV2(res.detail)}</div>${eventPaymentHtml(res.payment)}`;
         return;
     }
 
@@ -363,7 +395,7 @@ function renderNfcScanResult(res) {
         title.textContent = 'ℹ تم تسجيل الحضور مسبقًا';
         sub.textContent = escapeHtmlV2(res.member ? res.member.last_name + ' ' + res.member.first_name : '');
         document.getElementById('nfcScanResult').innerHTML =
-            `<div class="alert alert-info"><strong>تم تسجيل الحضور مسبقًا</strong><br>${escapeHtmlV2(res.detail)}</div>`;
+            `<div class="alert alert-info"><strong>تم تسجيل الحضور مسبقًا</strong><br>${escapeHtmlV2(res.detail)}</div>${eventPaymentHtml(res.payment)}`;
         return;
     }
 
@@ -382,7 +414,7 @@ function renderNfcScanResult(res) {
             <div style="font-size:.9rem;">
                 الحضور :<br><strong>${dateFmt} — ${escapeHtmlV2(res.time)}</strong>
             </div>
-        </div>`;
+        </div>${eventPaymentHtml(res.payment)}`;
 }
 
 /* Attribution depuis le scanner (carte non attribuée) */
@@ -504,11 +536,34 @@ async function armNfcScanner() {
     }
 }
 
+/* ---------- Événements proposés pour le paiement par carte ---------- */
+async function loadNfcScanEvents() {
+    const sel = document.getElementById('nfcScanEvent');
+    if (!sel) return;
+    const prev = sel.value;
+    sel.innerHTML = '<option value="">— Présence seulement —</option>';
+    try {
+        // Événements du club actif + tous les événements généraux.
+        const events = await NfcCards.listEventsForScanner(v2GetActiveClubId());
+        sel.innerHTML += events.map(ev => {
+            const d = ev.event_date
+                ? new Date(ev.event_date + 'T00:00:00').toLocaleDateString('fr-FR') : '';
+            const scope = ev.scope === 'general' ? ' 🌍' : '';
+            const price = Number(ev.price || 0);
+            return `<option value="${ev.id}">${escapeHtmlV2(ev.title || '')} — ${d}${scope} (${price} DA)</option>`;
+        }).join('');
+    } catch (e) {
+        console.warn('loadNfcScanEvents', e);
+    }
+    if (prev) sel.value = prev;
+}
+
 /* ---------- Ouverture du scanner ---------- */
 async function openNfcScanner() {
     renderWebNfcStatus();
     updateNfcModeSelector();
     document.getElementById('nfcScanResult').innerHTML = '';
+    await loadNfcScanEvents();
     await armNfcScanner();
     loadNfcScannerHistory();
     openModal('nfcScannerModal');
