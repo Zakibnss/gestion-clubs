@@ -147,6 +147,82 @@ window.NfcCards = (function () {
     /* ---------- Scanner de présence ----------
        Enregistre la présence de l'adhérent associé à un UID, et un
        évènement d'historique. Retourne un objet info pour l'UI. */
+    /* Événements disponibles pour le scanner de paiement :
+       événements du club actif + TOUS les événements généraux. */
+    async function listEventsForScanner(clubId) {
+        let q = window.supabase
+            .from('events')
+            .select('id, title, event_date, price, scope, club_id')
+            .order('event_date', { ascending: false });
+        if (clubId) q = q.or(`club_id.eq.${clubId},scope.eq.general`);
+        else q = q.eq('scope', 'general');   // sans club : seulement les généraux
+        let { data, error } = await q;
+        if (error) {
+            // Repli si la colonne `scope` n'est pas encore migrée (017).
+            let fb = window.supabase.from('events')
+                .select('id, title, event_date, price, club_id')
+                .order('event_date', { ascending: false });
+            if (clubId) fb = fb.eq('club_id', clubId);
+            const r = await fb;
+            if (r.error) throw r.error;
+            data = (r.data || []).map(e => ({ ...e, scope: 'local' }));
+        }
+        return data || [];
+    }
+
+    /* Encaisse le paiement d'un événement pour l'adhérent identifié par sa
+       carte. La carte est résolue globalement : accepté pour les adhérents
+       de TOUS les clubs/groupes (utile pour un événement général).
+       Retourne { ok, paid, alreadyPaid, reason, amount, event }. */
+    async function payEventForMember(eventId, memberId) {
+        const [evRes, partRes] = await Promise.all([
+            window.supabase.from('events')
+                .select('id, title, price')
+                .eq('id', eventId).maybeSingle(),
+            window.supabase.from('event_participants')
+                .select('id')
+                .eq('event_id', eventId)
+                .eq('member_id', memberId)
+                .maybeSingle()
+        ]);
+        if (evRes.error) throw evRes.error;
+        if (partRes.error) throw partRes.error;
+
+        const ev = evRes.data;
+        if (!ev) return { ok: false, reason: 'event_not_found' };
+
+        const part = partRes.data;
+        if (!part) return { ok: false, reason: 'not_participant', event: ev };
+
+        const { data: pays, error: payErr } = await window.supabase
+            .from('event_payments')
+            .select('id, status')
+            .eq('participant_id', part.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
+        if (payErr) throw payErr;
+
+        const last = (pays || [])[0];
+        if (last && last.status === 'PAYE') {
+            return { ok: true, alreadyPaid: true, amount: Number(ev.price || 0), event: ev };
+        }
+
+        const { error } = await window.supabase.from('event_payments').insert({
+            participant_id: part.id,
+            amount: Number(ev.price || 0),
+            status: 'PAYE',
+            previous_status: last ? last.status : 'NON PAYE',
+            paid_on: new Date().toISOString().slice(0, 10),
+            changed_by: 'NFC'
+        });
+        if (error) throw error;
+        return { ok: true, paid: true, amount: Number(ev.price || 0), event: ev };
+    }
+
+    /* ---------- Scanner de présence ----------*
+       Enregistre la présence de l'adhérent associé à un UID, et un
+       évènement d'historique. Retourne un objet info pour l'UI.
+       opts.eventId : encaisse aussi le paiement de l'événement choisi. */
     async function scanPresence(uid, clubId, opts) {
         opts = opts || {};
         const method = opts.method || 'NFC';
@@ -226,6 +302,18 @@ window.NfcCards = (function () {
         // différence visible est le statut « expired » remonté à l'UI.
         const expired = !st || !st.is_active;
 
+        // Paiement d'événement par carte (optionnel). La carte est résolue
+        // globalement : fonctionne pour les adhérents de tous les clubs/groupes.
+        let payment = null;
+        if (opts.eventId) {
+            try {
+                payment = await payEventForMember(opts.eventId, card.member_id);
+            } catch (e) {
+                console.warn('payEventForMember', e);
+                payment = { ok: false, reason: 'error', message: e.message };
+            }
+        }
+
         // Vérif : présence déjà enregistrée aujourd'hui ? (anti-doublon)
         if (!opts.allowDuplicate) {
             if (existing && existing.length) {
@@ -234,7 +322,7 @@ window.NfcCards = (function () {
                 return { ok: true, duplicate: true, result: 'present', uid: uidClean,
                     label: 'Présence déjà enregistrée',
                     detail: `${fullName} a validé sa présence à ${existing[0].attendance_time}.`,
-                    member, groupName, firstTime: existing[0].attendance_time, expired };
+                    member, groupName, firstTime: existing[0].attendance_time, expired, payment };
             }
         }
 
@@ -261,7 +349,7 @@ window.NfcCards = (function () {
                 member, groupName, time: timeStr, date: dateStr };
         }
         return { ok: true, result: 'present', uid: uidClean, label: 'Présence enregistrée',
-            detail: `${fullName} · ${timeStr}`, member, groupName, time: timeStr, date: dateStr };
+            detail: `${fullName} · ${timeStr}`, member, groupName, time: timeStr, date: dateStr, payment };
     }
 
     async function insertEvent(ev) {
@@ -292,6 +380,8 @@ window.NfcCards = (function () {
         setCardStatus,
         listCardHistory,
         listAllHistory,
+        listEventsForScanner,
+        payEventForMember,
         scanPresence
     };
 })();

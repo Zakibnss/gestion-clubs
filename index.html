@@ -2273,6 +2273,17 @@
                 <div id="nfcWebNfcStatus" style="margin-top:8px;font-size:.85rem;color:var(--text-secondary);"></div>
             </div>
 
+            <!-- Paiement d'événement par carte (optionnel) -->
+            <div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);">
+                <label style="font-weight:700;display:block;margin-bottom:6px;">💰 Paiement d'événement (optionnel)</label>
+                <select id="nfcScanEvent" class="form-control">
+                    <option value="">— Présence seulement —</option>
+                </select>
+                <div style="font-size:.78rem;color:var(--text-secondary);margin-top:4px;">
+                    اختر حدثاً لتسجيل الدفع تلقائياً عند مسح البطاقة. الأحداث العامة تقبل بطاقات جميع الأندية.
+                </div>
+            </div>
+
             <!-- État du lecteur -->
             <div id="nfcReaderStatus" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:rgba(220,53,69,.1);border:1px solid #dc3545;margin-bottom:12px;">
                 <span style="font-size:1.2rem;">🔴</span>
@@ -2500,6 +2511,15 @@
                     <option value="exam">Examen</option>
                     <option value="other">Autre</option>
                 </select>
+            </div>
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label>Portée</label>
+                    <select id="eventScope" class="form-control">
+                        <option value="local">🏠 Local — ce club uniquement</option>
+                        <option value="general">🌍 Général — tous les clubs</option>
+                    </select>
+                </div>
             </div>
             <div class="form-group">
                 <label>Description</label>
@@ -12953,11 +12973,11 @@ async function exportCardAsPNG(cardElement, fileName) {
     <!-- Modules V2 : Groupes / Abonnements / Rapports / Paiements + navigation NFC -->
     <script src="js/groups.js?v=20260917"></script>
     <script src="js/subscriptions.js?v=20260824"></script>
-    <script src="js/reports.js?v=20260917"></script>
-    <script src="js/events.js?v=20260824"></script>
+    <script src="js/reports.js?v=20261110"></script>
+    <script src="js/events.js?v=20261110"></script>
     <script src="js/nfc-reader-service.js?v=20260830"></script>
-    <script src="js/nfc-cards.js?v=20260830"></script>
-    <script src="js/nfc-cards-ui.js?v=20260830"></script>
+    <script src="js/nfc-cards.js?v=20261110"></script>
+    <script src="js/nfc-cards-ui.js?v=20261110"></script>
     <script src="js/v2-bootstrap.js?v=20260824"></script>
     <script src="js/sessions-core.js?v=20260917"></script>
 </body>

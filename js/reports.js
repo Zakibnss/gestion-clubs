@@ -451,13 +451,13 @@ async function runEventsReport() {
     if (!from || !to || from > to) { alert('Période invalide'); return; }
 
     try {
-        const [evRes, ] = await Promise.all([
-            supabase.from('events')
-                .select('id, title, event_date, event_time, lieu, price, type')
-                .eq('club_id', clubId)
-                .gte('event_date', from).lte('event_date', to)
-                .order('event_date')
-        ]);
+        // Événements du club actif + tous les événements généraux (inter-clubs).
+        let evQ = supabase.from('events')
+            .select('id, title, event_date, event_time, lieu, price, type, scope')
+            .gte('event_date', from).lte('event_date', to)
+            .order('event_date');
+        if (clubId) evQ = evQ.or(`club_id.eq.${clubId},scope.eq.general`);
+        const evRes = await evQ;
 
         const events = evRes.data || [];
         if (!events.length) {
