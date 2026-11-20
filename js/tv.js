@@ -205,16 +205,29 @@ async function loadAttendance() {
 
 /* ---------------- Panneaux latéraux ---------------- */
 
+// Date du jour dans le fuseau du club (évite un décalage UTC).
+function todayInClubTz() {
+    const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'Africa/Algiers',
+        year: 'numeric', month: '2-digit', day: '2-digit'
+    }).formatToParts(new Date());
+    const get = (type) => (parts.find(p => p.type === type) || {}).value || '';
+    return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
 async function loadSidePanels() {
     if (!CLUB_ID) return;
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayInClubTz();
 
-    // Prochaines séances via vue upcoming_sessions si dispo, sinon sessions
-    const { data: upcoming } = await supabaseClient.from('upcoming_sessions')
-        .select('*')
+    // Séances réelles uniquement (séances ponctuelles saisies manuellement).
+    // Le planning récurrent est calculé à la volée, il n'est jamais stocké ici.
+    const { data: upcoming } = await supabaseClient.from('sessions')
+        .select('group_type, session_date, start_time')
         .eq('club_id', CLUB_ID)
         .gte('session_date', today)
-        .order('session_date')
+        .neq('status', 'cancelled')
+        .order('session_date', { ascending: true })
+        .order('start_time', { ascending: true })
         .limit(3);
 
     document.getElementById('upcomingList').innerHTML = (upcoming || []).map(s => `

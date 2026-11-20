@@ -640,32 +640,7 @@ async function viewGroupSessions(groupId, groupName) {
                 ${(s.status === 'live' || s.status === 'paused') ? `<button class="btn btn-danger btn-sm" onclick="setSessionStatus('${s.id}','completed')">⏹ Terminer</button>` : ''}
                 ${(s.status === 'waiting' || s.status === 'paused') ? `<button class="btn btn-warning btn-sm" onclick="setSessionStatus('${s.id}','cancelled')">⛔ Annuler</button>` : ''}
             </td>
-        </tr>`        ).join('') || '<tr><td colspan="5">Aucune séance. Utilisez « Générer » pour créer le planning.</td></tr>';
-}
-
-async function generateSessionsForGroup() {
-    const g = findGroupCache(currentSessionsGroup);
-    if (!g) return;
-    const hasSchedule = !!(g.schedule && Object.keys(g.schedule).length);
-    let hasExtras = false;
-    try {
-        hasExtras = (await fetchGroupExtraSessions(currentSessionsGroup)).length > 0;
-    } catch (err) {
-        console.warn('[groups] sessions ponctuelles', err);
-    }
-    if (!hasSchedule && !hasExtras) {
-        alert("Définissez d'abord un planning du groupe (jours + heures) ou des séances en plus.");
-        return;
-    }
-    if (!confirm('Générer les séances manquantes depuis le planning centralisé ?\n(Saison en cours, pauses et séances annulées respectées — rien n\'est supprimé.)')) return;
-
-    const created = await generateGroupSessions(currentSessionsGroup);
-    if (created === 0) {
-        alert('Aucune nouvelle séance à générer : toutes les dates planifiées existent déjà.');
-    } else {
-        alert(`${created} séance(s) générée(s).`);
-    }
-    viewGroupSessions(g.id, g.name);
+        </tr>`        ).join('') || '<tr><td colspan="5">Aucune séance enregistrée. Ajoutez une séance ponctuelle manuellement.</td></tr>';
 }
 
 async function setSessionStatus(sessionId, action) {

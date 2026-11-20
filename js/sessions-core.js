@@ -1,8 +1,7 @@
 // ============================================
 // MODULE CENTRAL — SÉANCES PLANIFIÉES
-// Source de vérité unique côté client.
-// Toutes les logiques (génération, présences,
-// rapports, fiche QR) passent par getGroupSessions.
+// Lecture seule : aucune date future n'est stockée côté client.
+// Présences, rapports et fiche QR passent par getGroupSessions.
 // ============================================
 
 (function (global) {
@@ -41,24 +40,6 @@
         return byDate;
     }
 
-    // Crée les séances manquantes du groupe (planning complet) via la RPC.
-    // Retourne le nombre de séances créées.
-    async function generateGroupSessions(groupId) {
-        if (!groupId) return 0;
-        try {
-            const { data, error } = await global.supabase
-                .rpc('generate_group_sessions', { p_group_id: groupId });
-            if (error) {
-                console.warn('generateGroupSessions', error);
-                return 0;
-            }
-            return data ?? 0;
-        } catch (err) {
-            console.warn('generateGroupSessions', err);
-            return 0;
-        }
-    }
-
     // Date de réinscription d'un membre : inscription active la plus
     // récente, sinon members.start_date. Retourne 'YYYY-MM-DD' ou null.
     function reinDate(member, activeRegistrations) {
@@ -73,6 +54,5 @@
 
     global.getGroupSessions = getGroupSessions;
     global.getGroupSessionsByDate = getGroupSessionsByDate;
-    global.generateGroupSessions = generateGroupSessions;
     global.getMemberReinDate = reinDate;
 })(window);

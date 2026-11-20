@@ -71,75 +71,60 @@ Application web professionnelle pour la gestion d'un club de Kyokushin Karate av
 La fiche `member-info.html` affiche automatiquement :
 
 1. **La prochaine séance** de l'adhérent (carte « Prochaine séance ») ;
-2. **Toutes les prochaines séances** via le bouton **Voir tout / Masquer**.
+2. **Les suivantes** via le bouton **Voir tout / Masquer** (`sessions[1..N]`).
+
+Les occurrences sont **calculées à la volée** par `js/next-sessions.js`.
+Aucune date future n'est stockée : le vieux générateur et la table
+d'occurrences pré-calculées ont été supprimés.
 
 ### Source de vérité (schéma Supabase réel)
 
 | Donnée | Emplacement |
 | --- | --- |
 | Groupe de l'adhérent | `members.current_group_id` → `groups.id` |
-| Repli multi-groupes | `group_members` où `end_date IS NULL` |
-| Planning hebdomadaire | `groups.schedule` (jsonb `{ "mardi": "18:30", … }`) |
-| Séances ponctuelles | `groups.extra_sessions` (jsonb, migration 016) |
-| Pauses | `groups.pause_start_date` / `pause_end_date` (migration 016) |
-| Saison | `groups.start_date` / `groups.end_date` |
+| Planning hebdomadaire | `training_sessions` (`day_of_week` 1–7, `start_time`, `end_time`, `coach`, `is_active`, rattaché par `group_id` ou `group_type` selon le déploiement) |
+| Séances ponctuelles réelles | `sessions` (`group_id`, `session_date`, `start_time`, `status`) |
 | Annulation | `sessions.status = 'cancelled'` |
 
-> ⚠️ La RPC `group_planned_sessions` n'est pas déployée sur la base
-> actuelle (HTTP 404). La génération des occurrences est donc faite
-> **côté client** par `js/upcoming-sessions.js`, avec les mêmes règles
-> que la migration 016. Dès que la RPC est déployée, le module peut
-> être branché dessus sans changer l'interface.
+> ⚠️ `groups.schedule`, `groups.extra_sessions`, les RPC de génération
+> et la table d'occurrences pré-calculées ne sont plus utilisés.
 
 ### Algorithme de calcul
 
-Pour chaque groupe de l'adhérent, le module :
+1. résolution `member → groupe` (avec lecture directe de `groups` en repli) ;
+2. date du jour et heure courante dans le fuseau **`Africa/Algiers`** ;
+3. lecture des créneaux **actifs** de `training_sessions` pour ce `group_id` ;
+4. projection sur **8 semaines** (56 jours) de `day_of_week` → dates ;
+5. créneau déjà terminé aujourd'hui ignoré (`end_time`, ou `start_time` à défaut) ;
+6. ajout des séances ponctuelles **déjà présentes** dans `sessions`
+   (`session_date >= aujourd'hui`, `status <> 'cancelled'`) ;
+7. tri par date + heure, déduplication (date + heure), limite `limit`.
 
-1. part de la date du jour dans le fuseau **`Africa/Algiers`** ;
-2. borne la période par `start_date` / `end_date` du groupe et un
-   horizon de **180 jours** ;
-3. génère les occurrences du planning hebdomadaire (`schedule`) ;
-4. ajoute les séances supplémentaires (`extra_sessions`) ;
-5. retire les pauses du groupe (`pause_*`) ;
-6. retire les séances annulées (`sessions.status = 'cancelled'`) ;
-7. exclut les séances déjà passées aujourd'hui (heure de début
-   dépassée), tout en gardant une séance en cours si `end_time` existe ;
-8. trie par date puis heure et déduplique (date + heure + groupe).
+Une séance ponctuelle saisie manuellement est **prioritaire** sur un
+créneau récurrent identique (même date, même heure).
 
-Une séance supplémentaire est **prioritaire** sur un créneau
-récurrent identique (même date, même heure).
+### Ajouter une séance ponctuelle
 
-### Ajouter une séance supplémentaire
-
-Deux possibilités :
-
-- **Via l'application** : onglet Groupes → « Séances en plus »
-  (écrit dans `groups.extra_sessions`) ;
-- **Via SQL** (si la migration 016 est appliquée) :
+Uniquement **manuellement** dans la table `sessions` (le coach peut
+toujours le faire depuis l'onglet Groupes → « Séances en plus », ou en SQL) :
 
 ```sql
-update public.groups
-set extra_sessions = coalesce(extra_sessions, '[]'::jsonb) ||
-    jsonb_build_array(jsonb_build_object(
-        'date', '2026-12-05',
-        'time', '10:00',
-        'notes', 'Stage technique'
-    ))
-where id = '<group_id>';
+insert into public.sessions
+    (club_id, group_id, session_date, start_time, end_time, status, group_type)
+values
+    ('<club_id>', '<group_id>', '2026-12-05', '10:00:00', '12:00:00',
+     'waiting', 'Stage technique');
 ```
 
-Le module accepte aussi les formes `{ start_time, end_time, room }`
-et la chaîne `"2026-12-05 10:00"`.
+Le module n'écrit jamais dans `sessions` et n'y crée aucune date future.
 
 ### Badges affichés
 
 | Badge | Signification |
 | --- | --- |
 | `Entraînement` | Séance récurrente du planning |
-| `Séance supplémentaire` | Entrée de `extra_sessions` |
-| `Stage` / `Compétition` | Détecté dans les notes / le libellé |
-| `Aujourd'hui` | Séance le jour même (fuseau du club) |
-| `Demain` | Séance le lendemain |
+| `Séance supplémentaire` | Ligne manuelle de `sessions` |
+| `Aujourd'hui` / `Demain` | Calculé dans le fuseau du club |
 
 ### Accessibilité
 
@@ -150,46 +135,46 @@ et la chaîne `"2026-12-05 10:00"`.
 
 ### Diagnostic SQL
 
-Le fichier [`sql/018_upcoming_sessions_diagnostic.sql`](sql/018_upcoming_sessions_diagnostic.sql)
+Le fichier [`sql/019_next_sessions_cleanup.sql`](sql/019_next_sessions_cleanup.sql)
 regroupe des requêtes **lecture seule** :
 
-- colonnes réellement présentes (`groups`, `sessions`, …) ;
-- existence des colonnes optionnelles de la migration 016 ;
-- existence de la RPC `group_planned_sessions` ;
-- résolution `membre → groupe` ;
-- planning brut, pauses et séances supplémentaires ;
-- séances annulées ;
-- aperçu des 20 prochaines occurrences ;
-- contrôle du nombre d'occurrences par source.
+- planning récurrent actif (`training_sessions`) ;
+- séances futures présentes dans `sessions` (à examiner) ;
+- candidates probablement générées (correspondance date + heure + groupe) ;
+- existence de l'ancienne table d'occurrences pré-calculées.
 
-Remplacer `'FL1'` par l'identifiant de l'adhérent à contrôler.
+Les instructions `DELETE` / `DROP` y sont **commentées** : aucune
+suppression n'est exécutée sans confirmation du coach.
+
+Le fichier `sql/018_upcoming_sessions_diagnostic.sql` reste disponible
+à titre historique pour le diagnostic de l'ancien schéma.
 
 ### Test rapide dans la console
 
 ```js
 // Sur member-info.html?id=FL1 (F12 → Console)
-await getUpcomingSessions('FL1', 5);       // tableau des 5 prochaines séances
-await getUpcomingSessionsData('FL1', 5);   // détail (reason, groupName, all…)
-UpcomingSessions.getState().lastData.reason;
+await getUpcomingSessions('FL1', 10);      // { sessions, message, … }
+await getUpcomingSessionsData('FL1', 5);   // même objet détaillé
+UpcomingSessions.getState().lastData.message;
 ```
 
-Valeurs de `reason` : `null` (OK), `no_group`, `member_not_found`,
-`no_member`, `no_client`, `load_error`.
+Valeurs de `reason` : `null` (OK), `no_member`, `no_client`,
+`member_not_found`, `no_group`, `inactive_group`, `planning_error`,
+`no_slots`, `none`, `load_error`.
 
 Tests unitaires :
 
 ```bash
-node --test tests/upcoming-sessions.test.js
+node --test tests/next-sessions.test.js
 ```
 
 ### Limites connues
 
-- Pas de colonne `room` en base : la salle n'est affichée que si elle
-  est fournie par `extra_sessions` ou par une future colonne ;
+- l'horizon est fixé à **8 semaines** (`HORIZON_DAYS = 56`) ;
 - `sessions.end_time` est souvent `null` : l'heure de fin n'apparaît
   alors pas ;
-- `extra_sessions` / pauses nécessitent la migration `016` ;
-- l'horizon est fixé à 180 jours (constante `HORIZON_DAYS`).
+- les séances ponctuelles sont affichées telles quelles, sans calcul
+  de récurrence.
 
 ## 📦 Fichiers du Projet
 

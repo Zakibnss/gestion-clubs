@@ -342,10 +342,15 @@
         }
 
         .session-next__room,
+        .session-next__coach,
         .session-next__countdown {
             margin: 6px 0 0;
             font-size: 0.8rem;
             color: var(--c-muted);
+        }
+
+        .session-next__coach {
+            color: var(--c-text);
         }
 
         .session-next__countdown {
@@ -458,10 +463,15 @@
             color: var(--c-text);
         }
 
-        .session-item__room {
+        .session-item__room,
+        .session-item__coach {
             font-size: 0.76rem;
             color: var(--c-muted);
             margin-top: 2px;
+        }
+
+        .session-item__coach {
+            color: var(--c-text);
         }
 
         .session-item__badges {
@@ -731,7 +741,7 @@
         </div>
     </div>
 
-    <script src="js/upcoming-sessions.js?v=20261120"></script>
+    <script src="js/next-sessions.js?v=20261120"></script>
     <script>
         // ============================================
         // CONFIGURATION SUPABASE
@@ -740,7 +750,7 @@
         const SUPABASE_URL = 'https://gmoyoflorwaltuanfswn.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdtb3lvZmxvcndhbHR1YW5mc3duIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxNTc0OTIsImV4cCI6MjA3NzczMzQ5Mn0.Yr0SFLvcPNbvRqNSjzwFdTZkrIz3Z6WZxcIyx8gwjZA';
         const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-        // Client partagé avec js/upcoming-sessions.js (config Supabase inchangée)
+        // Client partagé avec js/next-sessions.js (config Supabase inchangée)
         window.__supabaseClient = supabaseClient;
 
         // ============================================
@@ -899,7 +909,8 @@
                     </span>
                 `;
 
-                // Prochaine séance + liste complète (récurrentes + supplémentaires).
+                // Prochaine séance calculée à la volée depuis training_sessions,
+                // enrichie des séances ponctuelles réelles de sessions.
                 // Ne jamais bloquer l'affichage de la fiche si ce module échoue.
                 if (window.UpcomingSessions) {
                     window.UpcomingSessions.init({
