@@ -66,6 +66,116 @@ Application web professionnelle pour la gestion d'un club de Kyokushin Karate av
 - PC et smartphone synchronisés
 - Données sauvegardées en ligne
 
+## 📅 Prochaines séances (fiche adhérent)
+
+La fiche `member-info.html` affiche automatiquement :
+
+1. **La prochaine séance** de l'adhérent (carte « Prochaine séance ») ;
+2. **Les suivantes** via le bouton **Voir tout / Masquer** (`sessions[1..N]`).
+
+Les occurrences sont **calculées à la volée** par `js/next-sessions.js`.
+Aucune date future n'est stockée : le vieux générateur et la table
+d'occurrences pré-calculées ont été supprimés.
+
+### Source de vérité (schéma Supabase réel)
+
+| Donnée | Emplacement |
+| --- | --- |
+| Groupe de l'adhérent | `members.current_group_id` → `groups.id` |
+| Planning hebdomadaire | `training_sessions` (`day_of_week` 1–7, `start_time`, `end_time`, `coach`, `is_active`, rattaché par `group_id` ou `group_type` selon le déploiement) |
+| Séances ponctuelles réelles | `sessions` (`group_id`, `session_date`, `start_time`, `status`) |
+| Annulation | `sessions.status = 'cancelled'` |
+
+> ⚠️ `groups.schedule`, `groups.extra_sessions`, les RPC de génération
+> et la table d'occurrences pré-calculées ne sont plus utilisés.
+
+### Algorithme de calcul
+
+1. résolution `member → groupe` (avec lecture directe de `groups` en repli) ;
+2. date du jour et heure courante dans le fuseau **`Africa/Algiers`** ;
+3. lecture des créneaux **actifs** de `training_sessions` pour ce `group_id` ;
+4. projection sur **8 semaines** (56 jours) de `day_of_week` → dates ;
+5. créneau déjà terminé aujourd'hui ignoré (`end_time`, ou `start_time` à défaut) ;
+6. ajout des séances ponctuelles **déjà présentes** dans `sessions`
+   (`session_date >= aujourd'hui`, `status <> 'cancelled'`) ;
+7. tri par date + heure, déduplication (date + heure), limite `limit`.
+
+Une séance ponctuelle saisie manuellement est **prioritaire** sur un
+créneau récurrent identique (même date, même heure).
+
+### Ajouter une séance ponctuelle
+
+Uniquement **manuellement** dans la table `sessions` (le coach peut
+toujours le faire depuis l'onglet Groupes → « Séances en plus », ou en SQL) :
+
+```sql
+insert into public.sessions
+    (club_id, group_id, session_date, start_time, end_time, status, group_type)
+values
+    ('<club_id>', '<group_id>', '2026-12-05', '10:00:00', '12:00:00',
+     'waiting', 'Stage technique');
+```
+
+Le module n'écrit jamais dans `sessions` et n'y crée aucune date future.
+
+### Badges affichés
+
+| Badge | Signification |
+| --- | --- |
+| `Entraînement` | Séance récurrente du planning |
+| `Séance supplémentaire` | Ligne manuelle de `sessions` |
+| `Aujourd'hui` / `Demain` | Calculé dans le fuseau du club |
+
+### Accessibilité
+
+- Cartes en `role`/`aria-labelledby`, corps en `aria-live="polite"` ;
+- Bouton **Voir tout** avec `aria-expanded` et `aria-controls` ;
+- Fermeture de la liste avec **Échap** (focus rendu au bouton) ;
+- Styles `:focus-visible` et respect de `prefers-reduced-motion`.
+
+### Diagnostic SQL
+
+Le fichier [`sql/019_next_sessions_cleanup.sql`](sql/019_next_sessions_cleanup.sql)
+regroupe des requêtes **lecture seule** :
+
+- planning récurrent actif (`training_sessions`) ;
+- séances futures présentes dans `sessions` (à examiner) ;
+- candidates probablement générées (correspondance date + heure + groupe) ;
+- existence de l'ancienne table d'occurrences pré-calculées.
+
+Les instructions `DELETE` / `DROP` y sont **commentées** : aucune
+suppression n'est exécutée sans confirmation du coach.
+
+Le fichier `sql/018_upcoming_sessions_diagnostic.sql` reste disponible
+à titre historique pour le diagnostic de l'ancien schéma.
+
+### Test rapide dans la console
+
+```js
+// Sur member-info.html?id=FL1 (F12 → Console)
+await getUpcomingSessions('FL1', 10);      // { sessions, message, … }
+await getUpcomingSessionsData('FL1', 5);   // même objet détaillé
+UpcomingSessions.getState().lastData.message;
+```
+
+Valeurs de `reason` : `null` (OK), `no_member`, `no_client`,
+`member_not_found`, `no_group`, `inactive_group`, `planning_error`,
+`no_slots`, `none`, `load_error`.
+
+Tests unitaires :
+
+```bash
+node --test tests/next-sessions.test.js
+```
+
+### Limites connues
+
+- l'horizon est fixé à **8 semaines** (`HORIZON_DAYS = 56`) ;
+- `sessions.end_time` est souvent `null` : l'heure de fin n'apparaît
+  alors pas ;
+- les séances ponctuelles sont affichées telles quelles, sans calcul
+  de récurrence.
+
 ## 📦 Fichiers du Projet
 
 1. **index.html** - Application principale complète
