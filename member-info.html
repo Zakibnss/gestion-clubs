@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="fr" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -25,12 +25,21 @@
         }
 
         [data-theme="dark"] {
-            --primary-color: #ff3b57;
-            --secondary-color: #2d2d2d;
-            --bg-primary: #1a1a1a;
-            --bg-secondary: #2d2d2d;
-            --text-primary: #f8f9fa;
-            --text-secondary: #adb5bd;
+            --primary-color: #c8102e;
+            --secondary-color: #0a0a0a;
+            --bg-primary: #141414;
+            --bg-secondary: #1e1e1e;
+            --text-primary: #f5f5f5;
+            --text-secondary: #a0a0a0;
+            --gold: #ffd700;
+            --c-red: #c8102e;
+            --c-gold: #ffd700;
+            --c-surface: #141414;
+            --c-surface-2: #1e1e1e;
+            --c-text: #f5f5f5;
+            --c-muted: #a0a0a0;
+            --c-border: rgba(255, 255, 255, 0.08);
+            color-scheme: dark;
         }
 
         body {
@@ -38,7 +47,7 @@
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
             min-height: 100vh;
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             justify-content: center;
             padding: 20px;
         }
@@ -49,6 +58,7 @@
             box-shadow: var(--shadow-lg);
             max-width: 500px;
             width: 100%;
+            margin: 0 auto;
             overflow: hidden;
             animation: slideUp 0.5s ease-out;
         }
@@ -166,7 +176,7 @@
 
         @media (max-width: 600px) {
             .card {
-                margin: 10px;
+                margin: 0 auto;
             }
 
             .card-header h1 {
@@ -175,6 +185,440 @@
 
             .info-value {
                 font-size: 1.1rem;
+            }
+        }
+
+        /* ============================================================
+           Thème sombre — finitions
+           ============================================================ */
+        [data-theme="dark"] .member-photo {
+            background: #1e1e1e;
+            border-color: #ffd700;
+        }
+
+        [data-theme="dark"] .club-logo {
+            border-color: #ffd700;
+        }
+
+        [data-theme="dark"] .status-active {
+            background: rgba(40, 167, 69, 0.18);
+            color: #4ade80;
+        }
+
+        [data-theme="dark"] .status-expired {
+            background: rgba(220, 53, 69, 0.18);
+            color: #ff6b6b;
+        }
+
+        /* ============================================================
+           Prochaines séances (rouge / noir / doré)
+           ============================================================ */
+        .session-card {
+            --c-red: #c8102e;
+            --c-gold: #ffd700;
+            --c-surface: #141414;
+            --c-surface-2: #1e1e1e;
+            --c-surface-3: #2a2a2a;
+            --c-text: #f5f5f5;
+            --c-muted: #a0a0a0;
+            --c-border: rgba(255, 255, 255, 0.08);
+            margin-top: 20px;
+            background: var(--c-surface);
+            border: 1px solid var(--c-border);
+            border-radius: 14px;
+            overflow: hidden;
+            text-align: left;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+        }
+
+        .session-card.card--next-session {
+            border-left: 4px solid var(--c-gold);
+        }
+
+        .session-card.card--upcoming-sessions {
+            border-left: 4px solid var(--c-red);
+        }
+
+        .session-card__header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 13px 16px;
+            background: linear-gradient(135deg, rgba(200, 16, 46, 0.18), rgba(20, 20, 20, 0));
+            border-bottom: 1px solid var(--c-border);
+        }
+
+        .session-card__header h2 {
+            margin: 0;
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--c-text);
+            letter-spacing: 0.01em;
+        }
+
+        .session-card__group {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--c-gold);
+            text-align: right;
+            max-width: 45%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .session-card__body {
+            padding: 16px;
+        }
+
+        #upcomingList[hidden] {
+            display: none !important;
+        }
+
+        /* --- Prochaine séance --- */
+        .session-next {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .session-next__date {
+            flex: 0 0 86px;
+            text-align: center;
+            background: var(--c-surface-2);
+            border: 1px solid var(--c-border);
+            border-radius: 12px;
+            padding: 10px 8px;
+        }
+
+        .session-next__weekday {
+            display: block;
+            font-size: 0.66rem;
+            text-transform: uppercase;
+            letter-spacing: 0.09em;
+            color: var(--c-gold);
+            font-weight: 700;
+        }
+
+        .session-next__daynum {
+            display: block;
+            font-size: 1.9rem;
+            font-weight: 800;
+            line-height: 1.05;
+            color: var(--c-text);
+        }
+
+        .session-next__month {
+            display: block;
+            font-size: 0.68rem;
+            color: var(--c-muted);
+            text-transform: capitalize;
+        }
+
+        .session-next__details {
+            min-width: 0;
+        }
+
+        .session-next__full-date {
+            margin: 0 0 2px;
+            font-size: 0.78rem;
+            color: var(--c-muted);
+        }
+
+        .session-next__time {
+            margin: 0;
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--c-text);
+            letter-spacing: -0.01em;
+        }
+
+        .session-next__badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .session-next__room,
+        .session-next__countdown {
+            margin: 6px 0 0;
+            font-size: 0.8rem;
+            color: var(--c-muted);
+        }
+
+        .session-next__countdown {
+            color: var(--c-gold);
+            font-weight: 700;
+        }
+
+        .session-next--today .session-next__date {
+            border-color: var(--c-red);
+            box-shadow: 0 0 0 1px rgba(200, 16, 46, 0.35);
+        }
+
+        /* --- Badges --- */
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            line-height: 1.45;
+            white-space: nowrap;
+        }
+
+        .badge--recurring {
+            background: rgba(255, 255, 255, 0.1);
+            color: #f5f5f5;
+        }
+
+        .badge--extra {
+            background: rgba(255, 215, 0, 0.15);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.35);
+        }
+
+        .badge--today {
+            background: rgba(200, 16, 46, 0.22);
+            color: #ff6b6b;
+            border: 1px solid rgba(200, 16, 46, 0.45);
+        }
+
+        .badge--tomorrow {
+            background: rgba(255, 215, 0, 0.2);
+            color: #ffd700;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+        }
+
+        .badge--stage {
+            background: rgba(200, 16, 46, 0.22);
+            color: #ff6b6b;
+            border: 1px solid rgba(200, 16, 46, 0.45);
+        }
+
+        /* --- Liste complète --- */
+        .session-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .session-item {
+            display: flex;
+            gap: 14px;
+            align-items: center;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: var(--c-surface-2);
+            border: 1px solid var(--c-border);
+            transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+        }
+
+        .session-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .session-item--extra {
+            border-color: rgba(255, 215, 0, 0.5);
+            background: rgba(255, 215, 0, 0.05);
+        }
+
+        .session-item__date {
+            flex: 0 0 108px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .session-item__date strong {
+            font-size: 0.82rem;
+            color: var(--c-text);
+            text-transform: capitalize;
+        }
+
+        .session-item__date span {
+            font-size: 0.7rem;
+            color: var(--c-muted);
+        }
+
+        .session-item__main {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .session-item__time {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--c-text);
+        }
+
+        .session-item__room {
+            font-size: 0.76rem;
+            color: var(--c-muted);
+            margin-top: 2px;
+        }
+
+        .session-item__badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .session-item__group {
+            font-size: 0.7rem;
+            color: var(--c-gold);
+            font-weight: 700;
+            white-space: nowrap;
+        }
+
+        /* --- Bouton Voir tout / Masquer --- */
+        .session-toggle {
+            appearance: none;
+            -webkit-appearance: none;
+            border: 1px solid var(--c-border);
+            background: transparent;
+            color: var(--c-gold);
+            font: inherit;
+            font-size: 0.76rem;
+            font-weight: 700;
+            padding: 7px 12px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+        }
+
+        .session-toggle:hover {
+            background: rgba(255, 215, 0, 0.1);
+            border-color: var(--c-gold);
+        }
+
+        .session-toggle[aria-expanded="true"] {
+            background: rgba(255, 215, 0, 0.12);
+        }
+
+        .session-toggle:focus-visible {
+            outline: 3px solid var(--c-gold);
+            outline-offset: 2px;
+        }
+
+        /* --- États vides / chargement / erreur --- */
+        .session-empty,
+        .session-skeleton {
+            text-align: center;
+            padding: 18px 10px;
+            color: var(--c-muted);
+            font-size: 0.84rem;
+        }
+
+        .session-empty p {
+            margin: 0;
+        }
+
+        .session-empty__icon {
+            display: block;
+            font-size: 1.6rem;
+            margin-bottom: 6px;
+        }
+
+        .session-error {
+            color: #ff6b6b;
+        }
+
+        .session-retry {
+            margin-top: 10px;
+            border: 1px solid rgba(255, 107, 107, 0.5);
+            background: rgba(200, 16, 46, 0.15);
+            color: #ff6b6b;
+            font: inherit;
+            font-size: 0.78rem;
+            font-weight: 700;
+            padding: 7px 14px;
+            border-radius: 999px;
+            cursor: pointer;
+        }
+
+        .session-retry:hover {
+            background: rgba(200, 16, 46, 0.25);
+        }
+
+        .session-retry:focus-visible {
+            outline: 3px solid var(--c-gold);
+            outline-offset: 2px;
+        }
+
+        .session-card :focus-visible {
+            outline: 3px solid var(--c-gold);
+            outline-offset: 2px;
+        }
+
+        /* --- Responsive --- */
+        @media (max-width: 639px) {
+            .session-card__header {
+                flex-wrap: wrap;
+            }
+
+            .session-card__group {
+                max-width: 100%;
+                text-align: left;
+            }
+
+            .session-next {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 12px;
+            }
+
+            .session-next__date {
+                display: flex;
+                align-items: baseline;
+                justify-content: center;
+                gap: 8px;
+                flex: none;
+                padding: 8px 10px;
+            }
+
+            .session-next__daynum {
+                font-size: 1.4rem;
+            }
+
+            .session-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+
+            .session-item__date {
+                flex-direction: row;
+                align-items: baseline;
+                gap: 8px;
+                flex: none;
+            }
+
+            .session-item__group {
+                white-space: normal;
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .session-item,
+            .session-toggle,
+            .session-retry {
+                transition: none;
+            }
+
+            .session-item:hover {
+                transform: none;
+            }
+
+            .card {
+                animation: none;
             }
         }
     </style>
@@ -222,6 +666,11 @@
                 </div>
 
                 <div class="info-group">
+                    <div class="info-label">Groupe</div>
+                    <div class="info-value" id="memberGroup">-</div>
+                </div>
+
+                <div class="info-group">
                     <div class="info-label">Date de Naissance</div>
                     <div class="info-value" id="memberDob">-</div>
                 </div>
@@ -250,10 +699,39 @@
                     <div class="info-label">Statut</div>
                     <div id="statusBadge"></div>
                 </div>
+
+                <!-- Prochaine séance (récurrente ou supplémentaire) -->
+                <section class="session-card card--next-session" id="nextSessionCard"
+                         aria-labelledby="nextSessionTitle">
+                    <div class="session-card__header">
+                        <h2 id="nextSessionTitle">📅 Prochaine séance</h2>
+                        <span class="session-card__group" id="nextSessionGroup"></span>
+                    </div>
+                    <div class="session-card__body" id="nextSessionBody"
+                         aria-live="polite" aria-busy="true">
+                        <div class="session-skeleton">Chargement…</div>
+                    </div>
+                </section>
+
+                <!-- Toutes les prochaines séances -->
+                <section class="session-card card--upcoming-sessions" id="upcomingSessionsCard"
+                         aria-labelledby="upcomingSessionsTitle">
+                    <div class="session-card__header">
+                        <h2 id="upcomingSessionsTitle">🗓️ Toutes les prochaines séances</h2>
+                        <button class="session-toggle" id="toggleUpcomingBtn" type="button"
+                                aria-expanded="false" aria-controls="upcomingList">
+                            Voir tout
+                        </button>
+                    </div>
+                    <div class="session-card__body" id="upcomingList" hidden aria-live="polite">
+                        <div class="session-skeleton">Chargement…</div>
+                    </div>
+                </section>
             </div>
         </div>
     </div>
 
+    <script src="js/upcoming-sessions.js?v=20261120"></script>
     <script>
         // ============================================
         // CONFIGURATION SUPABASE
@@ -261,13 +739,33 @@
         // ============================================
         const SUPABASE_URL = 'https://gmoyoflorwaltuanfswn.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdtb3lvZmxvcndhbHR1YW5mc3duIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjIxNTc0OTIsImV4cCI6MjA3NzczMzQ5Mn0.Yr0SFLvcPNbvRqNSjzwFdTZkrIz3Z6WZxcIyx8gwjZA';
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Client partagé avec js/upcoming-sessions.js (config Supabase inchangée)
+        window.__supabaseClient = supabaseClient;
 
         // ============================================
-        // GET MEMBER ID FROM URL
+        // GET MEMBER ID FROM URL (?id=... ou ?token=...)
         // ============================================
         const urlParams = new URLSearchParams(window.location.search);
-        const memberId = urlParams.get('id');
+        let memberId = urlParams.get('id');
+        const memberToken = urlParams.get('token') || urlParams.get('t');
+
+        async function resolveMemberId() {
+            if (memberId || !memberToken) return memberId;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('member_cards')
+                    .select('member_id')
+                    .eq('public_token', memberToken)
+                    .maybeSingle();
+                if (!error && data && data.member_id) {
+                    memberId = data.member_id;
+                }
+            } catch (err) {
+                console.warn('[member-info] token', err);
+            }
+            return memberId;
+        }
 
         // ============================================
         // UTILITY FUNCTIONS
@@ -329,6 +827,8 @@
         // LOAD MEMBER INFORMATION
         // ============================================
         async function loadMemberInfo() {
+            await resolveMemberId();
+
             if (!memberId) {
                 document.getElementById('loadingState').style.display = 'none';
                 document.getElementById('errorState').innerHTML = `
@@ -341,7 +841,7 @@
 
             try {
                 // Get member data
-                const { data: member, error: memberError } = await supabase
+                const { data: member, error: memberError } = await supabaseClient
                     .from('members')
                     .select('*')
                     .eq('id', memberId)
@@ -352,7 +852,7 @@
                 }
 
                 // Get club data
-                const { data: club, error: clubError } = await supabase
+                const { data: club, error: clubError } = await supabaseClient
                     .from('clubs')
                     .select('*')
                     .eq('id', member.club_id)
@@ -398,6 +898,16 @@
                         ${isActive ? '✅ ACTIF' : '❌ EXPIRÉ'}
                     </span>
                 `;
+
+                // Prochaine séance + liste complète (récurrentes + supplémentaires).
+                // Ne jamais bloquer l'affichage de la fiche si ce module échoue.
+                if (window.UpcomingSessions) {
+                    window.UpcomingSessions.init({
+                        supabase: supabaseClient,
+                        memberId: member.id,
+                        limit: 20
+                    }).catch((err) => console.warn('[member-info] séances', err));
+                }
 
             } catch (error) {
                 console.error('Erreur:', error);
