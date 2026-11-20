@@ -22,6 +22,7 @@
             --text-primary: #212529;
             --text-secondary: #6c757d;
             --shadow-lg: 0 10px 30px rgba(0,0,0,0.2);
+            --c-border: rgba(0, 0, 0, 0.08);
         }
 
         [data-theme="dark"] {
@@ -56,7 +57,7 @@
             background: var(--bg-primary);
             border-radius: 20px;
             box-shadow: var(--shadow-lg);
-            max-width: 500px;
+            max-width: 1080px;
             width: 100%;
             margin: 0 auto;
             overflow: hidden;
@@ -208,6 +209,54 @@
         [data-theme="dark"] .status-expired {
             background: rgba(220, 53, 69, 0.18);
             color: #ff6b6b;
+        }
+
+        /* ============================================================
+           Mise en page deux colonnes (adhérent | séances)
+           ============================================================ */
+        #memberInfo {
+            display: grid;
+            grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+            gap: 28px;
+            align-items: start;
+        }
+
+        .member-column,
+        .sessions-column {
+            min-width: 0;
+        }
+
+        .sessions-column {
+            padding-left: 28px;
+            border-left: 1px solid var(--c-border);
+        }
+
+        .sessions-column .session-card:first-child {
+            margin-top: 0;
+        }
+
+        .member-column .info-group:last-child {
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 900px) {
+            .card {
+                max-width: 620px;
+            }
+
+            #memberInfo {
+                grid-template-columns: minmax(0, 1fr);
+                gap: 20px;
+            }
+
+            .sessions-column {
+                padding-left: 0;
+                border-left: 0;
+            }
+
+            .sessions-column .session-card:first-child {
+                margin-top: 20px;
+            }
         }
 
         /* ============================================================
@@ -653,90 +702,96 @@
                 <p style="font-size: 0.9rem; margin-top: 10px;">Veuillez vérifier l'ID de la carte.</p>
             </div>
 
-            <!-- Member Info -->
+            <!-- Member Info : identité à gauche, séances à droite -->
             <div id="memberInfo" style="display: none;">
-                <img id="clubLogo" class="club-logo" alt="Logo du club" style="display: none;">
-                
-                <img id="memberPhoto" class="member-photo" alt="Photo" style="display: none;">
-                <div id="memberPhotoPlaceholder" class="member-photo">👤</div>
+                <!-- Colonne gauche : identité de l'adhérent -->
+                <div class="member-column">
+                    <img id="clubLogo" class="club-logo" alt="Logo du club" style="display: none;">
 
-                <div class="info-group">
-                    <div class="info-label">ID Membre</div>
-                    <div class="info-value" id="memberId">-</div>
-                </div>
+                    <img id="memberPhoto" class="member-photo" alt="Photo" style="display: none;">
+                    <div id="memberPhotoPlaceholder" class="member-photo">👤</div>
 
-                <div class="info-group">
-                    <div class="info-label">Nom Complet</div>
-                    <div class="info-value" id="memberName">-</div>
-                </div>
-
-                <div class="info-group">
-                    <div class="info-label">Club</div>
-                    <div class="info-value" id="clubName">-</div>
-                </div>
-
-                <div class="info-group">
-                    <div class="info-label">Groupe</div>
-                    <div class="info-value" id="memberGroup">-</div>
-                </div>
-
-                <div class="info-group">
-                    <div class="info-label">Date de Naissance</div>
-                    <div class="info-value" id="memberDob">-</div>
-                </div>
-
-                <div class="info-group">
-                    <div class="info-label">Groupe Sanguin</div>
-                    <div class="info-value" id="memberBloodType">-</div>
-                </div>
-
-                <div class="info-group">
-                    <div class="info-label">Type d'Abonnement</div>
-                    <div class="info-value" id="memberSubscription">-</div>
-                </div>
-
-                <div class="info-group">
-                    <div class="info-label">Date de Début</div>
-                    <div class="info-value" id="startDate">-</div>
-                </div>
-
-                <div class="info-group">
-                    <div class="info-label">Date de Fin d'Abonnement</div>
-                    <div class="info-value" id="endDate">-</div>
-                </div>
-
-                <div class="info-group" style="text-align: center;">
-                    <div class="info-label">Statut</div>
-                    <div id="statusBadge"></div>
-                </div>
-
-                <!-- Prochaine séance (récurrente ou supplémentaire) -->
-                <section class="session-card card--next-session" id="nextSessionCard"
-                         aria-labelledby="nextSessionTitle">
-                    <div class="session-card__header">
-                        <h2 id="nextSessionTitle">📅 Prochaine séance</h2>
-                        <span class="session-card__group" id="nextSessionGroup"></span>
+                    <div class="info-group">
+                        <div class="info-label">ID Membre</div>
+                        <div class="info-value" id="memberId">-</div>
                     </div>
-                    <div class="session-card__body" id="nextSessionBody"
-                         aria-live="polite" aria-busy="true">
-                        <div class="session-skeleton">Chargement…</div>
-                    </div>
-                </section>
 
-                <!-- Toutes les prochaines séances -->
-                <section class="session-card card--upcoming-sessions" id="upcomingSessionsCard"
-                         aria-labelledby="upcomingSessionsTitle">
-                    <div class="session-card__header">
-                        <h2 id="upcomingSessionsTitle">🗓️ Toutes les prochaines séances</h2>
-                        <button class="session-toggle" id="toggleUpcomingBtn" type="button"
-                                aria-expanded="false" aria-controls="upcomingList">
-                            Voir tout
-                        </button>
+                    <div class="info-group">
+                        <div class="info-label">Nom Complet</div>
+                        <div class="info-value" id="memberName">-</div>
                     </div>
-                    <div class="session-card__body" id="upcomingList" hidden aria-live="polite">
-                        <div class="session-skeleton">Chargement…</div>
+
+                    <div class="info-group">
+                        <div class="info-label">Club</div>
+                        <div class="info-value" id="clubName">-</div>
                     </div>
-                </section>
+
+                    <div class="info-group">
+                        <div class="info-label">Groupe</div>
+                        <div class="info-value" id="memberGroup">-</div>
+                    </div>
+
+                    <div class="info-group">
+                        <div class="info-label">Date de Naissance</div>
+                        <div class="info-value" id="memberDob">-</div>
+                    </div>
+
+                    <div class="info-group">
+                        <div class="info-label">Groupe Sanguin</div>
+                        <div class="info-value" id="memberBloodType">-</div>
+                    </div>
+
+                    <div class="info-group">
+                        <div class="info-label">Type d'Abonnement</div>
+                        <div class="info-value" id="memberSubscription">-</div>
+                    </div>
+
+                    <div class="info-group">
+                        <div class="info-label">Date de Début</div>
+                        <div class="info-value" id="startDate">-</div>
+                    </div>
+
+                    <div class="info-group">
+                        <div class="info-label">Date de Fin d'Abonnement</div>
+                        <div class="info-value" id="endDate">-</div>
+                    </div>
+
+                    <div class="info-group" style="text-align: center;">
+                        <div class="info-label">Statut</div>
+                        <div id="statusBadge"></div>
+                    </div>
+                </div>
+
+                <!-- Colonne droite : prochaines séances -->
+                <div class="sessions-column">
+                    <!-- Prochaine séance (récurrente ou supplémentaire) -->
+                    <section class="session-card card--next-session" id="nextSessionCard"
+                             aria-labelledby="nextSessionTitle">
+                        <div class="session-card__header">
+                            <h2 id="nextSessionTitle">📅 Prochaine séance</h2>
+                            <span class="session-card__group" id="nextSessionGroup"></span>
+                        </div>
+                        <div class="session-card__body" id="nextSessionBody"
+                             aria-live="polite" aria-busy="true">
+                            <div class="session-skeleton">Chargement…</div>
+                        </div>
+                    </section>
+
+                    <!-- Toutes les prochaines séances -->
+                    <section class="session-card card--upcoming-sessions" id="upcomingSessionsCard"
+                             aria-labelledby="upcomingSessionsTitle">
+                        <div class="session-card__header">
+                            <h2 id="upcomingSessionsTitle">🗓️ Toutes les prochaines séances</h2>
+                            <button class="session-toggle" id="toggleUpcomingBtn" type="button"
+                                    aria-expanded="false" aria-controls="upcomingList">
+                                Voir tout
+                            </button>
+                        </div>
+                        <div class="session-card__body" id="upcomingList" hidden aria-live="polite">
+                            <div class="session-skeleton">Chargement…</div>
+                        </div>
+                    </section>
+                </div>
             </div>
         </div>
     </div>
@@ -874,7 +929,8 @@
 
                 // Hide loading, show member info
                 document.getElementById('loadingState').style.display = 'none';
-                document.getElementById('memberInfo').style.display = 'block';
+                // Grille deux colonnes (une seule colonne sur petit écran).
+                document.getElementById('memberInfo').style.display = 'grid';
 
                 // Display club logo if available
                 if (club && club.logo) {
