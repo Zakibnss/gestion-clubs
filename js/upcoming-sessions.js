@@ -5,11 +5,11 @@
    Source de vérité réelle (schéma constaté sur Supabase) :
      . members.current_group_id  -> groups.id
        (repli : group_members où end_date IS NULL)
-     . groups.schedule           -> JSONB { "mardi": "18:30", ... }
-     . groups.extra_sessions     -> JSONB [{ date, time, ... }] (migration 016)
-     . groups.pause_start_date / pause_end_date (migration 016)
-     . groups.start_date / end_date
-     . sessions (group_id, session_date, start_time, end_time, status)
+     . groups.start_date / end_date / pause_start_date / pause_end_date
+     . training_sessions (group_type, day_of_week, start_time, end_time,
+       is_active) -> créneaux récurrents actifs
+     . sessions (group_id, session_date, start_time, end_time, status,
+       group_type) -> séances ponctuelles + annulations
        status = 'cancelled'  -> séance annulée (exclue)
 
    Aucune dépendance externe : le client Supabase est injecté via init()
@@ -180,7 +180,7 @@
   }
 
   /* ------------------------------------------------------------------ */
-  /* 4. LECTURE DU PLANNING (JSONB groupes.schedule)                     */
+  /* 4. LECTURE DU PLANNING (training_sessions + repli schedule)         */
   /* ------------------------------------------------------------------ */
   const DAY_ALIASES = {
     lundi: 1, lun: 1, monday: 1, mon: 1,
@@ -202,6 +202,30 @@
       .replace(/[^a-z0-9]/g, '')
       .trim();
     return DAY_ALIASES[s] || null;
+  }
+
+  /** Valeurs possibles de `group_type` pour un groupe. */
+  function groupTypeCandidates(group) {
+    if (!group) return [];
+    return unique([group.group_type, group.name, group.label]
+      .map(function (v) { return v == null ? '' : String(v).trim(); })
+      .filter(Boolean));
+  }
+
+  /** Un créneau training_sessions appartient-il à ce groupe ? */
+  function trainingMatchesGroup(row, group) {
+    if (!row) return false;
+    const candidates = groupTypeCandidates(group);
+    if (!candidates.length) return true;
+    const rowType = row.group_type == null ? '' : String(row.group_type).trim();
+    return !rowType || candidates.indexOf(rowType) !== -1;
+  }
+
+  function isActiveTrainingRow(row) {
+    if (!row) return false;
+    if (row.is_active === false || row.is_active === 0) return false;
+    if (row.is_active === 'false' || row.is_active === '0') return false;
+    return true;
   }
 
   /**
@@ -274,10 +298,34 @@
     return null;
   }
 
-  /** Créneaux récurrents d'un groupe -> [{ dow, startTime, endTime, room, ... }]. */
-  function extractScheduleEntries(group) {
-    const schedule = group && group.schedule;
+  /**
+   * Créneaux récurrents d'un groupe -> [{ dow, startTime, endTime, ... }].
+   * Source principale : training_sessions (filtrée par group_type).
+   * Repli toléré : groups.schedule pour les anciennes données.
+   */
+  function extractScheduleEntries(group, trainingRows) {
     const entries = [];
+
+    (Array.isArray(trainingRows) ? trainingRows : []).forEach(function (row) {
+      if (!isActiveTrainingRow(row) || !trainingMatchesGroup(row, group)) return;
+      const dow = normalizeDayKey(row.day_of_week);
+      if (!dow) return;
+      const parsed = parseScheduleValue({
+        start_time: row.start_time,
+        end_time: row.end_time
+      });
+      if (!parsed) return;
+
+      const item = Object.assign({ dow: dow }, parsed);
+      item.type = 'recurring';
+      item.groupType = row.group_type || null;
+      item.label = item.label || row.group_type || null;
+      entries.push(item);
+    });
+
+    if (entries.length) return entries;
+
+    const schedule = group && group.schedule;
     if (!schedule) return entries;
 
     if (Array.isArray(schedule)) {
@@ -306,49 +354,30 @@
     return entries;
   }
 
-  /** Séances ponctuelles de groupes.extra_sessions. */
-  function extractExtras(group) {
-    const raw = group && group.extra_sessions;
-    if (!Array.isArray(raw)) return [];
-
+  /** Séances ponctuelles : lignes de `sessions` (group_id + session_date). */
+  function extractExtras(rows) {
     const extras = [];
-    raw.forEach(function (item) {
-      if (item == null) return;
 
-      if (typeof item === 'string') {
-        const m = item.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{1,2}:\d{2})/);
-        if (!m) return;
-        const parsed = parseScheduleValue(m[2]);
-        if (!parsed) return;
-        extras.push(Object.assign({ date: m[1] }, parsed));
-        return;
-      }
-
-      if (typeof item !== 'object') return;
-      const date = normalizeDate(item.date || item.session_date || item.day_date || item.jour_date);
-      if (!date) return;
-      const parsed = parseScheduleValue(item.time != null ? item.time :
-        (item.start_time != null ? item.start_time :
-          (item.start != null ? item.start : item)));
-      if (!parsed) return;
-
-      let endTime = parsed.endTime ||
-        normalizeTime(item.end_time != null ? item.end_time :
-          (item.end != null ? item.end : item.fin));
-      if (!endTime && item.duration != null) {
-        endTime = addMinutesToTime(parsed.startTime, item.duration);
-      }
+    (Array.isArray(rows) ? rows : []).forEach(function (row) {
+      if (!row || !row.group_id) return;
+      const date = normalizeDate(row.session_date);
+      const startTime = normalizeTime(row.start_time);
+      if (!date || !startTime) return;
 
       extras.push({
+        id: row.id || null,
         date: date,
-        startTime: parsed.startTime,
-        endTime: endTime || null,
-        room: parsed.room || item.room || item.salle || item.lieu || null,
-        notes: parsed.notes || item.notes || item.note || null,
-        label: parsed.label || item.label || item.title || null,
-        type: parsed.type || item.type || null
+        startTime: startTime,
+        endTime: normalizeTime(row.end_time) || null,
+        room: row.room || row.salle || row.lieu || null,
+        notes: row.notes || row.note || null,
+        label: row.label || row.title || null,
+        type: 'extra',
+        groupType: row.group_type || null,
+        status: row.status || null
       });
     });
+
     return extras;
   }
 
@@ -445,7 +474,7 @@
 
   /**
    * Génère les occurrences d'un groupe entre aujourd'hui et l'horizon.
-   * Respecte : start_date / end_date, pauses, annulations, extras.
+   * Respecte : start_date / end_date, pauses, annulations, séances ponctuelles.
    */
   function generateOccurrences(group, opts) {
     opts = opts || {};
@@ -489,8 +518,11 @@
       out.push(session);
     }
 
-    // 7.a — Créneaux récurrents (planning hebdomadaire)
-    const entries = extractScheduleEntries(group);
+    // 7.a — Créneaux récurrents (training_sessions, filtrés par group_type)
+    const trainingRows = (opts.trainingSessions || []).filter(function (row) {
+      return trainingMatchesGroup(row, group);
+    });
+    const entries = extractScheduleEntries(group, trainingRows);
     for (let d = from; d <= to; d = addDaysYmd(d, 1)) {
       if (inPause(d)) continue;
       const dow = isoDow(d);
@@ -511,14 +543,17 @@
           type: 'recurring',
           notes: entry.notes,
           label: entry.label,
-          groupType: row && row.group_type,
+          groupType: entry.groupType ||
+            (row && row.group_type) ||
+            (group && group.group_type) ||
+            (group && group.name) || null,
           status: row && row.status
         }));
       }
     }
 
-    // 7.b — Séances supplémentaires ponctuelles
-    extractExtras(group).forEach(function (extra) {
+    // 7.b — Séances ponctuelles (table sessions : group_id + session_date)
+    extractExtras(opts.extraSessions || []).forEach(function (extra) {
       const d = extra.date;
       if (!d || d < from || d > to) return;
       if (inPause(d)) return;
@@ -536,8 +571,10 @@
         type: 'extra',
         notes: extra.notes,
         label: extra.label,
-        groupType: row && row.group_type,
-        status: row && row.status
+        groupType: extra.groupType ||
+          (row && row.group_type) ||
+          (group && group.group_type) || null,
+        status: extra.status || (row && row.status)
       }));
     });
 
@@ -719,6 +756,22 @@
     }
   }
 
+  /** Créneaux récurrents actifs, indexés par group_type. */
+  async function fetchTrainingSessions(client, groupTypes) {
+    if (!groupTypes.length) return [];
+    try {
+      const res = await client
+        .from('training_sessions')
+        .select('*')
+        .in('group_type', groupTypes);
+      if (res.error) throw res.error;
+      return (res.data || []).filter(isActiveTrainingRow);
+    } catch (err) {
+      console.warn('[upcoming-sessions] training_sessions', err);
+      return [];
+    }
+  }
+
   /* ------------------------------------------------------------------ */
   /* 10. FONCTION PRINCIPALE                                             */
   /* ------------------------------------------------------------------ */
@@ -766,7 +819,14 @@
       return { sessions: [], all: [], reason: 'no_group', member: member, groups: [], groupName: null, today: today };
     }
 
-    const rows = await fetchSessionRows(client, groupIds, today, horizon);
+    const groupTypes = unique(groups.reduce(function (acc, group) {
+      return acc.concat(groupTypeCandidates(group));
+    }, []));
+
+    const [rows, trainingRows] = await Promise.all([
+      fetchSessionRows(client, groupIds, today, horizon),
+      fetchTrainingSessions(client, groupTypes)
+    ]);
     const cancelled = buildCancelInfo(rows);
 
     let all = [];
@@ -774,7 +834,9 @@
       all = all.concat(generateOccurrences(group, {
         today: today,
         horizon: horizon,
-        cancelled: cancelled
+        cancelled: cancelled,
+        extraSessions: rows,
+        trainingSessions: trainingRows
       }));
     });
 
@@ -1104,6 +1166,9 @@
     todayInTz: todayInTz,
     timeInTz: timeInTz,
     parseTimeToMinutes: parseTimeToMinutes,
+    groupTypeCandidates: groupTypeCandidates,
+    trainingMatchesGroup: trainingMatchesGroup,
+    isActiveTrainingRow: isActiveTrainingRow,
     extractScheduleEntries: extractScheduleEntries,
     extractExtras: extractExtras,
     generateOccurrences: generateOccurrences,
