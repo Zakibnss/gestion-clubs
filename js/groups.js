@@ -57,14 +57,8 @@ async function loadGroups() {
             .eq('club_id', clubId);
 
         const perGroup = {};
-        const extrasPerGroup = {};
-        const todayKey = ymd(new Date());
         (sessionRows || []).forEach(s => {
             perGroup[s.group_id] = (perGroup[s.group_id] || 0) + 1;
-            if (s.session_date >= todayKey &&
-                String(s.status || '').toLowerCase() !== 'cancelled') {
-                extrasPerGroup[s.group_id] = (extrasPerGroup[s.group_id] || 0) + 1;
-            }
         });
 
         const grid = document.getElementById('groupsGrid');
@@ -86,7 +80,6 @@ async function loadGroups() {
                     <span>🎯 ${g.planned_sessions_count ?? '—'} séances prévues</span>
                     <span>🗂️ ${perGroup[g.id] || 0} séances créées</span>
                     ${g.pause_start_date ? `<span>⏸️ Pause ${fmtDateV2(g.pause_start_date)} → ${g.pause_end_date ? fmtDateV2(g.pause_end_date) : '…'}</span>` : ''}
-                    ${(extrasPerGroup[g.id] || 0) ? `<span>➕ ${extrasPerGroup[g.id]} séance(s) en plus</span>` : ''}
                 </div>
                 ${g.description ? `<p style="font-size:.85rem;color:var(--text-secondary);margin-bottom:10px">${escapeHtmlV2(g.description)}</p>` : ''}
                 ${chips ? `<div class="group-schedule">${chips}</div>` : ''}
@@ -164,56 +157,6 @@ function v2NormalizeEvent(ev) {
 
 /* ---------- Création / modification ---------- */
 
-/* ---------- Planning : pause + séances en plus ---------- */
-
-const GROUP_EXTRA_DAYS = [
-    { idx: 0, key: 'dimanche', label: 'Dimanche' },
-    { idx: 1, key: 'lundi',    label: 'Lundi' },
-    { idx: 2, key: 'mardi',    label: 'Mardi' },
-    { idx: 3, key: 'mercredi', label: 'Mercredi' },
-    { idx: 4, key: 'jeudi',    label: 'Jeudi' },
-    { idx: 5, key: 'vendredi', label: 'Vendredi' },
-    { idx: 6, key: 'samedi',   label: 'Samedi' }
-];
-
-let groupExtras = [];
-let groupExtrasRemoved = [];
-
-// Séances ponctuelles : lignes de `sessions` (jamais de colonne JSON sur groups).
-async function fetchGroupExtraSessions(groupId) {
-    if (!groupId) return [];
-    const { data, error } = await supabase
-        .from('sessions')
-        .select('id, group_id, session_date, start_time, end_time, status, group_type')
-        .eq('group_id', groupId)
-        .gte('session_date', ymd(new Date()))
-        .neq('status', 'cancelled')
-        .order('session_date', { ascending: true })
-        .order('start_time', { ascending: true });
-    if (error) throw error;
-
-    return (data || []).map(s => ({
-        id: s.id,
-        date: s.session_date,
-        time: String(s.start_time || '').slice(0, 5),
-        end_time: s.end_time || null,
-        group_type: s.group_type || null
-    }));
-}
-
-function resetGroupExtras() {
-    groupExtras = [];
-    groupExtrasRemoved = [];
-}
-
-function populateGroupExtraDayOptions() {
-    const sel = document.getElementById('groupExtraDay');
-    if (!sel || sel.options.length > 1) return;
-    GROUP_EXTRA_DAYS.forEach(d => {
-        sel.add(new Option(d.label, String(d.idx)));
-    });
-}
-
 function ymd(dt) {
     const y = dt.getFullYear();
     const m = String(dt.getMonth() + 1).padStart(2, '0');
@@ -228,55 +171,10 @@ function currentSeasonStartYmd() {
     return `${y}-09-01`;
 }
 
-function addDays(dateStr, n) {
-    const dt = new Date(dateStr + 'T00:00:00');
-    dt.setDate(dt.getDate() + n);
-    return ymd(dt);
-}
+let v2GroupsCache = [];
 
-function nextOccurrence(dayIdx) {
-    const t = new Date();
-    t.setHours(0, 0, 0, 0);
-    let diff = (dayIdx - t.getDay() + 7) % 7;
-    if (diff === 0) diff = 7;     // strictement après aujourd'hui
-    t.setDate(t.getDate() + diff);
-    return ymd(t);
-}
-
-function renderGroupExtras() {
-    const wrap = document.getElementById('groupExtrasList');
-    if (!wrap) return;
-    groupExtras.sort((a, b) => a.date.localeCompare(b.date));
-    wrap.innerHTML = groupExtras.map((e, i) => `
-        <div class="schedule-row" style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
-            <span style="min-width:120px;font-weight:600;">${fmtDateV2(e.date)}</span>
-            <span>${e.time}</span>
-            <button type="button" class="btn btn-danger btn-sm" onclick="removeGroupExtra(${i})">✖</button>
-        </div>`).join('')
-        || '<span style="color:var(--text-secondary);font-size:.85rem;">Aucune séance en plus.</span>';
-}
-
-function addGroupExtraWeeks() {
-    const daySel = document.getElementById('groupExtraDay');
-    const time = document.getElementById('groupExtraTime').value;
-    const weeks = parseInt(document.getElementById('groupExtraWeeks').value, 10) || 1;
-    const dayIdx = parseInt(daySel.value, 10);
-    if (isNaN(dayIdx)) { alert('Choisissez un jour.'); return; }
-    if (!time) { alert('Choisissez une heure.'); return; }
-    let d = nextOccurrence(dayIdx);
-    for (let i = 0; i < weeks; i++) {
-        groupExtras.push({ id: null, date: d, time });
-        d = addDays(d, 7);
-    }
-    renderGroupExtras();
-}
-
-function removeGroupExtra(index) {
-    const item = groupExtras[index];
-    if (!item) return;
-    if (item.id) groupExtrasRemoved.push(item.id);
-    groupExtras.splice(index, 1);
-    renderGroupExtras();
+function findGroupCache(id) {
+    return v2GroupsCache.find(g => g.id === id);
 }
 
 async function openGroupModal(groupId) {
@@ -285,8 +183,6 @@ async function openGroupModal(groupId) {
     form.reset();
     document.getElementById('groupId').value = groupId || '';
     document.getElementById('groupModalTitle').textContent = groupId ? '✏️ Modifier le groupe' : '➕ Nouveau groupe';
-    populateGroupExtraDayOptions();
-    resetGroupExtras();
 
     if (groupId) {
         const card = findGroupCache(groupId);
@@ -306,14 +202,6 @@ async function openGroupModal(groupId) {
                 tm.value = sched[d.key] || '';
             });
         }
-
-        try {
-            groupExtras = await fetchGroupExtraSessions(groupId);
-        } catch (err) {
-            console.error(err);
-            showMessage('groupMessage', 'Erreur chargement séances: ' + err.message, 'danger');
-        }
-        renderGroupExtras();
     } else {
         V2_DAYS.forEach(d => {
             document.getElementById('sched_' + d.key).checked = false;
@@ -322,47 +210,8 @@ async function openGroupModal(groupId) {
         document.getElementById('groupStartDate').value = currentSeasonStartYmd();
         document.getElementById('groupPauseStart').value = '';
         document.getElementById('groupPauseEnd').value = '';
-        resetGroupExtras();
-        renderGroupExtras();
     }
     openModal('groupModal');
-}
-
-let v2GroupsCache = [];
-function findGroupCache(id) {
-    return v2GroupsCache.find(g => g.id === id);
-};
-
-// Applique les ajouts/suppressions de séances ponctuelles à la table sessions.
-async function syncGroupExtraSessions(groupId, clubId, groupName) {
-    const removedIds = [...new Set(groupExtrasRemoved.filter(Boolean))];
-    if (removedIds.length) {
-        const { error } = await supabase
-            .from('sessions')
-            .delete()
-            .eq('group_id', groupId)
-            .in('id', removedIds);
-        if (error) throw error;
-    }
-
-    const existing = await fetchGroupExtraSessions(groupId);
-    const existingKeys = new Set(existing.map(e => `${e.date}|${e.time}`));
-    const rows = (groupExtras || [])
-        .filter(e => !e.id && e.date && e.time && !existingKeys.has(`${e.date}|${e.time}`))
-        .map(e => ({
-            club_id: clubId,
-            group_id: groupId,
-            session_date: e.date,
-            start_time: e.time,
-            end_time: null,
-            status: 'waiting',
-            group_type: e.group_type || groupName || null
-        }));
-
-    if (rows.length) {
-        const { error } = await supabase.from('sessions').insert(rows);
-        if (error) throw error;
-    }
 }
 
 async function handleGroupSubmit(e) {
@@ -408,10 +257,6 @@ async function handleGroupSubmit(e) {
             const { data: inserted, error } = await q.insert(payload).select('id').single();
             if (error) throw error;
             savedId = inserted && inserted.id;
-        }
-
-        if (savedId) {
-            await syncGroupExtraSessions(savedId, clubId, groupName);
         }
 
         closeModal('groupModal');
@@ -685,5 +530,4 @@ async function setSessionStatus(sessionId, action) {
 
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('groupForm')?.addEventListener('submit', handleGroupSubmit);
-    populateGroupExtraDayOptions();
 });

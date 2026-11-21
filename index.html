@@ -1468,6 +1468,7 @@
 }
     </style>
     <link rel="stylesheet" href="css/v2.css?v=20260824">
+    <link rel="stylesheet" href="css/sidebar.css?v=20261116">
 </head>
 <body>
 
@@ -1495,1477 +1496,1623 @@
     </div>
 
     <!-- Main App -->
-    <div id="mainApp" class="hidden">
-        <!-- Header -->
-        <div class="header">
-            <div class="header-content">
-                <div class="logo-section">
-                    <img src="logo_site.png" alt="Logo" class="logo">
-                    <div class="header-title">
-                        <h1>Kyokushin Manager Pro</h1>
-                        <p id="clubNameDisplay">Système de gestion</p>
+    <div class="app" id="app">
+
+        <!-- Skip link (accessibilité) -->
+        <a href="#main-content" class="skip-link">Aller au contenu principal</a>
+
+        <!-- Bouton hamburger (mobile) -->
+        <button
+            class="app__hamburger"
+            data-sidebar-toggle
+            aria-label="Ouvrir le menu"
+            aria-expanded="false"
+            aria-controls="mainSidebar"
+            type="button"
+        >
+            ☰
+        </button>
+
+        <!-- Sidebar principale -->
+        <aside
+            class="sidebar"
+            data-sidebar
+            id="mainSidebar"
+            aria-label="Navigation principale"
+        >
+            <div class="sidebar__header">
+                <img src="logo_site.png" alt="Kyokushin Manager Pro" class="sidebar__logo">
+                <span class="sidebar__brand">Kyokushin Pro</span>
+                <button
+                    class="sidebar__close"
+                    data-sidebar-close
+                    aria-label="Fermer le menu"
+                    type="button"
+                >
+                    ✕
+                </button>
+            </div>
+
+            <nav class="sidebar__nav" aria-label="Menu principal">
+                <ul>
+                    <li>
+                        <a
+                            href="#dashboard"
+                            data-sidebar-link
+                            data-section="dashboardSection"
+                            class="sidebar__link is-active"
+                             aria-current="page"
+                            type="button"
+                        >
+                            <span>Tableau de bord</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="#members"
+                            data-sidebar-link
+                            data-section="membersSection"
+                            class="sidebar__link"
+                            
+                            type="button"
+                        >
+                            <span>Adhérents</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="#cards"
+                            data-sidebar-link
+                            data-section="cardsSection"
+                            class="sidebar__link"
+                            
+                            type="button"
+                        >
+                            <span>Cartes</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="#nfc"
+                            data-sidebar-link
+                            data-section="nfcSection"
+                            class="sidebar__link"
+                            
+                            type="button"
+                        >
+                            <span>NFC</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="#payments"
+                            data-sidebar-link
+                            data-section="paymentsSection"
+                            class="sidebar__link"
+                            
+                            type="button"
+                        >
+                            <span>Paiements</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="#settings"
+                            data-sidebar-link
+                            data-section="settingsSection"
+                            class="sidebar__link"
+                            
+                            type="button"
+                        >
+                            <span>Paramètres</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="#nfc-write"
+                            data-sidebar-link
+                            data-section="nfcWriteSection"
+                            class="sidebar__link"
+                            
+                            type="button"
+                        >
+                            <span>Écriture NFC</span>
+                        </a>
+                    </li>
+                </ul>
+                <hr class="sidebar__nav-separator">
+            </nav>
+
+            <div class="sidebar__footer">
+                <div class="sidebar__user">
+                    <img src="logo_site.png" alt="" class="sidebar__avatar">
+                    <div>
+                        <strong id="userDisplay">Coach</strong>
+                        <small>Admin</small>
                     </div>
                 </div>
-                <div class="header-actions">
-                    <button class="theme-toggle" id="themeToggle">🌙</button>
-                    <button class="notification-btn" id="notificationBtn">
+                <button
+                    id="logoutBtn"
+                    class="sidebar__logout"
+                    data-sidebar-logout
+                    aria-label="Se déconnecter"
+                    type="button"
+                >
+                    ⏻ Déconnexion
+                </button>
+            </div>
+        </aside>
+
+        <!-- Overlay sombre derrière le drawer (mobile) -->
+        <div class="sidebar__overlay" data-sidebar-overlay aria-hidden="true"></div>
+
+        <!-- Contenu principal -->
+        <main class="app__main" id="main-content" tabindex="-1">
+
+            <!-- Header de l'application -->
+            <header class="app__header">
+                <div class="app__header-left" style="display:flex;align-items:center;gap:var(--space-4);">
+                    <img src="logo_site.png" alt="Logo" style="width:40px;height:40px;border-radius:var(--radius-sm);">
+                    <div>
+                        <h1 id="clubNameDisplay">Kyokushin Manager Pro</h1>
+                        <p style="font-size:var(--fs-xs);color:var(--c-text-muted);margin:0;">Système de gestion</p>
+                    </div>
+                </div>
+                <div class="app__header-actions" style="display:flex;align-items:center;gap:var(--space-3);">
+                    <button
+                        class="theme-toggle"
+                        id="themeToggle"
+                        aria-label="Basculer le thème"
+                        type="button"
+                    >
+                        🌙
+                    </button>
+                    <button
+                        class="notification-btn"
+                        id="notificationBtn"
+                        aria-label="Notifications"
+                        type="button"
+                    >
                         🔔 Notifications
                         <span class="notification-count" id="notificationCount">0</span>
                     </button>
-                    <div class="user-info">
-                        <span>👤</span>
-                        <span id="userDisplay">Utilisateur</span>
-                    </div>
-                    <button class="btn-logout" id="logoutBtn">Déconnexion</button>
                 </div>
-            </div>
-        </div>
+            </header>
 
-        <div class="container">
-            <!-- Navigation Tabs -->
-            <div class="nav-tabs" id="navTabs">
-                <!-- Tabs will be generated dynamically -->
-            </div>
-
-            <!-- Dashboard Section (Admin & Club) -->
-            <div id="dashboardSection" class="content-section active">
-                <div class="grid grid-3">
-                    <div class="stats-card">
-                        <div class="stats-number" id="totalMembers">0</div>
-                        <div class="stats-label">👥 Adhérents</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stats-number" id="totalAttendance">0</div>
-                        <div class="stats-label">✅ Présences ce mois</div>
-                    </div>
-                    <div class="stats-card">
-                        <div class="stats-number" id="totalClubs">1</div>
-                        <div class="stats-label">🏢 Clubs</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Manage Clubs Section (Admin Only) -->
-            <div id="manageClubsSection" class="content-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">🏢 Gestion des Clubs</h2>
-                        <button class="btn btn-primary" id="addClubBtn">+ Ajouter un club</button>
-                    </div>
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Nom du club</th>
-                                    <th>Username</th>
-                                    <th>Logo</th>
-                                    <th>Date création</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="clubsList"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Preferences Section (Club Only) -->
-            <div id="preferencesSection" class="content-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">⚙️ Préférences du Club</h2>
-                    </div>
-                    <form id="preferencesForm">
+            <!-- Contenu scrollable -->
+            <div class="app__content">
+                
+                        <div class="container">
+                            <!-- Navigation Tabs -->
+                            <div class="nav-tabs" id="navTabs">
+                                <!-- Tabs will be generated dynamically -->
+                            </div>
+                
+                            <!-- Dashboard Section (Admin & Club) -->
+                            <div id="dashboardSection" class="content-section active">
+                                <div class="grid grid-3">
+                                    <div class="stats-card">
+                                        <div class="stats-number" id="totalMembers">0</div>
+                                        <div class="stats-label">👥 Adhérents</div>
+                                    </div>
+                                    <div class="stats-card">
+                                        <div class="stats-number" id="totalAttendance">0</div>
+                                        <div class="stats-label">✅ Présences ce mois</div>
+                                    </div>
+                                    <div class="stats-card">
+                                        <div class="stats-number" id="totalClubs">1</div>
+                                        <div class="stats-label">🏢 Clubs</div>
+                                    </div>
+                                </div>
+                            </div>
+                
+                            <!-- Manage Clubs Section (Admin Only) -->
+                            <div id="manageClubsSection" class="content-section">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h2 class="card-title">🏢 Gestion des Clubs</h2>
+                                        <button class="btn btn-primary" id="addClubBtn">+ Ajouter un club</button>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>Nom du club</th>
+                                                    <th>Username</th>
+                                                    <th>Logo</th>
+                                                    <th>Date création</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="clubsList"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                
+                            <!-- Preferences Section (Club Only) -->
+                            <div id="preferencesSection" class="content-section">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h2 class="card-title">⚙️ Préférences du Club</h2>
+                                    </div>
+                                    <form id="preferencesForm">
+                                        <div class="grid grid-2">
+                                            <div class="form-group">
+                                                <label>Nom du club</label>
+                                                <input type="text" id="prefClubName" class="form-control" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Username</label>
+                                                <input type="text" id="prefUsername" class="form-control" required>
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-2">
+                                            <div class="form-group">
+                                                <label>Nouveau mot de passe (laisser vide pour ne pas changer)</label>
+                                                <input type="password" id="prefPassword" class="form-control" placeholder="••••••••">
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Confirmer le mot de passe</label>
+                                                <input type="password" id="prefPasswordConfirm" class="form-control" placeholder="••••••••">
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>Uploader un logo</label>
+                                            <input type="file" id="prefLogoUpload" class="form-control" accept="image/*">
+                                            <small class="form-text text-muted">Veuillez sélectionner une image à utiliser comme logo du club.</small>
+                                        </div>
+                                        <button type="submit" class="btn btn-success">💾 Enregistrer les modifications</button>
+                                    </form>
+                                    <div id="prefMessage" style="margin-top: 15px;"></div>
+                                </div>
+                            </div>
+                
+                            <!-- Add Member Section -->
+                            <div id="addMemberSection" class="content-section">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h2 class="card-title">➕ Ajouter un Adhérent</h2>
+                                    </div>
+                                    <form id="addMemberForm">
+                                        <div class="grid grid-2">
+                                            <div class="form-group">
+                                                <label>ID Adhérent *</label>
+                                                <input type="text" id="memberId" class="form-control" placeholder="KYO001" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Club (Admin uniquement)</label>
+                                                <select id="memberClub" class="form-control"></select>
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-2">
+                                            <div class="form-group">
+                                                <label>Nom *</label>
+                                                <input type="text" id="memberLastName" class="form-control" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Prénom *</label>
+                                                <input type="text" id="memberFirstName" class="form-control" required>
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-2">
+                                            <div class="form-group">
+                                                <label>Date de naissance *</label>
+                                                <input type="date" id="memberDob" class="form-control" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Groupe sanguin</label>
+                                                <select id="memberBloodType" class="form-control">
+                                                    <option value="">Sélectionner</option>
+                                                    <option value="A+">A+</option>
+                                                    <option value="A-">A-</option>
+                                                    <option value="B+">B+</option>
+                                                    <option value="B-">B-</option>
+                                                    <option value="AB+">AB+</option>
+                                                    <option value="AB-">AB-</option>
+                                                    <option value="O+">O+</option>
+                                                    <option value="O-">O-</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div class="grid grid-2">
+                                            <div class="form-group">
+                                                <label>Type d'abonnement *</label>
+                                                <select id="memberSubscription" class="form-control" required>
+                                                    <option value="monthly">Mensuel</option>
+                                                    <option value="quarterly">Trimestriel</option>
+                                                    <option value="biannual">Semestriel</option>
+                                                    <option value="annual">Annuel</option>
+                                                </select>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Date de début *</label>
+                                                <input type="date" id="memberStartDate" class="form-control" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label>Numéro téléphone<label>
+                                                <input type="text" id="memberPhone" class="form-control" required>
+                                              </div>
+                                              
+                                        </div>
+                                        <button type="submit" class="btn btn-success">💾 Ajouter l'adhérent</button>
+                                    </form>
+                                    <div id="addMemberMessage" style="margin-top: 15px;"></div>
+                                </div>
+                            </div>
+                
+                            <!-- Members List Section -->
+                            <!-- Members List Section -->
+                            <div id="membersListSection" class="content-section">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h2 class="card-title">👥 Liste des Adhérents</h2>
+                                        <div class="filter-container">
+                                            <!-- Filtre par statut -->
+                                            <div class="filter-select-wrapper" style="flex: 1;">
+                                                <label class="filter-label">📊 Filtrer par statut :</label>
+                                                <select id="filterStatus" class="filter-select">
+                                                    <option value="all">📋 Tous les adhérents</option>
+                                                    <option value="active">✅ Actifs uniquement</option>
+                                                    <option value="expired">❌ Expirés uniquement</option>
+                                                </select>
+                                            </div>
+                            
+                                            <!-- Recherche par nom -->
+                                            <div class="filter-select-wrapper" style="flex: 1;">
+                                                <label class="filter-label">🔍 Rechercher par nom :</label>
+                                                <input type="text" id="searchName" class="form-control" placeholder="Nom ou prénom..." style="padding: 8px 12px; min-width: 200px;">
+                                            </div>
+                            
+                                            <!-- Nouveau: tri -->
+                                            <div class="filter-select-wrapper" style="flex: 1;">
+                                                <label class="filter-label">🔀 Trier par :</label>
+                                                <select id="sortOrder" class="filter-select">
+                                                    <option value="alphabetical">🔤 Ordre alphabétique</option>
+                                                    <option value="birthdateAsc">🎂 Date de naissance (âgé → jeune)</option>
+                                                    <option value="birthdateDesc">🎂 Date de naissance (jeune → âgé)</option>
+                                                </select>
+                                            </div>
+                            
+                                            <div class="filter-stats">
+                                                <span class="filter-badge" id="memberCount">0</span>
+                                                <span style="font-size: 0.85rem; color: var(--text-secondary);">adhérent(s)</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <button class="btn btn-primary" onclick="loadMembers()">🔄 Actualiser</button>
+                                    </div>
+                                    <div id="membersGrid" class="grid grid-3"></div>
+                                </div>
+                            </div>
+                
+                            <!-- Import/Export Section -->
+                            <div id="importExportSection" class="content-section">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h2 class="card-title">📁 Import / Export Excel</h2>
+                                    </div>
+                                    <div class="grid grid-2">
+                                        <div>
+                                            <h3>📥 Importer des adhérents</h3>
+                                            <p style="margin-bottom: 15px; color: var(--text-secondary);">
+                                                Téléchargez le template, remplissez-le et importez-le.
+                                            </p>
+                                            <button class="btn btn-info" onclick="downloadTemplate()">📄 Télécharger Template Excel</button>
+                            
+                                            <div class="file-upload" style="margin-top: 15px;">
+                                                <input type="file" id="excelFile" accept=".xlsx,.xls">
+                                                <label for="excelFile" class="file-upload-label">
+                                                    <span>📂</span>
+                                                    <span>Choisir un fichier Excel</span>
+                                                </label>
+                                            </div>
+                                            <button class="btn btn-success" onclick="importExcel()" style="margin-top: 15px;">📥 Importer</button>
+                                        </div>
+                                        <div>
+                                            <h3>📤 Exporter les données</h3>
+                                            <p style="margin-bottom: 15px; color: var(--text-secondary);">
+                                                Exportez la liste complète des adhérents.
+                                            </p>
+                                            <button class="btn btn-primary" onclick="exportMembers()">📊 Exporter Adhérents</button>
+                                            <button class="btn btn-primary" onclick="exportAttendance()" style="margin-top: 10px;">📊 Exporter Présences</button>
+                                        </div>
+                                    </div>
+                                    <div id="importMessage" style="margin-top: 15px;"></div>
+                                </div>
+                            </div>
+                
+                            <!-- Scanner Section -->
+                            <div id="scannerSection" class="content-section">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h2 class="card-title">📱 Scanner QR Code</h2>
+                                    </div>
+                                    <div id="reader" style="margin-bottom: 20px;"></div>
+                                    <div style="text-align: center;">
+                                        <button class="btn btn-primary" id="startScanBtn">▶️ Démarrer le scanner</button>
+                                        <button class="btn btn-danger hidden" id="stopScanBtn">⏹️ Arrêter le scanner</button>
+                                    </div>
+                                    <div id="scanResult" style="margin-top: 20px;"></div>
+                                </div>
+                            </div>
+                
+                            <!-- Manual Validation Section -->
+                            <div id="validationSection" class="content-section">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h2 class="card-title">✅ Validation Manuelle</h2>
+                                    </div>
+                                    <div class="grid grid-2">
+                                        <div>
+                                            <div class="form-group">
+                                                <label>ID Adhérent</label>
+                                                <input type="text" id="validateMemberId" class="form-control" placeholder="KYO001">
+                                            </div>
+                                            <button class="btn btn-success" onclick="validateAttendance()">✅ Valider Présence</button>
+                                        </div>
+                                    </div>
+                                    <div id="validationMessage" style="margin-top: 15px;"></div>
+                                </div>
+                            </div>
+                
+                            <!-- Attendance List Section -->
+                            <div id="attendanceListSection" class="content-section">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h2 class="card-title">📋 Présences Mensuelles</h2>
+                                        <div>
+                                            <input type="month" id="attendanceMonth" class="form-control" style="display: inline-block; width: auto;">
+                                            <button class="btn btn-primary" onclick="loadMonthlyAttendance()">🔍 Rechercher</button>
+                                        </div>
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table>
+                                            <thead>
+                                                <tr>
+                                                    <th>ID</th>
+                                                    <th>Nom</th>
+                                                    <th>Prénom</th>
+                                                    <th>Groupe</th>
+                                                    <th>Mois</th>
+                                                    <th>Présences</th>
+                                                    <th>Absences</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="attendanceList"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                
+                           <!-- Dans la section Cards Generation -->
+                <!-- Dans la section Cards Generation -->
+                <!-- Dans la section Cards Generation -->
+                <div id="cardsSection" class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">🎫 Génération de Cartes</h2>
+                        </div>
                         <div class="grid grid-2">
                             <div class="form-group">
-                                <label>Nom du club</label>
-                                <input type="text" id="prefClubName" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Username</label>
-                                <input type="text" id="prefUsername" class="form-control" required>
+                                <label>Uploader le modèle design de la carte</label>
+                                <input type="file" id="cardFrontImage" class="form-control" accept="image/*">
+                                <small class="form-text text-muted">Image de fond : photo, nom, date de naissance et QR code seront ajoutés dessus</small>
                             </div>
                         </div>
-                        <div class="grid grid-2">
-                            <div class="form-group">
-                                <label>Nouveau mot de passe (laisser vide pour ne pas changer)</label>
-                                <input type="password" id="prefPassword" class="form-control" placeholder="••••••••">
-                            </div>
-                            <div class="form-group">
-                                <label>Confirmer le mot de passe</label>
-                                <input type="password" id="prefPasswordConfirm" class="form-control" placeholder="••••••••">
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <label>Uploader un logo</label>
-                            <input type="file" id="prefLogoUpload" class="form-control" accept="image/*">
-                            <small class="form-text text-muted">Veuillez sélectionner une image à utiliser comme logo du club.</small>
-                        </div>
-                        <button type="submit" class="btn btn-success">💾 Enregistrer les modifications</button>
-                    </form>
-                    <div id="prefMessage" style="margin-top: 15px;"></div>
-                </div>
-            </div>
-
-            <!-- Add Member Section -->
-            <div id="addMemberSection" class="content-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">➕ Ajouter un Adhérent</h2>
-                    </div>
-                    <form id="addMemberForm">
-                        <div class="grid grid-2">
-                            <div class="form-group">
-                                <label>ID Adhérent *</label>
-                                <input type="text" id="memberId" class="form-control" placeholder="KYO001" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Club (Admin uniquement)</label>
-                                <select id="memberClub" class="form-control"></select>
-                            </div>
-                        </div>
-                        <div class="grid grid-2">
-                            <div class="form-group">
-                                <label>Nom *</label>
-                                <input type="text" id="memberLastName" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Prénom *</label>
-                                <input type="text" id="memberFirstName" class="form-control" required>
-                            </div>
-                        </div>
-                        <div class="grid grid-2">
-                            <div class="form-group">
-                                <label>Date de naissance *</label>
-                                <input type="date" id="memberDob" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Groupe sanguin</label>
-                                <select id="memberBloodType" class="form-control">
-                                    <option value="">Sélectionner</option>
-                                    <option value="A+">A+</option>
-                                    <option value="A-">A-</option>
-                                    <option value="B+">B+</option>
-                                    <option value="B-">B-</option>
-                                    <option value="AB+">AB+</option>
-                                    <option value="AB-">AB-</option>
-                                    <option value="O+">O+</option>
-                                    <option value="O-">O-</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="grid grid-2">
-                            <div class="form-group">
-                                <label>Type d'abonnement *</label>
-                                <select id="memberSubscription" class="form-control" required>
-                                    <option value="monthly">Mensuel</option>
-                                    <option value="quarterly">Trimestriel</option>
-                                    <option value="biannual">Semestriel</option>
-                                    <option value="annual">Annuel</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Date de début *</label>
-                                <input type="date" id="memberStartDate" class="form-control" required>
-                            </div>
-                            <div class="form-group">
-                                <label>Numéro téléphone<label>
-                                <input type="text" id="memberPhone" class="form-control" required>
-                              </div>
-                              
-                        </div>
-                        <button type="submit" class="btn btn-success">💾 Ajouter l'adhérent</button>
-                    </form>
-                    <div id="addMemberMessage" style="margin-top: 15px;"></div>
-                </div>
-            </div>
-
-            <!-- Members List Section -->
-            <!-- Members List Section -->
-            <div id="membersListSection" class="content-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">👥 Liste des Adhérents</h2>
-                        <div class="filter-container">
-                            <!-- Filtre par statut -->
-                            <div class="filter-select-wrapper" style="flex: 1;">
-                                <label class="filter-label">📊 Filtrer par statut :</label>
-                                <select id="filterStatus" class="filter-select">
-                                    <option value="all">📋 Tous les adhérents</option>
-                                    <option value="active">✅ Actifs uniquement</option>
-                                    <option value="expired">❌ Expirés uniquement</option>
-                                </select>
-                            </div>
-            
-                            <!-- Recherche par nom -->
-                            <div class="filter-select-wrapper" style="flex: 1;">
-                                <label class="filter-label">🔍 Rechercher par nom :</label>
-                                <input type="text" id="searchName" class="form-control" placeholder="Nom ou prénom..." style="padding: 8px 12px; min-width: 200px;">
-                            </div>
-            
-                            <!-- Nouveau: tri -->
-                            <div class="filter-select-wrapper" style="flex: 1;">
-                                <label class="filter-label">🔀 Trier par :</label>
-                                <select id="sortOrder" class="filter-select">
-                                    <option value="alphabetical">🔤 Ordre alphabétique</option>
-                                    <option value="birthdateAsc">🎂 Date de naissance (âgé → jeune)</option>
-                                    <option value="birthdateDesc">🎂 Date de naissance (jeune → âgé)</option>
-                                </select>
-                            </div>
-            
-                            <div class="filter-stats">
-                                <span class="filter-badge" id="memberCount">0</span>
-                                <span style="font-size: 0.85rem; color: var(--text-secondary);">adhérent(s)</span>
-                            </div>
-                        </div>
+                        <button class="btn btn-primary" onclick="loadMembersForCards()" id="loadMembersForCardsBtn" style="margin: 20px 0;">
+                            📋 Charger les adhérents
+                        </button>
                         
-                        <button class="btn btn-primary" onclick="loadMembers()">🔄 Actualiser</button>
+                        <!-- Conteneur pour la sélection des membres -->
+                        <div id="cardsGrid" style="margin-top: 20px;"></div>
+                        
+                        <!-- Conteneur pour la prévisualisation des cartes -->
+                        <div id="cardsPreview" style="margin-top: 30px; display: flex; flex-direction: column; align-items: center;"></div>
+                
+                        <!-- Export global PDF / Impression -->
+                        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 25px; flex-wrap: wrap;">
+                            <button class="btn btn-danger" onclick="exportAllCardsPDF()">📄 Exporter tout en PDF</button>
+                            <button class="btn btn-info" onclick="printAllCards()">🖨️ Imprimer les cartes</button>
+                        </div>
                     </div>
-                    <div id="membersGrid" class="grid grid-3"></div>
                 </div>
-            </div>
-
-            <!-- Import/Export Section -->
-            <div id="importExportSection" class="content-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">📁 Import / Export Excel</h2>
-                    </div>
-                    <div class="grid grid-2">
-                        <div>
-                            <h3>📥 Importer des adhérents</h3>
-                            <p style="margin-bottom: 15px; color: var(--text-secondary);">
-                                Téléchargez le template, remplissez-le et importez-le.
-                            </p>
-                            <button class="btn btn-info" onclick="downloadTemplate()">📄 Télécharger Template Excel</button>
-            
-                            <div class="file-upload" style="margin-top: 15px;">
-                                <input type="file" id="excelFile" accept=".xlsx,.xls">
-                                <label for="excelFile" class="file-upload-label">
-                                    <span>📂</span>
-                                    <span>Choisir un fichier Excel</span>
-                                </label>
+                
+                    <!-- Modals -->
+                    <!-- Add Club Modal -->
+                    <div id="addClubModal" class="modal">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h2>➕ Ajouter un Club</h2>
+                                <button class="modal-close" onclick="closeModal('addClubModal')">&times;</button>
                             </div>
-                            <button class="btn btn-success" onclick="importExcel()" style="margin-top: 15px;">📥 Importer</button>
-                        </div>
-                        <div>
-                            <h3>📤 Exporter les données</h3>
-                            <p style="margin-bottom: 15px; color: var(--text-secondary);">
-                                Exportez la liste complète des adhérents.
-                            </p>
-                            <button class="btn btn-primary" onclick="exportMembers()">📊 Exporter Adhérents</button>
-                            <button class="btn btn-primary" onclick="exportAttendance()" style="margin-top: 10px;">📊 Exporter Présences</button>
-                        </div>
-                    </div>
-                    <div id="importMessage" style="margin-top: 15px;"></div>
-                </div>
-            </div>
-
-            <!-- Scanner Section -->
-            <div id="scannerSection" class="content-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">📱 Scanner QR Code</h2>
-                    </div>
-                    <div id="reader" style="margin-bottom: 20px;"></div>
-                    <div style="text-align: center;">
-                        <button class="btn btn-primary" id="startScanBtn">▶️ Démarrer le scanner</button>
-                        <button class="btn btn-danger hidden" id="stopScanBtn">⏹️ Arrêter le scanner</button>
-                    </div>
-                    <div id="scanResult" style="margin-top: 20px;"></div>
-                </div>
-            </div>
-
-            <!-- Manual Validation Section -->
-            <div id="validationSection" class="content-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">✅ Validation Manuelle</h2>
-                    </div>
-                    <div class="grid grid-2">
-                        <div>
-                            <div class="form-group">
-                                <label>ID Adhérent</label>
-                                <input type="text" id="validateMemberId" class="form-control" placeholder="KYO001">
-                            </div>
-                            <button class="btn btn-success" onclick="validateAttendance()">✅ Valider Présence</button>
-                        </div>
-                    </div>
-                    <div id="validationMessage" style="margin-top: 15px;"></div>
-                </div>
-            </div>
-
-            <!-- Attendance List Section -->
-            <div id="attendanceListSection" class="content-section">
-                <div class="card">
-                    <div class="card-header">
-                        <h2 class="card-title">📋 Présences Mensuelles</h2>
-                        <div>
-                            <input type="month" id="attendanceMonth" class="form-control" style="display: inline-block; width: auto;">
-                            <button class="btn btn-primary" onclick="loadMonthlyAttendance()">🔍 Rechercher</button>
-                        </div>
-                    </div>
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nom</th>
-                                    <th>Prénom</th>
-                                    <th>Groupe</th>
-                                    <th>Mois</th>
-                                    <th>Présences</th>
-                                    <th>Absences</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="attendanceList"></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-           <!-- Dans la section Cards Generation -->
-<!-- Dans la section Cards Generation -->
-<!-- Dans la section Cards Generation -->
-<div id="cardsSection" class="content-section">
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">🎫 Génération de Cartes</h2>
-        </div>
-        <div class="grid grid-2">
-            <div class="form-group">
-                <label>Uploader le modèle design de la carte</label>
-                <input type="file" id="cardFrontImage" class="form-control" accept="image/*">
-                <small class="form-text text-muted">Image de fond : photo, nom, date de naissance et QR code seront ajoutés dessus</small>
-            </div>
-        </div>
-        <button class="btn btn-primary" onclick="loadMembersForCards()" id="loadMembersForCardsBtn" style="margin: 20px 0;">
-            📋 Charger les adhérents
-        </button>
-        
-        <!-- Conteneur pour la sélection des membres -->
-        <div id="cardsGrid" style="margin-top: 20px;"></div>
-        
-        <!-- Conteneur pour la prévisualisation des cartes -->
-        <div id="cardsPreview" style="margin-top: 30px; display: flex; flex-direction: column; align-items: center;"></div>
-
-        <!-- Export global PDF / Impression -->
-        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 25px; flex-wrap: wrap;">
-            <button class="btn btn-danger" onclick="exportAllCardsPDF()">📄 Exporter tout en PDF</button>
-            <button class="btn btn-info" onclick="printAllCards()">🖨️ Imprimer les cartes</button>
-        </div>
-    </div>
-</div>
-
-    <!-- Modals -->
-    <!-- Add Club Modal -->
-    <div id="addClubModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>➕ Ajouter un Club</h2>
-                <button class="modal-close" onclick="closeModal('addClubModal')">&times;</button>
-            </div>
-            <form id="addClubForm">
-                <div class="form-group">
-                    <label>Nom du club *</label>
-                    <input type="text" id="clubName" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label>Username *</label>
-                    <input type="text" id="clubUsername" class="form-control" placeholder="ex: flame_club" required>
-                </div>
-                <div class="form-group">
-                    <label>Mot de passe *</label>
-                    <input type="password" id="clubPassword" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label>URL du logo</label>
-                    <input type="url" id="clubLogo" class="form-control" placeholder="https://...">
-                </div>
-                <button type="submit" class="btn btn-success">💾 Créer le club</button>
-            </form>
-            <div id="addClubMessage" style="margin-top: 15px;"></div>
-        </div>
-    </div>
-
-    <!-- Photo Upload Modal -->
-    <div id="photoModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>📷 Ajouter une Photo</h2>
-                <button class="modal-close" onclick="closeModal('photoModal')">&times;</button>
-            </div>
-            <div style="text-align: center;">
-                <img id="photoPreview" class="photo-preview hidden" alt="Preview">
-                <div class="file-upload">
-                    <input type="file" id="memberPhoto" accept="image/*" onchange="previewPhoto()">
-                    <label for="memberPhoto" class="file-upload-label">
-                        <span>📷</span>
-                        <span>Choisir une photo</span>
-                    </label>
-                </div>
-                <button class="btn btn-success" onclick="uploadPhoto()" style="margin-top: 15px;">💾 Enregistrer</button>
-            </div>
-            <div id="photoMessage" style="margin-top: 15px;"></div>
-        </div>
-    </div>
-<!-- Edit Member Modal -->
-<!-- Edit Member Modal -->
-<div id="editMemberModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Modifier les informations</h2>
-        <button class="modal-close" onclick="closeModal('editMemberModal')">&times;</button>
-      </div>
-      <form id="editMemberForm">
-        <input type="hidden" id="editMemberId">
-        <div class="form-group">
-          <label>Nom</label>
-          <input type="text" id="editLastName" class="form-control" required>
-        </div>
-        <div class="form-group">
-          <label>Prénom</label>
-          <input type="text" id="editFirstName" class="form-control" required>
-        </div>
-        <div class="form-group">
-          <label>Date de naissance</label>
-          <input type="date" id="editDob" class="form-control" required>
-        </div>
-        <div class="form-group">
-          <label>Numéro téléphone</label>
-          <input type="text" id="editPhone" class="form-control">
-        </div>
-        <div class="form-group">
-          <label>Groupe sanguin</label>
-          <select id="editBloodType" class="form-control">
-            <option value="">Sélectionner</option>
-            <option value="A+">A+</option><option value="A-">A-</option>
-            <option value="B+">B+</option><option value="B-">B-</option>
-            <option value="AB+">AB+</option><option value="AB-">AB-</option>
-            <option value="O+">O+</option><option value="O-">O-</option>
-          </select>
-        </div>
-        <button type="submit" class="btn btn-success">💾 Enregistrer</button>
-      </form>
-      <div id="editMemberMessage" style="margin-top: 10px;"></div>
-    </div>
-  </div>
-  
-  
-    <!-- Attendance History Modal -->
-    <div id="historyModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>📋 Historique des Présences</h2>
-                <button class="modal-close" onclick="closeModal('historyModal')">&times;</button>
-            </div>
-            <div id="historyContent"></div>
-        </div>
-    </div>
-<!-- Subscription Expired Modal -->
-<div id="subscriptionAlertModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>⚠️ Abonnement expiré</h2>
-        <button class="modal-close" onclick="closeModal('subscriptionAlertModal')">&times;</button>
-      </div>
-      <p id="subscriptionAlertMessage">
-        Cet adhérent a un abonnement expiré. Voulez-vous le renouveler ?
-      </p>
-      <div style="display:flex; gap:10px; justify-content:center; margin-top:10px;">
-        <button class="btn btn-success" id="renewBtn">🔁 Renouveler</button>
-        <button class="btn btn-danger" id="ignoreBtn">❌ Ignorer</button>
-      </div>
-    </div>
-  </div>
-  <!-- Renewal Modal -->
-<div id="renewalModal" class="modal">
-    <div class="modal-content" style="max-width: 460px;">
-      <div class="modal-header">
-        <h2>🔄 Renouvellement de l'inscription</h2>
-        <button class="modal-close" onclick="closeModal('renewalModal')">&times;</button>
-      </div>
-      <div id="renewalContent" style="text-align:center; padding: 5px 0;"></div>
-    </div>
-  </div>
-  <!-- Ajoutez ce modal après les autres modals -->
-<div id="notificationsModal" class="modal">
-    <div class="modal-content" style="max-width: 500px;">
-        <div class="modal-header">
-            <h2>🔔 Notifications</h2>
-            <button class="modal-close" onclick="closeModal('notificationsModal')">&times;</button>
-        </div>
-        <div class="notifications-list" id="notificationsList" style="max-height: 400px; overflow-y: auto;">
-            <!-- Les notifications seront chargées ici -->
-        </div>
-        <div class="modal-footer" style="display: flex; justify-content: space-between; margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
-            <button class="btn btn-secondary" onclick="markAllAsRead()">📭 Tout marquer comme lu</button>
-            <button class="btn btn-danger" onclick="clearAllNotifications()">🗑️ Tout effacer</button>
-        </div>
-    </div>
-    <div id="cameraPermission" class="alert alert-info hidden">
-        📱 Veuillez autoriser l'accès à la caméra pour utiliser le scanner
-    </div>
-</div>
-<!-- ============ SECTIONS V2 : GROUPES / ABONNEMENTS / RAPPORTS / PAIEMENTS ============ -->
-
-<!-- Groupes -->
-<div id="groupsSection" class="content-section">
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">🥊 Gestion des Groupes</h2>
-            <button class="btn btn-primary" onclick="openGroupModal()">+ Nouveau groupe</button>
-        </div>
-        <div class="v2-toolbar" id="groupsToolbar"></div>
-        <div id="groupsMessage" style="margin-top:10px;"></div>
-        <div id="groupsGrid" class="grid grid-2" style="margin-top:15px;"></div>
-
-        <div id="sessionsPanel" class="hidden" style="margin-top:25px;">
-            <div class="card-header">
-                <h3 class="card-title" id="sessionsPanelTitle">🗓️ Séances</h3>
-                <div>
-                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('sessionsPanel').classList.add('hidden')">Fermer</button>
-                </div>
-            </div>
-            <div class="table-responsive sessions-table">
-                <table>
-                    <thead><tr><th>Date</th><th>Heure</th><th>Durée prévue</th><th>Statut</th><th>Actions</th></tr></thead>
-                    <tbody id="sessionsTableBody"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Abonnements -->
-<div id="subscriptionsSection" class="content-section">
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">💳 Abonnements Mensuels</h2>
-        </div>
-        <p style="color:var(--text-secondary);font-size:.85rem;">
-            Règle de continuité : un mois payé tardivement conserve sa période théorique
-            (ex : janvier payé le 15/02 → période 01/01 → 31/01).
-        </p>
-        <div class="v2-toolbar" id="subsToolbar"></div>
-        <div id="subscriptionsMessage" style="margin-top:10px;"></div>
-        <div id="subscriptionsList" style="margin-top:15px;"><div class="spinner"></div></div>
-    </div>
-</div>
-
-<!-- Rapports -->
-<div id="reportsSection" class="content-section">
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">📊 Rapports</h2>
-            <div>
-                <button class="btn btn-info btn-sm" onclick="exportReportCSV()">⬇️ CSV du dernier rapport</button>
-                <button class="btn btn-danger btn-sm" onclick="exportReportPDF()">🖨️ PDF du dernier rapport</button>
-            </div>
-        </div>
-        <div class="v2-toolbar" id="reportsToolbar"></div>
-        <div id="reportsMessage" style="margin-top:10px;"></div>
-
-        <div style="margin-top:20px;">
-            <h3 style="color:var(--primary-color)">👤 Présences individuelles</h3>
-            <div class="report-filters">
-                <div class="form-group"><label>Adhérent</label>
-                    <select id="repMember" class="form-control"></select></div>
-                <div class="form-group"><label>Du</label>
-                    <input type="date" id="repFrom" class="form-control"></div>
-                <div class="form-group"><label>Au</label>
-                    <input type="date" id="repTo" class="form-control"></div>
-                <button class="btn btn-primary" onclick="runIndividualReport()">Générer</button>
-            </div>
-            <div id="individualReportResult"></div>
-        </div>
-
-        <hr style="border-color:var(--border-color)">
-
-        <div style="margin-top:15px;">
-            <h3 style="color:var(--primary-color)">🥊 Matrice de groupe (P/A)</h3>
-            <div class="report-filters">
-                <div class="form-group"><label>Groupe</label>
-                    <select id="repGroup" class="form-control"></select></div>
-                <div class="form-group"><label>Du</label>
-                    <input type="date" id="repGroupFrom" class="form-control"></div>
-                <div class="form-group"><label>Au</label>
-                    <input type="date" id="repGroupTo" class="form-control"></div>
-                <button class="btn btn-primary" onclick="runGroupMatrix()">Générer</button>
-            </div>
-            <div id="groupMatrixResult"></div>
-        </div>
-
-        <hr style="border-color:var(--border-color)">
-
-        <div style="margin-top:15px;">
-            <h3 style="color:var(--primary-color)">💳 Abonnements</h3>
-            <div class="report-filters">
-                <div class="form-group"><label>Adhérent (vide = tous)</label>
-                    <select id="srMember" class="form-control"></select></div>
-                <div class="form-group"><label>Mois début</label>
-                    <input type="month" id="srFrom" class="form-control"></div>
-                <div class="form-group"><label>Mois fin</label>
-                    <input type="month" id="srTo" class="form-control"></div>
-                <button class="btn btn-primary" onclick="runSubscriptionReport()">Générer</button>
-            </div>
-            <div id="subscriptionReportResult"></div>
-        </div>
-
-        <hr style="border-color:var(--border-color)">
-
-        <div style="margin-top:15px;">
-            <h3 style="color:var(--primary-color)">💰 Événements & Recettes</h3>
-            <div class="report-filters">
-                <div class="form-group"><label>Du</label>
-                    <input type="date" id="evFrom" class="form-control"></div>
-                <div class="form-group"><label>Au</label>
-                    <input type="date" id="evTo" class="form-control"></div>
-                <button class="btn btn-primary" onclick="runEventsReport()">Générer</button>
-            </div>
-            <div id="eventsReportResult"></div>
-        </div>
-
-        <hr style="border-color:var(--border-color)">
-
-        <div style="margin-top:15px;">
-            <h3 style="color:var(--primary-color)">🧾 Rapport de paiement — Événements</h3>
-            <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:8px;">
-                Montants réellement encaissés (dernier paiement de chaque participant).
-            </p>
-            <div class="report-filters">
-                <div class="form-group" id="payClubWrap" style="display:none;">
-                    <label>Club</label>
-                    <select id="payClub" class="form-control" onchange="v2LoadPayEventOptions()"></select>
-                </div>
-                <div class="form-group"><label>Du</label>
-                    <input type="date" id="payFrom" class="form-control"></div>
-                <div class="form-group"><label>Au</label>
-                    <input type="date" id="payTo" class="form-control"></div>
-                <div class="form-group"><label>Événement (vide = tous)</label>
-                    <select id="payEvent" class="form-control"></select></div>
-                <button class="btn btn-primary" onclick="runEventPaymentsReport()">Générer</button>
-            </div>
-            <div id="eventPaymentsResult"></div>
-        </div>
-
-        <hr style="border-color:var(--border-color)">
-
-        <div style="margin-top:15px;">
-            <h3 style="color:var(--primary-color)">👥 État des adhérents</h3>
-            <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:8px;">
-                Vue globale : abonnement, groupe et ancienneté de chaque adhérent.
-            </p>
-            <button class="btn btn-primary" onclick="runMembersReport()">Générer</button>
-            <div id="membersReportResult" style="margin-top:10px;"></div>
-        </div>
-    </div>
-</div>
-
-<!-- Paiements / Événements -->
-<div id="eventsSection" class="content-section">
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">💰 Événements & Participations</h2>
-            <div>
-                <button class="btn btn-info" onclick="openEventPaymentsReport()">🧾 Rapport de paiement</button>
-                <button class="btn btn-primary" onclick="openEventModal()">+ Nouvel événement</button>
-            </div>
-        </div>
-        <div class="v2-toolbar" id="eventsToolbar"></div>
-        <div id="eventsMessage" style="margin-top:10px;"></div>
-        <div id="eventsGrid" class="grid grid-2" style="margin-top:15px;"></div>
-    </div>
-</div>
-
-<!-- ============ CARTES NFC (UID) ============ -->
-<div id="nfcCardsSection" class="content-section">
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">📇 Cartes NFC (UID)</h2>
-            <div>
-                <button class="btn btn-info btn-sm" onclick="openNfcScanner()">📡 Scanner de présence</button>
-                <button class="btn btn-primary" onclick="openNfcCardModal()">+ Nouvelle carte</button>
-            </div>
-        </div>
-
-        <!-- Stats -->
-        <div class="grid grid-3" style="margin-bottom:16px;" id="nfcStats">
-            <div class="stats-card"><div class="stats-number" id="nfcStatTotal">0</div><div class="stats-label">📇 Total cartes</div></div>
-            <div class="stats-card"><div class="stats-number" id="nfcStatAssigned">0</div><div class="stats-label">✅ Attribuées</div></div>
-            <div class="stats-card"><div class="stats-number" id="nfcStatScans">0</div><div class="stats-label">📡 Scans</div></div>
-        </div>
-
-        <!-- Recherche / filtres -->
-        <div class="v2-toolbar" id="nfcToolbar">
-            <input type="search" id="nfcSearch" class="form-control" placeholder="🔎 Rechercher un UID…" style="max-width:240px;">
-            <select id="nfcFilter" class="form-control" style="max-width:180px;">
-                <option value="all">Tous les statuts</option>
-                <option value="assigned">Attribuées</option>
-                <option value="unassigned">Libres</option>
-                <option value="lost">Perdues</option>
-                <option value="retired">Retirées</option>
-            </select>
-        </div>
-
-        <div id="nfcMessage" style="margin-top:10px;"></div>
-
-        <!-- Tableau des cartes -->
-        <div class="table-responsive" style="margin-top:15px;">
-            <table>
-                <thead>
-                    <tr>
-                        <th>UID</th>
-                        <th>Adhérent</th>
-                        <th>Statut</th>
-                        <th>Attribuée le</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="nfcCardsTable"></tbody>
-            </table>
-        </div>
-
-        <!-- Historique global -->
-        <div style="margin-top:25px;">
-            <h3 style="color:var(--primary-color)">🕓 Historique des scans</h3>
-            <div class="table-responsive">
-                <table>
-                    <thead><tr><th>Heure</th><th>UID</th><th>Adhérent</th><th>Résultat</th><th>Méthode</th></tr></thead>
-                    <tbody id="nfcHistoryTable"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ============ MODAUX V2 ============ -->
-
-<!-- Modal Carte NFC (création / attribution) -->
-<div id="nfcCardModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="nfcCardModalTitle">📇 Nouvelle carte NFC</h2>
-            <button class="modal-close" onclick="closeModal('nfcCardModal')">&times;</button>
-        </div>
-        <div class="form-group">
-            <label>UID / Serial Number *</label>
-            <div style="display:flex;gap:8px;">
-                <input type="text" id="nfcUid" class="form-control" placeholder="Ex : 04:12:3A:9F:02:56" style="text-transform:uppercase;" readonly>
-                <button class="btn btn-primary" id="nfcReadBtn" onclick="readUidIntoCardModal()">📡 Lire la carte</button>
-            </div>
-            <small style="color:var(--text-secondary);">UID lu automatiquement par le lecteur NFC externe (modifiable en cas exceptionnel).</small>
-            <div id="nfcCardModeNote" style="margin-top:6px;font-size:.82rem;color:var(--text-secondary);"></div>
-        </div>
-        <div class="form-group">
-            <label>Attribuer à un adhérent</label>
-            <select id="nfcMemberSelect" class="form-control">
-                <option value="">— Carte libre —</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label>Statut</label>
-            <select id="nfcStatus" class="form-control">
-                <option value="unassigned">Libre</option>
-                <option value="assigned">Attribuée</option>
-                <option value="lost">Perdue</option>
-                <option value="retired">Retirée</option>
-            </select>
-        </div>
-        <div id="nfcCardMessage" style="margin-top:10px;"></div>
-        <button class="btn btn-success" onclick="saveNfcCard()">💾 Enregistrer la carte</button>
-    </div>
-</div>
-
-<!-- Modal Scanner de présence -->
-<div id="nfcScannerModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2>📡 التحقق من الحضور (قارئ NFC)</h2>
-            <button class="modal-close" onclick="closeNfcScanner()">&times;</button>
-        </div>
-        <div id="nfcScannerBody">
-            <!-- Sélecteur de mode de lecture -->
-            <div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);">
-                <div style="font-weight:700;margin-bottom:8px;">طريقة قراءة NFC</div>
-                <label style="font-weight:400;display:block;margin:4px 0;cursor:pointer;">
-                    <input type="radio" name="nfcMode" value="external" checked onchange="setNfcMode('external')">
-                    🔌 قارئ NFC خارجي (USB / USB OTG — HID Keyboard)
-                </label>
-                <label id="nfcIntegratedModeWrap" style="font-weight:400;display:block;margin:4px 0;cursor:pointer;">
-                    <input type="radio" name="nfcMode" value="android-integrated" onchange="setNfcMode('android-integrated')">
-                    📱 NFC مدمج في الهاتف (Web NFC، تجريبي)
-                </label>
-                <div id="nfcWebNfcStatus" style="margin-top:8px;font-size:.85rem;color:var(--text-secondary);"></div>
-            </div>
-
-            <!-- Paiement d'événement par carte (optionnel) -->
-            <div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);">
-                <label style="font-weight:700;display:block;margin-bottom:6px;">💰 Paiement d'événement (optionnel)</label>
-                <select id="nfcScanEvent" class="form-control">
-                    <option value="">— Présence seulement —</option>
-                </select>
-                <div style="font-size:.78rem;color:var(--text-secondary);margin-top:4px;">
-                    اختر حدثاً لتسجيل الدفع تلقائياً عند مسح البطاقة. الأحداث العامة تقبل بطاقات جميع الأندية.
-                </div>
-            </div>
-
-            <!-- État du lecteur -->
-            <div id="nfcReaderStatus" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:rgba(220,53,69,.1);border:1px solid #dc3545;margin-bottom:12px;">
-                <span style="font-size:1.2rem;">🔴</span>
-                <div>
-                    <div style="font-weight:700;" id="nfcReaderStatusTitle">القارئ غير متصل</div>
-                    <div style="font-size:.8rem;color:var(--text-secondary);" id="nfcReaderStatusSub">جاهز تلقائياً — قدّم البطاقة فقط.</div>
-                </div>
-            </div>
-
-            <div style="display:flex;gap:10px;margin:12px 0;flex-wrap:wrap;">
-                <button class="btn btn-primary" id="nfcConnectBtn" onclick="connectNfcReader()">🔌 توصيل القارئ</button>
-                <button class="btn btn-secondary" id="nfcTestBtn" onclick="testNfcReader()">🧪 اختبار القارئ</button>
-                <button class="btn btn-secondary" id="nfcDisconnectBtn" style="display:none;" onclick="disconnectNfcReader()">⏹ قطع الاتصال</button>
-            </div>
-
-            <!-- Cœur du scanner -->
-            <div id="nfcScannerCore" style="text-align:center;padding:22px 8px;border-radius:14px;background:rgba(255,255,255,.03);border:1px dashed var(--border);display:none;">
-                <div style="font-size:2.4rem;">📡</div>
-                <div style="font-size:1.15rem;font-weight:700;margin-top:6px;" id="nfcScannerTitle">جاهز للمسح</div>
-                <div style="color:var(--text-secondary);margin-top:4px;" id="nfcScannerSub">ضع البطاقة على القارئ الخارجي.</div>
-                <div id="nfcScanResult" style="margin-top:14px;"></div>
-            </div>
-
-            <details style="margin-top:14px;font-size:.85rem;">
-                <summary style="cursor:pointer;color:var(--text-secondary);">⌨️ إدخال يدوي (للمسؤول فقط — حالات استثنائية)</summary>
-                <div style="display:flex;gap:8px;margin-top:8px;direction:rtl;">
-                    <input type="text" id="nfcScanInput" class="form-control" placeholder="معرّف البطاقة UID" autocomplete="off" style="direction:ltr;text-align:left;">
-                    <button class="btn btn-secondary" onclick="performNfcScan()">تأكيد</button>
-                </div>
-            </details>
-
-            <hr style="margin:16px 0;border:none;border-top:1px solid var(--border);">
-            <h3 style="font-size:.95rem;">🕓 آخر عمليات المسح</h3>
-            <div id="nfcScanHistory" style="margin-top:10px;max-height:260px;overflow-y:auto;"></div>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Groupe -->
-<div id="groupModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="groupModalTitle">➕ Nouveau groupe</h2>
-            <button class="modal-close" onclick="closeModal('groupModal')">&times;</button>
-        </div>
-        <form id="groupForm">
-            <input type="hidden" id="groupId">
-            <div class="form-group">
-                <label>Nom du groupe *</label>
-                <input type="text" id="groupName" class="form-control" required>
-            </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="groupDescription" rows="2" class="form-control"></textarea>
-            </div>
-            <div class="grid grid-2">
-                <div class="form-group">
-                    <label>Date de début</label>
-                    <input type="date" id="groupStartDate" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label>Date de fin</label>
-                    <input type="date" id="groupEndDate" class="form-control">
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Nombre de séances prévues par mois</label>
-                <input type="number" id="groupPlannedCount" class="form-control" min="1" value="8">
-            </div>
-            <div class="form-group">
-                <label>🗓️ Planning hebdomadaire (jours + heure)</label>
-                <div id="groupScheduleGrid" class="schedule-grid">
-                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                    <label style="min-width:90px;font-weight:600;">Lundi</label>
-                    <input type="checkbox" id="sched_lundi">
-                    <input type="time" id="schedtime_lundi" class="form-control" style="width:auto;" disabled
-                           onchange="" oninput="">
-                </div>
-                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                    <label style="min-width:90px;font-weight:600;">Mardi</label>
-                    <input type="checkbox" id="sched_mardi">
-                    <input type="time" id="schedtime_mardi" class="form-control" style="width:auto;" disabled
-                           onchange="" oninput="">
-                </div>
-                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                    <label style="min-width:90px;font-weight:600;">Mercredi</label>
-                    <input type="checkbox" id="sched_mercredi">
-                    <input type="time" id="schedtime_mercredi" class="form-control" style="width:auto;" disabled
-                           onchange="" oninput="">
-                </div>
-                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                    <label style="min-width:90px;font-weight:600;">Jeudi</label>
-                    <input type="checkbox" id="sched_jeudi">
-                    <input type="time" id="schedtime_jeudi" class="form-control" style="width:auto;" disabled
-                           onchange="" oninput="">
-                </div>
-                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                    <label style="min-width:90px;font-weight:600;">Vendredi</label>
-                    <input type="checkbox" id="sched_vendredi">
-                    <input type="time" id="schedtime_vendredi" class="form-control" style="width:auto;" disabled
-                           onchange="" oninput="">
-                </div>
-                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                    <label style="min-width:90px;font-weight:600;">Samedi</label>
-                    <input type="checkbox" id="sched_samedi">
-                    <input type="time" id="schedtime_samedi" class="form-control" style="width:auto;" disabled
-                           onchange="" oninput="">
-                </div>
-                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                    <label style="min-width:90px;font-weight:600;">Dimanche</label>
-                    <input type="checkbox" id="sched_dimanche">
-                    <input type="time" id="schedtime_dimanche" class="form-control" style="width:auto;" disabled
-                           onchange="" oninput="">
-                </div>
-            </div>
-            <script>
-            (function() {
-                var days = ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
-                document.querySelectorAll('#groupScheduleGrid input[type=checkbox]').forEach(function(cb) {
-                    cb.addEventListener('change', function() {
-                        var tm = document.getElementById('schedtime_' + cb.id.replace('sched_', ''));
-                        tm.disabled = !cb.checked;
-                        if (cb.checked && !tm.value) tm.focus();
-                    });
-                });
-            })();
-            </script>
-            </div>
-            <div class="form-group">
-                <label>⏸️ Pause de séances (optionnel)</label>
-                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
-                    <input type="date" id="groupPauseStart" class="form-control" style="flex:1;min-width:130px;">
-                    <span style="color:var(--text-secondary)">→</span>
-                    <input type="date" id="groupPauseEnd" class="form-control" style="flex:1;min-width:130px;">
-                </div>
-                <small style="color:var(--text-secondary);">
-                    Aucune séance n'est générée ni comptée pendant cette période (vacances, stage obligatoire, fermeture…).
-                </small>
-            </div>
-            <div class="form-group">
-                <label>➕ Séances en plus</label>
-                <div id="groupExtrasList" class="schedule-grid"></div>
-                <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
-                    <select id="groupExtraDay" class="form-control" style="width:auto;">
-                        <option value="">Jour…</option>
-                    </select>
-                    <input type="time" id="groupExtraTime" class="form-control" style="width:auto;"
-                           onchange="" oninput="">
-                    <input type="number" id="groupExtraWeeks" class="form-control" style="width:90px;"
-                           min="1" max="12" value="1" title="Nombre de semaines">
-                    <button type="button" class="btn btn-info btn-sm" onclick="addGroupExtraWeeks()">➕ Ajouter</button>
-                </div>
-                <small style="color:var(--text-secondary);">
-                    Ajoute les prochaines occurrences du jour choisi (ex. « Samedi 10:00 pendant 4 semaines » → 4 dates).
-                </small>
-            </div>
-            <div id="groupMessage" style="margin-top:10px;"></div>
-            <button type="submit" class="btn btn-success">💾 Enregistrer le groupe</button>
-        </form>
-    </div>
-</div>
-
-<!-- Modal Affectation adhérents -->
-<div id="assignModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="assignModalTitle">👥 Affectation</h2>
-            <button class="modal-close" onclick="closeModal('assignModal')">&times;</button>
-        </div>
-        <div id="assignCount" style="margin-bottom:10px;font-weight:600;"></div>
-        <div id="assignMembersList" class="assign-list"></div>
-        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px; flex-wrap:wrap;">
-            <button type="button" class="btn btn-secondary" onclick="closeModal('assignModal')">Annuler</button>
-            <button type="button" class="btn btn-success" id="assignSaveBtn" onclick="saveAssignments()">
-                💾 Enregistrer les affectations
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Mois d'abonnement -->
-<div id="monthsModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="monthsModalTitle">💳 Abonnement</h2>
-            <button class="modal-close" onclick="closeModal('monthsModal')">&times;</button>
-        </div>
-        <div id="monthsSummary" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;"></div>
-        <div id="memberMonthsGrid"></div>
-    </div>
-</div>
-
-<!-- Modal Événement -->
-<div id="eventModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h2 id="eventModalTitle">➕ Nouvel événement</h2>
-            <button class="modal-close" onclick="closeModal('eventModal')">&times;</button>
-        </div>
-        <div id="eventMessage"></div>
-        <form id="eventForm">
-            <input type="hidden" id="eventId">
-            <div class="form-group">
-                <label>Titre *</label>
-                <input type="text" id="eventTitle" class="form-control" required>
-            </div>
-            <div class="grid grid-2">
-                <div class="form-group">
-                    <label>Date *</label>
-                    <input type="date" id="eventDate" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <label>Heure</label>
-                    <input type="time" id="eventTime" class="form-control">
-                </div>
-            </div>
-            <div class="grid grid-2">
-                <div class="form-group">
-                    <label>Lieu</label>
-                    <input type="text" id="eventLieu" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label>Prix (DA)</label>
-                    <input type="number" id="eventPrice" class="form-control" min="0" value="0">
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Type</label>
-                <select id="eventType" class="form-control">
-                    <option value="stage">Stage</option>
-                    <option value="competition">Compétition</option>
-                    <option value="exam">Examen</option>
-                    <option value="other">Autre</option>
-                </select>
-            </div>
-            <div class="grid grid-2">
-                <div class="form-group">
-                    <label>Portée</label>
-                    <select id="eventScope" class="form-control">
-                        <option value="local">🏠 Local — ce club uniquement</option>
-                        <option value="general">🌍 Général — tous les clubs</option>
-                    </select>
-                </div>
-            </div>
-            <div class="form-group">
-                <label>Description</label>
-                <textarea id="eventDescription" rows="3" class="form-control"></textarea>
-            </div>
-            <button type="submit" class="btn btn-success">💾 Enregistrer l'événement</button>
-        </form>
-    </div>
-</div>
-
-<!-- Modal Participations événement -->
-<div id="eventParticipantsModal" class="modal">
-    <div class="modal-content" style="max-width:900px;">
-        <div class="modal-header">
-            <h2 id="epTitle">👥 Participations</h2>
-            <button class="modal-close" onclick="closeModal('eventParticipantsModal')">&times;</button>
-        </div>
-        <div id="epMessage"></div>
-
-        <!-- Paiement par carte NFC : inscrit + encaisse automatiquement -->
-        <div style="padding:12px;margin-bottom:14px;border:1px solid var(--border-color);border-radius:10px;background:rgba(23,162,184,.06);">
-            <h4 style="margin-bottom:6px;">📡 Paiement par carte NFC</h4>
-            <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:8px;">
-                Présentez la carte de l'adhérent sur le lecteur : il sera automatiquement inscrit
-                à cet événement et marqué <b>payé</b>.
-            </p>
-            <div id="epNfcStatus" class="alert alert-info" style="margin-bottom:8px;">
-                Scanner en attente — présentez une carte.
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
-                <button type="button" class="btn btn-info btn-sm" id="epNfcConnectBtn"
-                        onclick="armEventNfcScanner(true)">📡 Connecter le lecteur</button>
-                <input type="text" id="epNfcManualUid" class="form-control"
-                       style="max-width:210px;" placeholder="UID (saisie de secours)"
-                       onkeydown="if(event.key==='Enter'){event.preventDefault();eventNfcManualScan();}">
-                <button type="button" class="btn btn-secondary btn-sm"
-                        onclick="eventNfcManualScan()">Valider UID</button>
-            </div>
-        </div>
-
-        <h4 style="margin-bottom:8px;">Sélection des participants</h4>
-        <div id="epMembersList" style="max-height:220px;overflow-y:auto;margin-bottom:12px;"></div>
-        <button class="btn btn-success btn-sm" id="epSaveParticipantsBtn"
-                onclick="saveParticipants()" style="margin-bottom:16px;">
-            💾 Enregistrer les participations
-        </button>
-
-        <h4 style="margin-bottom:8px;">Paiements des participants</h4>
-        <div id="epPaySummary" class="report-stats" style="margin-bottom:10px;"></div>
-        <div class="table-responsive">
-            <table class="matrix-table">
-                <thead><tr>
-                    <th class="row-label">Adhérent</th>
-                    <th>Groupe</th>
-                    <th>Montant</th>
-                    <th>Statut</th>
-                    <th>Date paiement</th>
-                    <th>Action</th>
-                </tr></thead>
-                <tbody id="epParticipantsTable"></tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- SMS Section -->
-<!-- SMS Section Corrigée -->
-<div id="smsSection" class="content-section">
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">💬 Messagerie WhatsApp</h2>
-        </div>
-
-        <!-- Navigation par onglets SMS -->
-        <div class="nav-tabs" style="margin-bottom: 20px;">
-            <button class="nav-tab active" data-sms-tab="personal-sms">✍️ SMS Personnalisés</button>
-            <button class="nav-tab" data-sms-tab="subscription-sms">🔄 SMS d'Abonnement</button>
-        </div>
-
-        <!-- Onglet SMS Personnalisés -->
-        <div id="personal-sms" class="sms-tab-content active">
-            <!-- Configuration du message personnalisé -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">📝 Nouveau Message Personnalisé</h3>
-                </div>
-                
-                <!-- Composition du message -->
-                <div class="form-group">
-                    <label>💬 Message WhatsApp</label>
-                    <textarea id="whatsappMessage" class="form-control" rows="6" 
-                              placeholder="Tapez votre message ici... (sera envoyé via WhatsApp)"
-                              oninput="updateMessagePreview()"></textarea>
-                    
-                    <!-- Variables personnalisées -->
-                    <div class="variables-section" style="margin: 15px 0;">
-                        <label>Variables disponibles :</label>
-                        <div class="variables-grid">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{PRENOM}')">
-                                {PRENOM}
-                            </button>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{NOM}')">
-                                {NOM}
-                            </button>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{ID}')">
-                                {ID}
-                            </button>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{CLUB}')">
-                                {CLUB}
-                            </button>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{FIN_ABONNEMENT}')">
-                                {FIN_ABONNEMENT}
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Aperçu du message -->
-                    <div class="message-preview">
-                        <label>Aperçu :</label>
-                        <div class="preview-container" id="messagePreview">
-                            Le message apparaîtra ici...
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sélection des destinataires -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">👥 Sélection des Destinataires</h3>
-                </div>
-                
-                <div class="form-group">
-                    <div class="recipients-actions">
-                        <button type="button" class="btn btn-primary btn-sm" onclick="selectAllMembersForSMS()">
-                            ✅ Tous les adhérents
-                        </button>
-                        <button type="button" class="btn btn-success btn-sm" onclick="selectActiveMembersForSMS()">
-                            ✅ Adhérents actifs uniquement
-                        </button>
-                        <button type="button" class="btn btn-warning btn-sm" onclick="selectExpiredMembersForSMS()">
-                            ⚠️ Adhérents expirés uniquement
-                        </button>
-                        <button type="button" class="btn btn-danger btn-sm" onclick="clearSMSSelection()">
-                            🗑️ Effacer la sélection
-                        </button>
-                    </div>
-                    
-                    <!-- Liste des adhérents -->
-                    <div class="members-selection-list" id="membersSMSList" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
-                        <div class="text-center" style="padding: 20px; color: var(--text-secondary);">
-                            <div class="spinner"></div>
-                            <p>Chargement des adhérents...</p>
-                        </div>
-                    </div>
-                    
-                    <div id="selectedCount" class="badge badge-info" style="margin-top: 15px; padding: 10px;">
-                        0 adhérent(s) sélectionné(s)
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bouton d'envoi -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">🚀 Envoi du Message</h3>
-                </div>
-                <div class="form-group">
-                    <button class="btn btn-success btn-lg" onclick="sendBulkWhatsAppMessages()" id="sendPersonalSMSBtn" disabled style="width: 100%; padding: 15px;">
-                        📤 Envoyer les messages WhatsApp (0 destinataires)
-                    </button>
-                    <small class="form-text text-muted" style="display: block; margin-top: 10px;">
-                        <strong>Fonctionnement :</strong> Le système ouvrira tous les messages WhatsApp dans de nouveaux onglets. 
-                        Il vous suffira de confirmer l'envoi pour chaque conversation.
-                    </small>
-                </div>
-            </div>
-        </div>
-
-        <!-- Onglet SMS d'Abonnement -->
-        <div id="subscription-sms" class="sms-tab-content">
-            <!-- Configuration des rappels automatiques -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">⚙️ Configuration des Rappels Automatiques</h3>
-                </div>
-                
-                <div class="form-group">
-                    <div class="toggle-section">
-                        <label>Activer les rappels automatiques :</label>
-                        <div class="toggle-switch">
-                            <input type="checkbox" id="autoSMSEnabled" onchange="toggleAutoSMS()">
-                            <label for="autoSMSEnabled" class="toggle-label">
-                                <span class="toggle-text">OFF</span>
-                            </label>
-                        </div>
-                    </div>
-                    
-                    <div id="autoSMSConfig" style="margin-top: 20px;">
-                        <div class="auto-message-config">
-                            <h4>🔔 Rappel avant expiration</h4>
-                            <div class="grid grid-2">
+                            <form id="addClubForm">
                                 <div class="form-group">
-                                    <label>Jours avant expiration</label>
-                                    <input type="number" id="reminderDays" class="form-control" value="7" min="1" max="30">
+                                    <label>Nom du club *</label>
+                                    <input type="text" id="clubName" class="form-control" required>
                                 </div>
                                 <div class="form-group">
-                                    <label>Heure d'envoi</label>
-                                    <input type="time" id="reminderTime" class="form-control" value="10:00">
+                                    <label>Username *</label>
+                                    <input type="text" id="clubUsername" class="form-control" placeholder="ex: flame_club" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Mot de passe *</label>
+                                    <input type="password" id="clubPassword" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>URL du logo</label>
+                                    <input type="url" id="clubLogo" class="form-control" placeholder="https://...">
+                                </div>
+                                <button type="submit" class="btn btn-success">💾 Créer le club</button>
+                            </form>
+                            <div id="addClubMessage" style="margin-top: 15px;"></div>
+                        </div>
+                    </div>
+                
+                    <!-- Photo Upload Modal -->
+                    <div id="photoModal" class="modal">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h2>📷 Ajouter une Photo</h2>
+                                <button class="modal-close" onclick="closeModal('photoModal')">&times;</button>
+                            </div>
+                            <div style="text-align: center;">
+                                <img id="photoPreview" class="photo-preview hidden" alt="Preview">
+                                <div class="file-upload">
+                                    <input type="file" id="memberPhoto" accept="image/*" onchange="previewPhoto()">
+                                    <label for="memberPhoto" class="file-upload-label">
+                                        <span>📷</span>
+                                        <span>Choisir une photo</span>
+                                    </label>
+                                </div>
+                                <button class="btn btn-success" onclick="uploadPhoto()" style="margin-top: 15px;">💾 Enregistrer</button>
+                            </div>
+                            <div id="photoMessage" style="margin-top: 15px;"></div>
+                        </div>
+                    </div>
+                <!-- Edit Member Modal -->
+                <!-- Edit Member Modal -->
+                <div id="editMemberModal" class="modal">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h2>Modifier les informations</h2>
+                        <button class="modal-close" onclick="closeModal('editMemberModal')">&times;</button>
+                      </div>
+                      <form id="editMemberForm">
+                        <input type="hidden" id="editMemberId">
+                        <div class="form-group">
+                          <label>Nom</label>
+                          <input type="text" id="editLastName" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                          <label>Prénom</label>
+                          <input type="text" id="editFirstName" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                          <label>Date de naissance</label>
+                          <input type="date" id="editDob" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                          <label>Numéro téléphone</label>
+                          <input type="text" id="editPhone" class="form-control">
+                        </div>
+                        <div class="form-group">
+                          <label>Groupe sanguin</label>
+                          <select id="editBloodType" class="form-control">
+                            <option value="">Sélectionner</option>
+                            <option value="A+">A+</option><option value="A-">A-</option>
+                            <option value="B+">B+</option><option value="B-">B-</option>
+                            <option value="AB+">AB+</option><option value="AB-">AB-</option>
+                            <option value="O+">O+</option><option value="O-">O-</option>
+                          </select>
+                        </div>
+                        <button type="submit" class="btn btn-success">💾 Enregistrer</button>
+                      </form>
+                      <div id="editMemberMessage" style="margin-top: 10px;"></div>
+                    </div>
+                  </div>
+                  
+                  
+                    <!-- Attendance History Modal -->
+                    <div id="historyModal" class="modal">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h2>📋 Historique des Présences</h2>
+                                <button class="modal-close" onclick="closeModal('historyModal')">&times;</button>
+                            </div>
+                            <div id="historyContent"></div>
+                        </div>
+                    </div>
+                <!-- Subscription Expired Modal -->
+                <div id="subscriptionAlertModal" class="modal">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h2>⚠️ Abonnement expiré</h2>
+                        <button class="modal-close" onclick="closeModal('subscriptionAlertModal')">&times;</button>
+                      </div>
+                      <p id="subscriptionAlertMessage">
+                        Cet adhérent a un abonnement expiré. Voulez-vous le renouveler ?
+                      </p>
+                      <div style="display:flex; gap:10px; justify-content:center; margin-top:10px;">
+                        <button class="btn btn-success" id="renewBtn">🔁 Renouveler</button>
+                        <button class="btn btn-danger" id="ignoreBtn">❌ Ignorer</button>
+                      </div>
+                    </div>
+                  </div>
+                  <!-- Renewal Modal -->
+                <div id="renewalModal" class="modal">
+                    <div class="modal-content" style="max-width: 460px;">
+                      <div class="modal-header">
+                        <h2>🔄 Renouvellement de l'inscription</h2>
+                        <button class="modal-close" onclick="closeModal('renewalModal')">&times;</button>
+                      </div>
+                      <div id="renewalContent" style="text-align:center; padding: 5px 0;"></div>
+                    </div>
+                  </div>
+                  <!-- Ajoutez ce modal après les autres modals -->
+                <div id="notificationsModal" class="modal">
+                    <div class="modal-content" style="max-width: 500px;">
+                        <div class="modal-header">
+                            <h2>🔔 Notifications</h2>
+                            <button class="modal-close" onclick="closeModal('notificationsModal')">&times;</button>
+                        </div>
+                        <div class="notifications-list" id="notificationsList" style="max-height: 400px; overflow-y: auto;">
+                            <!-- Les notifications seront chargées ici -->
+                        </div>
+                        <div class="modal-footer" style="display: flex; justify-content: space-between; margin-top: 20px; padding-top: 15px; border-top: 1px solid var(--border-color);">
+                            <button class="btn btn-secondary" onclick="markAllAsRead()">📭 Tout marquer comme lu</button>
+                            <button class="btn btn-danger" onclick="clearAllNotifications()">🗑️ Tout effacer</button>
+                        </div>
+                    </div>
+                    <div id="cameraPermission" class="alert alert-info hidden">
+                        📱 Veuillez autoriser l'accès à la caméra pour utiliser le scanner
+                    </div>
+                </div>
+                <!-- ============ SECTIONS V2 : GROUPES / ABONNEMENTS / RAPPORTS / PAIEMENTS ============ -->
+                
+                <!-- Groupes -->
+                <div id="groupsSection" class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">🥊 Gestion des Groupes</h2>
+                            <button class="btn btn-primary" onclick="openGroupModal()">+ Nouveau groupe</button>
+                        </div>
+                        <div class="v2-toolbar" id="groupsToolbar"></div>
+                        <div id="groupsMessage" style="margin-top:10px;"></div>
+                        <div id="groupsGrid" class="grid grid-2" style="margin-top:15px;"></div>
+                
+                        <div id="sessionsPanel" class="hidden" style="margin-top:25px;">
+                            <div class="card-header">
+                                <h3 class="card-title" id="sessionsPanelTitle">🗓️ Séances</h3>
+                                <div>
+                                    <button class="btn btn-secondary btn-sm" onclick="document.getElementById('sessionsPanel').classList.add('hidden')">Fermer</button>
                                 </div>
                             </div>
-                            <textarea id="reminderMessage" class="form-control" rows="3">
-Bonjour {PRENOM}, votre abonnement au club {CLUB} expire dans {JOURS} jours. Pensez à le renouveler !</textarea>
-                        </div>
-
-                        <button class="btn btn-primary" onclick="saveAutoSMSConfig()" style="margin-top: 15px;">
-                            💾 Sauvegarder la configuration
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bouton pour tester les rappels -->
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">🧪 Test des Rappels</h3>
-                </div>
-                <div class="form-group">
-                    <button class="btn btn-info" onclick="testReminderSystem()">
-                        🔍 Tester les rappels maintenant
-                    </button>
-                    <small class="form-text text-muted">
-                        Ceci vérifiera les abonnements expirant bientôt et préparera les messages.
-                    </small>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-<!-- Compétitions Section - Version améliorée -->
-<div id="competitionsSection" class="content-section">
-    <div class="card">
-        <div class="card-header">
-            <h2 class="card-title">🏆 Gestion des Compétitions</h2>
-        </div>
-
-        <!-- Navigation par onglets -->
-        <div class="nav-tabs" id="competitionNavTabs" style="margin-bottom: 20px;">
-            <button class="nav-tab active" onclick="switchCompetitionTab('list-competitions')">📋 Liste des Compétitions</button>
-            <button class="nav-tab" onclick="switchCompetitionTab('create-competition')" id="createCompTab">➕ Créer une Compétition</button>
-            <button class="nav-tab" onclick="switchCompetitionTab('my-registrations')" id="myRegistrationsTab">📝 Mes Inscriptions</button>
-            <button class="nav-tab" onclick="switchCompetitionTab('admin-competitions')" id="adminCompTab">⚙️ Administration</button>
-        </div>
-
-        <!-- Onglet: Liste des compétitions (pour clubs) -->
-        <div id="list-competitions" class="comp-tab-content active" style="display: block;">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">📋 Compétitions Disponibles</h3>
-                    <button class="btn btn-primary" onclick="loadCompetitions()">🔄 Actualiser</button>
-                </div>
-                <div id="competitionsList" class="grid grid-2"></div>
-            </div>
-        </div>
-
-        <!-- Onglet: Créer une compétition (admin uniquement) -->
-        <div id="create-competition" class="comp-tab-content" style="display: none;">
-            <div class="card">
-                <div class="card-header">
-                    <h3 class="card-title">➕ Créer une Nouvelle Compétition</h3>
-                </div>
-                <form id="createCompetitionForm">
-                    <div class="grid grid-2">
-                        <div class="form-group">
-                            <label>🏆 Nom de la compétition *</label>
-                            <input type="text" id="compName" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label>📅 Date de la compétition *</label>
-                            <input type="date" id="compDate" class="form-control" required>
+                            <div class="table-responsive sessions-table">
+                                <table>
+                                    <thead><tr><th>Date</th><th>Heure</th><th>Durée prévue</th><th>Statut</th><th>Actions</th></tr></thead>
+                                    <tbody id="sessionsTableBody"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="grid grid-2">
-                        <div class="form-group">
-                            <label>📍 Lieu *</label>
-                            <input type="text" id="compLocation" class="form-control" required>
+                </div>
+                
+                <!-- Abonnements -->
+                <div id="subscriptionsSection" class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">💳 Abonnements Mensuels</h2>
                         </div>
-                        <div class="form-group">
-                            <label>🏛️ Wilaya *</label>
-                            <select id="compWilaya" class="form-control" required>
-                                <!-- Les wilayas seront chargées dynamiquement -->
+                        <p style="color:var(--text-secondary);font-size:.85rem;">
+                            Règle de continuité : un mois payé tardivement conserve sa période théorique
+                            (ex : janvier payé le 15/02 → période 01/01 → 31/01).
+                        </p>
+                        <div class="v2-toolbar" id="subsToolbar"></div>
+                        <div id="subscriptionsMessage" style="margin-top:10px;"></div>
+                        <div id="subscriptionsList" style="margin-top:15px;"><div class="spinner"></div></div>
+                    </div>
+                </div>
+                
+                <!-- Rapports -->
+                <div id="reportsSection" class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">📊 Rapports</h2>
+                            <div>
+                                <button class="btn btn-info btn-sm" onclick="exportReportCSV()">⬇️ CSV du dernier rapport</button>
+                                <button class="btn btn-danger btn-sm" onclick="exportReportPDF()">🖨️ PDF du dernier rapport</button>
+                            </div>
+                        </div>
+                        <div class="v2-toolbar" id="reportsToolbar"></div>
+                        <div id="reportsMessage" style="margin-top:10px;"></div>
+                
+                        <div style="margin-top:20px;">
+                            <h3 style="color:var(--primary-color)">👤 Présences individuelles</h3>
+                            <div class="report-filters">
+                                <div class="form-group"><label>Adhérent</label>
+                                    <select id="repMember" class="form-control"></select></div>
+                                <div class="form-group"><label>Du</label>
+                                    <input type="date" id="repFrom" class="form-control"></div>
+                                <div class="form-group"><label>Au</label>
+                                    <input type="date" id="repTo" class="form-control"></div>
+                                <button class="btn btn-primary" onclick="runIndividualReport()">Générer</button>
+                            </div>
+                            <div id="individualReportResult"></div>
+                        </div>
+                
+                        <hr style="border-color:var(--border-color)">
+                
+                        <div style="margin-top:15px;">
+                            <h3 style="color:var(--primary-color)">🥊 Matrice de groupe (P/A)</h3>
+                            <div class="report-filters">
+                                <div class="form-group"><label>Groupe</label>
+                                    <select id="repGroup" class="form-control"></select></div>
+                                <div class="form-group"><label>Du</label>
+                                    <input type="date" id="repGroupFrom" class="form-control"></div>
+                                <div class="form-group"><label>Au</label>
+                                    <input type="date" id="repGroupTo" class="form-control"></div>
+                                <button class="btn btn-primary" onclick="runGroupMatrix()">Générer</button>
+                            </div>
+                            <div id="groupMatrixResult"></div>
+                        </div>
+                
+                        <hr style="border-color:var(--border-color)">
+                
+                        <div style="margin-top:15px;">
+                            <h3 style="color:var(--primary-color)">💳 Abonnements</h3>
+                            <div class="report-filters">
+                                <div class="form-group"><label>Adhérent (vide = tous)</label>
+                                    <select id="srMember" class="form-control"></select></div>
+                                <div class="form-group"><label>Mois début</label>
+                                    <input type="month" id="srFrom" class="form-control"></div>
+                                <div class="form-group"><label>Mois fin</label>
+                                    <input type="month" id="srTo" class="form-control"></div>
+                                <button class="btn btn-primary" onclick="runSubscriptionReport()">Générer</button>
+                            </div>
+                            <div id="subscriptionReportResult"></div>
+                        </div>
+                
+                        <hr style="border-color:var(--border-color)">
+                
+                        <div style="margin-top:15px;">
+                            <h3 style="color:var(--primary-color)">💰 Événements & Recettes</h3>
+                            <div class="report-filters">
+                                <div class="form-group"><label>Du</label>
+                                    <input type="date" id="evFrom" class="form-control"></div>
+                                <div class="form-group"><label>Au</label>
+                                    <input type="date" id="evTo" class="form-control"></div>
+                                <button class="btn btn-primary" onclick="runEventsReport()">Générer</button>
+                            </div>
+                            <div id="eventsReportResult"></div>
+                        </div>
+                
+                        <hr style="border-color:var(--border-color)">
+                
+                        <div style="margin-top:15px;">
+                            <h3 style="color:var(--primary-color)">🧾 Rapport de paiement — Événements</h3>
+                            <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:8px;">
+                                Montants réellement encaissés (dernier paiement de chaque participant).
+                            </p>
+                            <div class="report-filters">
+                                <div class="form-group" id="payClubWrap" style="display:none;">
+                                    <label>Club</label>
+                                    <select id="payClub" class="form-control" onchange="v2LoadPayEventOptions()"></select>
+                                </div>
+                                <div class="form-group"><label>Du</label>
+                                    <input type="date" id="payFrom" class="form-control"></div>
+                                <div class="form-group"><label>Au</label>
+                                    <input type="date" id="payTo" class="form-control"></div>
+                                <div class="form-group"><label>Événement (vide = tous)</label>
+                                    <select id="payEvent" class="form-control"></select></div>
+                                <button class="btn btn-primary" onclick="runEventPaymentsReport()">Générer</button>
+                            </div>
+                            <div id="eventPaymentsResult"></div>
+                        </div>
+                
+                        <hr style="border-color:var(--border-color)">
+                
+                        <div style="margin-top:15px;">
+                            <h3 style="color:var(--primary-color)">👥 État des adhérents</h3>
+                            <p style="color:var(--text-secondary);font-size:.85rem;margin-bottom:8px;">
+                                Vue globale : abonnement, groupe et ancienneté de chaque adhérent.
+                            </p>
+                            <button class="btn btn-primary" onclick="runMembersReport()">Générer</button>
+                            <div id="membersReportResult" style="margin-top:10px;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Paiements / Événements -->
+                <div id="eventsSection" class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">💰 Événements & Participations</h2>
+                            <div>
+                                <button class="btn btn-info" onclick="openEventPaymentsReport()">🧾 Rapport de paiement</button>
+                                <button class="btn btn-primary" onclick="openEventModal()">+ Nouvel événement</button>
+                            </div>
+                        </div>
+                        <div class="v2-toolbar" id="eventsToolbar"></div>
+                        <div id="eventsMessage" style="margin-top:10px;"></div>
+                        <div id="eventsGrid" class="grid grid-2" style="margin-top:15px;"></div>
+                    </div>
+                </div>
+                
+                <!-- ============ CARTES NFC (UID) ============ -->
+                <div id="nfcCardsSection" class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">📇 Cartes NFC (UID)</h2>
+                            <div>
+                                <button class="btn btn-info btn-sm" onclick="openNfcScanner()">📡 Scanner de présence</button>
+                                <button class="btn btn-primary" onclick="openNfcCardModal()">+ Nouvelle carte</button>
+                            </div>
+                        </div>
+                
+                        <!-- Stats -->
+                        <div class="grid grid-3" style="margin-bottom:16px;" id="nfcStats">
+                            <div class="stats-card"><div class="stats-number" id="nfcStatTotal">0</div><div class="stats-label">📇 Total cartes</div></div>
+                            <div class="stats-card"><div class="stats-number" id="nfcStatAssigned">0</div><div class="stats-label">✅ Attribuées</div></div>
+                            <div class="stats-card"><div class="stats-number" id="nfcStatScans">0</div><div class="stats-label">📡 Scans</div></div>
+                        </div>
+                
+                        <!-- Recherche / filtres -->
+                        <div class="v2-toolbar" id="nfcToolbar">
+                            <input type="search" id="nfcSearch" class="form-control" placeholder="🔎 Rechercher un UID…" style="max-width:240px;">
+                            <select id="nfcFilter" class="form-control" style="max-width:180px;">
+                                <option value="all">Tous les statuts</option>
+                                <option value="assigned">Attribuées</option>
+                                <option value="unassigned">Libres</option>
+                                <option value="lost">Perdues</option>
+                                <option value="retired">Retirées</option>
                             </select>
                         </div>
-                    </div>
-                    
-                    <div class="grid grid-2">
-                        <div class="form-group">
-                            <label>🔞 Année de naissance MAX (année) *</label>
-                            <input type="number" id="compYearMax" class="form-control" 
-                                   min="1900" max="2025" value="2025" required>
+                
+                        <div id="nfcMessage" style="margin-top:10px;"></div>
+                
+                        <!-- Tableau des cartes -->
+                        <div class="table-responsive" style="margin-top:15px;">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>UID</th>
+                                        <th>Adhérent</th>
+                                        <th>Statut</th>
+                                        <th>Attribuée le</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="nfcCardsTable"></tbody>
+                            </table>
                         </div>
-                        <div class="form-group">
-                            <label>👶 Année de naissance MIN (année) *</label>
-                            <input type="number" id="compYearMin" class="form-control" 
-                                   min="1900" max="2025" value="2000" required>
+                
+                        <!-- Historique global -->
+                        <div style="margin-top:25px;">
+                            <h3 style="color:var(--primary-color)">🕓 Historique des scans</h3>
+                            <div class="table-responsive">
+                                <table>
+                                    <thead><tr><th>Heure</th><th>UID</th><th>Adhérent</th><th>Résultat</th><th>Méthode</th></tr></thead>
+                                    <tbody id="nfcHistoryTable"></tbody>
+                                </table>
+                            </div>
                         </div>
                     </div>
-                    
-                    <div class="grid grid-2">
-                        <div class="form-group">
-                            <label>⏰ Date limite d'inscription *</label>
-                            <input type="datetime-local" id="compDeadline" class="form-control" required>
-                        </div>
-                        <div class="form-group">
-                            <label>💰 Frais d'inscription (DA)</label>
-                            <input type="number" id="compFee" class="form-control" value="0" min="0">
-                        </div>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>📝 Description</label>
-                        <textarea id="compDescription" class="form-control" rows="3"></textarea>
-                    </div>
-                    
-                    <button type="submit" class="btn btn-success">🏆 Créer la compétition</button>
-                </form>
-                <div id="compCreationMessage" style="margin-top: 15px;"></div>
-            </div>
-        </div>
-
-       <!-- Onglet: Mes inscriptions (club) -->
-<div id="my-registrations" class="comp-tab-content">
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">📝 Mes Inscriptions</h3>
-            <button class="btn btn-primary" onclick="loadMyRegistrations()">🔄 Actualiser</button>
-        </div>
-        <div id="myRegistrationsContent" class="grid grid-2"></div>
-    </div>
-</div>
-
-<!-- Onglet: Administration (admin uniquement) -->
-<div id="admin-competitions" class="comp-tab-content">
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">⚙️ Administration des Compétitions</h3>
-            <button class="btn btn-primary" onclick="loadAdminCompetitions()">🔄 Actualiser</button>
-        </div>
-        <div id="adminCompetitionsContent"></div>
-        </div>
-      </div>
-    </div>
-</div>
-
-<!-- Modal: Inscription à une compétition -->
-<div id="registerModal" class="modal">
-    <div class="modal-content" style="max-width: 800px; max-height: 90vh;">
-        <div class="modal-header">
-            <h2>📝 Inscription à la compétition</h2>
-            <button class="modal-close" onclick="closeModal('registerModal')">&times;</button>
-        </div>
-        <div id="registerContent" style="overflow-y: auto; max-height: 70vh;">
-            <!-- Le contenu sera chargé dynamiquement -->
-        </div>
-    </div>
-</div>
-
-<!-- Modal: Gestion des inscriptions (admin) -->
-<div id="manageRegistrationModal" class="modal">
-    <div class="modal-content" style="max-width: 90%; max-height: 90vh;">
-        <div class="modal-header">
-            <h2>👥 Gestion des Inscriptions</h2>
-            <button class="modal-close" onclick="closeModal('manageRegistrationModal')">&times;</button>
-        </div>
-        <div id="manageRegistrationContent" style="overflow-y: auto; max-height: 80vh;"></div>
-    </div>
-</div>
-
-<!-- Modal: Partager les poules (admin) -->
-<div id="sharePoolsModal" class="modal">
-    <div class="modal-content" style="max-width: 800px;">
-        <div class="modal-header">
-            <h2>📊 Partager les Poules</h2>
-            <button class="modal-close" onclick="closeModal('sharePoolsModal')">&times;</button>
-        </div>
-        <div id="sharePoolsContent">
-            <div class="form-group">
-                <label>🏆 Compétition: <span id="poolsCompName"></span></label>
-                <input type="hidden" id="poolsCompId">
-            </div>
-            
-            <div class="form-group">
-                <label>📷 Photos des poules (une par poule)</label>
-                <div id="poolsPhotosContainer" style="border: 2px dashed var(--border-color); padding: 20px; border-radius: 10px; margin-bottom: 15px;">
-                    <p style="text-align: center; color: var(--text-secondary);">
-                        Déposez les photos des poules ici ou cliquez pour sélectionner
-                    </p>
-                    <input type="file" id="poolPhotos" multiple accept="image/*" 
-                           onchange="handlePoolPhotos()" style="display: none;">
-                    <button class="btn btn-secondary" onclick="document.getElementById('poolPhotos').click()">
-                        📁 Sélectionner des photos
-                    </button>
                 </div>
-                <div id="selectedPoolPhotos" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;"></div>
+                
+                <!-- ============ MODAUX V2 ============ -->
+                
+                <!-- Modal Carte NFC (création / attribution) -->
+                <div id="nfcCardModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 id="nfcCardModalTitle">📇 Nouvelle carte NFC</h2>
+                            <button class="modal-close" onclick="closeModal('nfcCardModal')">&times;</button>
+                        </div>
+                        <div class="form-group">
+                            <label>UID / Serial Number *</label>
+                            <div style="display:flex;gap:8px;">
+                                <input type="text" id="nfcUid" class="form-control" placeholder="Ex : 04:12:3A:9F:02:56" style="text-transform:uppercase;" readonly>
+                                <button class="btn btn-primary" id="nfcReadBtn" onclick="readUidIntoCardModal()">📡 Lire la carte</button>
+                            </div>
+                            <small style="color:var(--text-secondary);">UID lu automatiquement par le lecteur NFC externe (modifiable en cas exceptionnel).</small>
+                            <div id="nfcCardModeNote" style="margin-top:6px;font-size:.82rem;color:var(--text-secondary);"></div>
+                        </div>
+                        <div class="form-group">
+                            <label>Attribuer à un adhérent</label>
+                            <select id="nfcMemberSelect" class="form-control">
+                                <option value="">— Carte libre —</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Statut</label>
+                            <select id="nfcStatus" class="form-control">
+                                <option value="unassigned">Libre</option>
+                                <option value="assigned">Attribuée</option>
+                                <option value="lost">Perdue</option>
+                                <option value="retired">Retirée</option>
+                            </select>
+                        </div>
+                        <div id="nfcCardMessage" style="margin-top:10px;"></div>
+                        <button class="btn btn-success" onclick="saveNfcCard()">💾 Enregistrer la carte</button>
+                    </div>
+                </div>
+                
+                <!-- Modal Scanner de présence -->
+                <div id="nfcScannerModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2>📡 التحقق من الحضور (قارئ NFC)</h2>
+                            <button class="modal-close" onclick="closeNfcScanner()">&times;</button>
+                        </div>
+                        <div id="nfcScannerBody">
+                            <!-- Sélecteur de mode de lecture -->
+                            <div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);">
+                                <div style="font-weight:700;margin-bottom:8px;">طريقة قراءة NFC</div>
+                                <label style="font-weight:400;display:block;margin:4px 0;cursor:pointer;">
+                                    <input type="radio" name="nfcMode" value="external" checked onchange="setNfcMode('external')">
+                                    🔌 قارئ NFC خارجي (USB / USB OTG — HID Keyboard)
+                                </label>
+                                <label id="nfcIntegratedModeWrap" style="font-weight:400;display:block;margin:4px 0;cursor:pointer;">
+                                    <input type="radio" name="nfcMode" value="android-integrated" onchange="setNfcMode('android-integrated')">
+                                    📱 NFC مدمج في الهاتف (Web NFC، تجريبي)
+                                </label>
+                                <div id="nfcWebNfcStatus" style="margin-top:8px;font-size:.85rem;color:var(--text-secondary);"></div>
+                            </div>
+                
+                            <!-- Paiement d'événement par carte (optionnel) -->
+                            <div style="margin-bottom:14px;padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.03);border:1px solid var(--border);">
+                                <label style="font-weight:700;display:block;margin-bottom:6px;">💰 Paiement d'événement (optionnel)</label>
+                                <select id="nfcScanEvent" class="form-control">
+                                    <option value="">— Présence seulement —</option>
+                                </select>
+                                <div style="font-size:.78rem;color:var(--text-secondary);margin-top:4px;">
+                                    اختر حدثاً لتسجيل الدفع تلقائياً عند مسح البطاقة. الأحداث العامة تقبل بطاقات جميع الأندية.
+                                </div>
+                            </div>
+                
+                            <!-- État du lecteur -->
+                            <div id="nfcReaderStatus" style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:rgba(220,53,69,.1);border:1px solid #dc3545;margin-bottom:12px;">
+                                <span style="font-size:1.2rem;">🔴</span>
+                                <div>
+                                    <div style="font-weight:700;" id="nfcReaderStatusTitle">القارئ غير متصل</div>
+                                    <div style="font-size:.8rem;color:var(--text-secondary);" id="nfcReaderStatusSub">جاهز تلقائياً — قدّم البطاقة فقط.</div>
+                                </div>
+                            </div>
+                
+                            <div style="display:flex;gap:10px;margin:12px 0;flex-wrap:wrap;">
+                                <button class="btn btn-primary" id="nfcConnectBtn" onclick="connectNfcReader()">🔌 توصيل القارئ</button>
+                                <button class="btn btn-secondary" id="nfcTestBtn" onclick="testNfcReader()">🧪 اختبار القارئ</button>
+                                <button class="btn btn-secondary" id="nfcDisconnectBtn" style="display:none;" onclick="disconnectNfcReader()">⏹ قطع الاتصال</button>
+                            </div>
+                
+                            <!-- Cœur du scanner -->
+                            <div id="nfcScannerCore" style="text-align:center;padding:22px 8px;border-radius:14px;background:rgba(255,255,255,.03);border:1px dashed var(--border);display:none;">
+                                <div style="font-size:2.4rem;">📡</div>
+                                <div style="font-size:1.15rem;font-weight:700;margin-top:6px;" id="nfcScannerTitle">جاهز للمسح</div>
+                                <div style="color:var(--text-secondary);margin-top:4px;" id="nfcScannerSub">ضع البطاقة على القارئ الخارجي.</div>
+                                <div id="nfcScanResult" style="margin-top:14px;"></div>
+                            </div>
+                
+                            <details style="margin-top:14px;font-size:.85rem;">
+                                <summary style="cursor:pointer;color:var(--text-secondary);">⌨️ إدخال يدوي (للمسؤول فقط — حالات استثنائية)</summary>
+                                <div style="display:flex;gap:8px;margin-top:8px;direction:rtl;">
+                                    <input type="text" id="nfcScanInput" class="form-control" placeholder="معرّف البطاقة UID" autocomplete="off" style="direction:ltr;text-align:left;">
+                                    <button class="btn btn-secondary" onclick="performNfcScan()">تأكيد</button>
+                                </div>
+                            </details>
+                
+                            <hr style="margin:16px 0;border:none;border-top:1px solid var(--border);">
+                            <h3 style="font-size:.95rem;">🕓 آخر عمليات المسح</h3>
+                            <div id="nfcScanHistory" style="margin-top:10px;max-height:260px;overflow-y:auto;"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Modal Groupe -->
+                <div id="groupModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 id="groupModalTitle">➕ Nouveau groupe</h2>
+                            <button class="modal-close" onclick="closeModal('groupModal')">&times;</button>
+                        </div>
+                        <form id="groupForm">
+                            <input type="hidden" id="groupId">
+                            <div class="form-group">
+                                <label>Nom du groupe *</label>
+                                <input type="text" id="groupName" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea id="groupDescription" rows="2" class="form-control"></textarea>
+                            </div>
+                            <div class="grid grid-2">
+                                <div class="form-group">
+                                    <label>Date de début</label>
+                                    <input type="date" id="groupStartDate" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Date de fin</label>
+                                    <input type="date" id="groupEndDate" class="form-control">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Nombre de séances prévues par mois</label>
+                                <input type="number" id="groupPlannedCount" class="form-control" min="1" value="8">
+                            </div>
+                            <div class="form-group">
+                                <label>🗓️ Planning hebdomadaire (jours + heure)</label>
+                                <div id="groupScheduleGrid" class="schedule-grid">
+                                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                                    <label style="min-width:90px;font-weight:600;">Lundi</label>
+                                    <input type="checkbox" id="sched_lundi">
+                                    <input type="time" id="schedtime_lundi" class="form-control" style="width:auto;" disabled
+                                           onchange="" oninput="">
+                                </div>
+                                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                                    <label style="min-width:90px;font-weight:600;">Mardi</label>
+                                    <input type="checkbox" id="sched_mardi">
+                                    <input type="time" id="schedtime_mardi" class="form-control" style="width:auto;" disabled
+                                           onchange="" oninput="">
+                                </div>
+                                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                                    <label style="min-width:90px;font-weight:600;">Mercredi</label>
+                                    <input type="checkbox" id="sched_mercredi">
+                                    <input type="time" id="schedtime_mercredi" class="form-control" style="width:auto;" disabled
+                                           onchange="" oninput="">
+                                </div>
+                                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                                    <label style="min-width:90px;font-weight:600;">Jeudi</label>
+                                    <input type="checkbox" id="sched_jeudi">
+                                    <input type="time" id="schedtime_jeudi" class="form-control" style="width:auto;" disabled
+                                           onchange="" oninput="">
+                                </div>
+                                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                                    <label style="min-width:90px;font-weight:600;">Vendredi</label>
+                                    <input type="checkbox" id="sched_vendredi">
+                                    <input type="time" id="schedtime_vendredi" class="form-control" style="width:auto;" disabled
+                                           onchange="" oninput="">
+                                </div>
+                                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                                    <label style="min-width:90px;font-weight:600;">Samedi</label>
+                                    <input type="checkbox" id="sched_samedi">
+                                    <input type="time" id="schedtime_samedi" class="form-control" style="width:auto;" disabled
+                                           onchange="" oninput="">
+                                </div>
+                                <div class="schedule-row" style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                                    <label style="min-width:90px;font-weight:600;">Dimanche</label>
+                                    <input type="checkbox" id="sched_dimanche">
+                                    <input type="time" id="schedtime_dimanche" class="form-control" style="width:auto;" disabled
+                                           onchange="" oninput="">
+                                </div>
+                            </div>
+                            <script>
+                            (function() {
+                                var days = ["lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
+                                document.querySelectorAll('#groupScheduleGrid input[type=checkbox]').forEach(function(cb) {
+                                    cb.addEventListener('change', function() {
+                                        var tm = document.getElementById('schedtime_' + cb.id.replace('sched_', ''));
+                                        tm.disabled = !cb.checked;
+                                        if (cb.checked && !tm.value) tm.focus();
+                                    });
+                                });
+                            })();
+                            </script>
+                            </div>
+                            <div class="form-group">
+                                <label>⏸️ Pause de séances (optionnel)</label>
+                                <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+                                    <input type="date" id="groupPauseStart" class="form-control" style="flex:1;min-width:130px;">
+                                    <span style="color:var(--text-secondary)">→</span>
+                                    <input type="date" id="groupPauseEnd" class="form-control" style="flex:1;min-width:130px;">
+                                </div>
+                                <small style="color:var(--text-secondary);">
+                                    Aucune séance n'est générée ni comptée pendant cette période (vacances, stage obligatoire, fermeture…).
+                                </small>
+                            </div>
+                            <div id="groupMessage" style="margin-top:10px;"></div>
+                            <button type="submit" class="btn btn-success">💾 Enregistrer le groupe</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Modal Affectation adhérents -->
+                <div id="assignModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 id="assignModalTitle">👥 Affectation</h2>
+                            <button class="modal-close" onclick="closeModal('assignModal')">&times;</button>
+                        </div>
+                        <div id="assignCount" style="margin-bottom:10px;font-weight:600;"></div>
+                        <div id="assignMembersList" class="assign-list"></div>
+                        <div style="display:flex; gap:10px; justify-content:flex-end; margin-top:16px; flex-wrap:wrap;">
+                            <button type="button" class="btn btn-secondary" onclick="closeModal('assignModal')">Annuler</button>
+                            <button type="button" class="btn btn-success" id="assignSaveBtn" onclick="saveAssignments()">
+                                💾 Enregistrer les affectations
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Modal Mois d'abonnement -->
+                <div id="monthsModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 id="monthsModalTitle">💳 Abonnement</h2>
+                            <button class="modal-close" onclick="closeModal('monthsModal')">&times;</button>
+                        </div>
+                        <div id="monthsSummary" style="margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;"></div>
+                        <div id="memberMonthsGrid"></div>
+                    </div>
+                </div>
+                
+                <!-- Modal Événement -->
+                <div id="eventModal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h2 id="eventModalTitle">➕ Nouvel événement</h2>
+                            <button class="modal-close" onclick="closeModal('eventModal')">&times;</button>
+                        </div>
+                        <div id="eventMessage"></div>
+                        <form id="eventForm">
+                            <input type="hidden" id="eventId">
+                            <div class="form-group">
+                                <label>Titre *</label>
+                                <input type="text" id="eventTitle" class="form-control" required>
+                            </div>
+                            <div class="grid grid-2">
+                                <div class="form-group">
+                                    <label>Date *</label>
+                                    <input type="date" id="eventDate" class="form-control" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Heure</label>
+                                    <input type="time" id="eventTime" class="form-control">
+                                </div>
+                            </div>
+                            <div class="grid grid-2">
+                                <div class="form-group">
+                                    <label>Lieu</label>
+                                    <input type="text" id="eventLieu" class="form-control">
+                                </div>
+                                <div class="form-group">
+                                    <label>Prix (DA)</label>
+                                    <input type="number" id="eventPrice" class="form-control" min="0" value="0">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Type</label>
+                                <select id="eventType" class="form-control">
+                                    <option value="stage">Stage</option>
+                                    <option value="competition">Compétition</option>
+                                    <option value="exam">Examen</option>
+                                    <option value="other">Autre</option>
+                                </select>
+                            </div>
+                            <div class="grid grid-2">
+                                <div class="form-group">
+                                    <label>Portée</label>
+                                    <select id="eventScope" class="form-control">
+                                        <option value="local">🏠 Local — ce club uniquement</option>
+                                        <option value="general">🌍 Général — tous les clubs</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Description</label>
+                                <textarea id="eventDescription" rows="3" class="form-control"></textarea>
+                            </div>
+                            <button type="submit" class="btn btn-success">💾 Enregistrer l'événement</button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Modal Participations événement -->
+                <div id="eventParticipantsModal" class="modal">
+                    <div class="modal-content" style="max-width:900px;">
+                        <div class="modal-header">
+                            <h2 id="epTitle">👥 Participations</h2>
+                            <button class="modal-close" onclick="closeModal('eventParticipantsModal')">&times;</button>
+                        </div>
+                        <div id="epMessage"></div>
+                
+                        <!-- Paiement par carte NFC : inscrit + encaisse automatiquement -->
+                        <div style="padding:12px;margin-bottom:14px;border:1px solid var(--border-color);border-radius:10px;background:rgba(23,162,184,.06);">
+                            <h4 style="margin-bottom:6px;">📡 Paiement par carte NFC</h4>
+                            <p style="font-size:.82rem;color:var(--text-secondary);margin-bottom:8px;">
+                                Présentez la carte de l'adhérent sur le lecteur : il sera automatiquement inscrit
+                                à cet événement et marqué <b>payé</b>.
+                            </p>
+                            <div id="epNfcStatus" class="alert alert-info" style="margin-bottom:8px;">
+                                Scanner en attente — présentez une carte.
+                            </div>
+                            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                                <button type="button" class="btn btn-info btn-sm" id="epNfcConnectBtn"
+                                        onclick="armEventNfcScanner(true)">📡 Connecter le lecteur</button>
+                                <input type="text" id="epNfcManualUid" class="form-control"
+                                       style="max-width:210px;" placeholder="UID (saisie de secours)"
+                                       onkeydown="if(event.key==='Enter'){event.preventDefault();eventNfcManualScan();}">
+                                <button type="button" class="btn btn-secondary btn-sm"
+                                        onclick="eventNfcManualScan()">Valider UID</button>
+                            </div>
+                        </div>
+                
+                        <h4 style="margin-bottom:8px;">Sélection des participants</h4>
+                        <div id="epMembersList" style="max-height:220px;overflow-y:auto;margin-bottom:12px;"></div>
+                        <button class="btn btn-success btn-sm" id="epSaveParticipantsBtn"
+                                onclick="saveParticipants()" style="margin-bottom:16px;">
+                            💾 Enregistrer les participations
+                        </button>
+                
+                        <h4 style="margin-bottom:8px;">Paiements des participants</h4>
+                        <div id="epPaySummary" class="report-stats" style="margin-bottom:10px;"></div>
+                        <div class="table-responsive">
+                            <table class="matrix-table">
+                                <thead><tr>
+                                    <th class="row-label">Adhérent</th>
+                                    <th>Groupe</th>
+                                    <th>Montant</th>
+                                    <th>Statut</th>
+                                    <th>Date paiement</th>
+                                    <th>Action</th>
+                                </tr></thead>
+                                <tbody id="epParticipantsTable"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- SMS Section -->
+                <!-- SMS Section Corrigée -->
+                <div id="smsSection" class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">💬 Messagerie WhatsApp</h2>
+                        </div>
+                
+                        <!-- Navigation par onglets SMS -->
+                        <div class="nav-tabs" style="margin-bottom: 20px;">
+                            <button class="nav-tab active" data-sms-tab="personal-sms">✍️ SMS Personnalisés</button>
+                            <button class="nav-tab" data-sms-tab="subscription-sms">🔄 SMS d'Abonnement</button>
+                        </div>
+                
+                        <!-- Onglet SMS Personnalisés -->
+                        <div id="personal-sms" class="sms-tab-content active">
+                            <!-- Configuration du message personnalisé -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">📝 Nouveau Message Personnalisé</h3>
+                                </div>
+                                
+                                <!-- Composition du message -->
+                                <div class="form-group">
+                                    <label>💬 Message WhatsApp</label>
+                                    <textarea id="whatsappMessage" class="form-control" rows="6" 
+                                              placeholder="Tapez votre message ici... (sera envoyé via WhatsApp)"
+                                              oninput="updateMessagePreview()"></textarea>
+                                    
+                                    <!-- Variables personnalisées -->
+                                    <div class="variables-section" style="margin: 15px 0;">
+                                        <label>Variables disponibles :</label>
+                                        <div class="variables-grid">
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{PRENOM}')">
+                                                {PRENOM}
+                                            </button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{NOM}')">
+                                                {NOM}
+                                            </button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{ID}')">
+                                                {ID}
+                                            </button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{CLUB}')">
+                                                {CLUB}
+                                            </button>
+                                            <button type="button" class="btn btn-secondary btn-sm" onclick="insertVariable('{FIN_ABONNEMENT}')">
+                                                {FIN_ABONNEMENT}
+                                            </button>
+                                        </div>
+                                    </div>
+                
+                                    <!-- Aperçu du message -->
+                                    <div class="message-preview">
+                                        <label>Aperçu :</label>
+                                        <div class="preview-container" id="messagePreview">
+                                            Le message apparaîtra ici...
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                
+                            <!-- Sélection des destinataires -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">👥 Sélection des Destinataires</h3>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <div class="recipients-actions">
+                                        <button type="button" class="btn btn-primary btn-sm" onclick="selectAllMembersForSMS()">
+                                            ✅ Tous les adhérents
+                                        </button>
+                                        <button type="button" class="btn btn-success btn-sm" onclick="selectActiveMembersForSMS()">
+                                            ✅ Adhérents actifs uniquement
+                                        </button>
+                                        <button type="button" class="btn btn-warning btn-sm" onclick="selectExpiredMembersForSMS()">
+                                            ⚠️ Adhérents expirés uniquement
+                                        </button>
+                                        <button type="button" class="btn btn-danger btn-sm" onclick="clearSMSSelection()">
+                                            🗑️ Effacer la sélection
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Liste des adhérents -->
+                                    <div class="members-selection-list" id="membersSMSList" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                                        <div class="text-center" style="padding: 20px; color: var(--text-secondary);">
+                                            <div class="spinner"></div>
+                                            <p>Chargement des adhérents...</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="selectedCount" class="badge badge-info" style="margin-top: 15px; padding: 10px;">
+                                        0 adhérent(s) sélectionné(s)
+                                    </div>
+                                </div>
+                            </div>
+                
+                            <!-- Bouton d'envoi -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">🚀 Envoi du Message</h3>
+                                </div>
+                                <div class="form-group">
+                                    <button class="btn btn-success btn-lg" onclick="sendBulkWhatsAppMessages()" id="sendPersonalSMSBtn" disabled style="width: 100%; padding: 15px;">
+                                        📤 Envoyer les messages WhatsApp (0 destinataires)
+                                    </button>
+                                    <small class="form-text text-muted" style="display: block; margin-top: 10px;">
+                                        <strong>Fonctionnement :</strong> Le système ouvrira tous les messages WhatsApp dans de nouveaux onglets. 
+                                        Il vous suffira de confirmer l'envoi pour chaque conversation.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                
+                        <!-- Onglet SMS d'Abonnement -->
+                        <div id="subscription-sms" class="sms-tab-content">
+                            <!-- Configuration des rappels automatiques -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">⚙️ Configuration des Rappels Automatiques</h3>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <div class="toggle-section">
+                                        <label>Activer les rappels automatiques :</label>
+                                        <div class="toggle-switch">
+                                            <input type="checkbox" id="autoSMSEnabled" onchange="toggleAutoSMS()">
+                                            <label for="autoSMSEnabled" class="toggle-label">
+                                                <span class="toggle-text">OFF</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="autoSMSConfig" style="margin-top: 20px;">
+                                        <div class="auto-message-config">
+                                            <h4>🔔 Rappel avant expiration</h4>
+                                            <div class="grid grid-2">
+                                                <div class="form-group">
+                                                    <label>Jours avant expiration</label>
+                                                    <input type="number" id="reminderDays" class="form-control" value="7" min="1" max="30">
+                                                </div>
+                                                <div class="form-group">
+                                                    <label>Heure d'envoi</label>
+                                                    <input type="time" id="reminderTime" class="form-control" value="10:00">
+                                                </div>
+                                            </div>
+                                            <textarea id="reminderMessage" class="form-control" rows="3">
+                Bonjour {PRENOM}, votre abonnement au club {CLUB} expire dans {JOURS} jours. Pensez à le renouveler !</textarea>
+                                        </div>
+                
+                                        <button class="btn btn-primary" onclick="saveAutoSMSConfig()" style="margin-top: 15px;">
+                                            💾 Sauvegarder la configuration
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                
+                            <!-- Bouton pour tester les rappels -->
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">🧪 Test des Rappels</h3>
+                                </div>
+                                <div class="form-group">
+                                    <button class="btn btn-info" onclick="testReminderSystem()">
+                                        🔍 Tester les rappels maintenant
+                                    </button>
+                                    <small class="form-text text-muted">
+                                        Ceci vérifiera les abonnements expirant bientôt et préparera les messages.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Compétitions Section - Version améliorée -->
+                <div id="competitionsSection" class="content-section">
+                    <div class="card">
+                        <div class="card-header">
+                            <h2 class="card-title">🏆 Gestion des Compétitions</h2>
+                        </div>
+                
+                        <!-- Navigation par onglets -->
+                        <div class="nav-tabs" id="competitionNavTabs" style="margin-bottom: 20px;">
+                            <button class="nav-tab active" onclick="switchCompetitionTab('list-competitions')">📋 Liste des Compétitions</button>
+                            <button class="nav-tab" onclick="switchCompetitionTab('create-competition')" id="createCompTab">➕ Créer une Compétition</button>
+                            <button class="nav-tab" onclick="switchCompetitionTab('my-registrations')" id="myRegistrationsTab">📝 Mes Inscriptions</button>
+                            <button class="nav-tab" onclick="switchCompetitionTab('admin-competitions')" id="adminCompTab">⚙️ Administration</button>
+                        </div>
+                
+                        <!-- Onglet: Liste des compétitions (pour clubs) -->
+                        <div id="list-competitions" class="comp-tab-content active" style="display: block;">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">📋 Compétitions Disponibles</h3>
+                                    <button class="btn btn-primary" onclick="loadCompetitions()">🔄 Actualiser</button>
+                                </div>
+                                <div id="competitionsList" class="grid grid-2"></div>
+                            </div>
+                        </div>
+                
+                        <!-- Onglet: Créer une compétition (admin uniquement) -->
+                        <div id="create-competition" class="comp-tab-content" style="display: none;">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h3 class="card-title">➕ Créer une Nouvelle Compétition</h3>
+                                </div>
+                                <form id="createCompetitionForm">
+                                    <div class="grid grid-2">
+                                        <div class="form-group">
+                                            <label>🏆 Nom de la compétition *</label>
+                                            <input type="text" id="compName" class="form-control" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>📅 Date de la compétition *</label>
+                                            <input type="date" id="compDate" class="form-control" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-2">
+                                        <div class="form-group">
+                                            <label>📍 Lieu *</label>
+                                            <input type="text" id="compLocation" class="form-control" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>🏛️ Wilaya *</label>
+                                            <select id="compWilaya" class="form-control" required>
+                                                <!-- Les wilayas seront chargées dynamiquement -->
+                                            </select>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-2">
+                                        <div class="form-group">
+                                            <label>🔞 Année de naissance MAX (année) *</label>
+                                            <input type="number" id="compYearMax" class="form-control" 
+                                                   min="1900" max="2025" value="2025" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>👶 Année de naissance MIN (année) *</label>
+                                            <input type="number" id="compYearMin" class="form-control" 
+                                                   min="1900" max="2025" value="2000" required>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="grid grid-2">
+                                        <div class="form-group">
+                                            <label>⏰ Date limite d'inscription *</label>
+                                            <input type="datetime-local" id="compDeadline" class="form-control" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label>💰 Frais d'inscription (DA)</label>
+                                            <input type="number" id="compFee" class="form-control" value="0" min="0">
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>📝 Description</label>
+                                        <textarea id="compDescription" class="form-control" rows="3"></textarea>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-success">🏆 Créer la compétition</button>
+                                </form>
+                                <div id="compCreationMessage" style="margin-top: 15px;"></div>
+                            </div>
+                        </div>
+                
+                       <!-- Onglet: Mes inscriptions (club) -->
+                <div id="my-registrations" class="comp-tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">📝 Mes Inscriptions</h3>
+                            <button class="btn btn-primary" onclick="loadMyRegistrations()">🔄 Actualiser</button>
+                        </div>
+                        <div id="myRegistrationsContent" class="grid grid-2"></div>
+                    </div>
+                </div>
+                
+                <!-- Onglet: Administration (admin uniquement) -->
+                <div id="admin-competitions" class="comp-tab-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="card-title">⚙️ Administration des Compétitions</h3>
+                            <button class="btn btn-primary" onclick="loadAdminCompetitions()">🔄 Actualiser</button>
+                        </div>
+                        <div id="adminCompetitionsContent"></div>
+                        </div>
+                      </div>
+                    </div>
+                </div>
+                
+                <!-- Modal: Inscription à une compétition -->
+                <div id="registerModal" class="modal">
+                    <div class="modal-content" style="max-width: 800px; max-height: 90vh;">
+                        <div class="modal-header">
+                            <h2>📝 Inscription à la compétition</h2>
+                            <button class="modal-close" onclick="closeModal('registerModal')">&times;</button>
+                        </div>
+                        <div id="registerContent" style="overflow-y: auto; max-height: 70vh;">
+                            <!-- Le contenu sera chargé dynamiquement -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Modal: Gestion des inscriptions (admin) -->
+                <div id="manageRegistrationModal" class="modal">
+                    <div class="modal-content" style="max-width: 90%; max-height: 90vh;">
+                        <div class="modal-header">
+                            <h2>👥 Gestion des Inscriptions</h2>
+                            <button class="modal-close" onclick="closeModal('manageRegistrationModal')">&times;</button>
+                        </div>
+                        <div id="manageRegistrationContent" style="overflow-y: auto; max-height: 80vh;"></div>
+                    </div>
+                </div>
+                
+                <!-- Modal: Partager les poules (admin) -->
+                <div id="sharePoolsModal" class="modal">
+                    <div class="modal-content" style="max-width: 800px;">
+                        <div class="modal-header">
+                            <h2>📊 Partager les Poules</h2>
+                            <button class="modal-close" onclick="closeModal('sharePoolsModal')">&times;</button>
+                        </div>
+                        <div id="sharePoolsContent">
+                            <div class="form-group">
+                                <label>🏆 Compétition: <span id="poolsCompName"></span></label>
+                                <input type="hidden" id="poolsCompId">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>📷 Photos des poules (une par poule)</label>
+                                <div id="poolsPhotosContainer" style="border: 2px dashed var(--border-color); padding: 20px; border-radius: 10px; margin-bottom: 15px;">
+                                    <p style="text-align: center; color: var(--text-secondary);">
+                                        Déposez les photos des poules ici ou cliquez pour sélectionner
+                                    </p>
+                                    <input type="file" id="poolPhotos" multiple accept="image/*" 
+                                           onchange="handlePoolPhotos()" style="display: none;">
+                                    <button class="btn btn-secondary" onclick="document.getElementById('poolPhotos').click()">
+                                        📁 Sélectionner des photos
+                                    </button>
+                                </div>
+                                <div id="selectedPoolPhotos" style="display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px;"></div>
+                            </div>
+                            
+                            <button class="btn btn-success" onclick="uploadPoolPhotos()">📤 Publier les poules</button>
+                            <div id="poolsMessage" style="margin-top: 15px;"></div>
+                        </div>
+                    </div>
+
             </div>
-            
-            <button class="btn btn-success" onclick="uploadPoolPhotos()">📤 Publier les poules</button>
-            <div id="poolsMessage" style="margin-top: 15px;"></div>
-        </div>
+        </main>
     </div>
-</div>
 
 <!-- Modal: Voir les poules (clubs) -->
 <div id="viewPoolsModal" class="modal">
@@ -13161,7 +13308,33 @@ async function exportCardAsPNG(cardElement, fileName) {
     <script src="js/nfc-reader-service.js?v=20260830"></script>
     <script src="js/nfc-cards.js?v=20260830"></script>
     <script src="js/nfc-cards-ui.js?v=20260830"></script>
+    <script src="js/sidebar.js"></script>
     <script src="js/v2-bootstrap.js?v=20260824"></script>
     <script src="js/sessions-core.js?v=20260917"></script>
+
+    <!-- Alias de compatibilité pour le code existant -->
+    <script>
+        window.setSidebarActive = (id) => {
+            if (window.sidebar && typeof window.sidebar.showSection === 'function') {
+                let sectionId = id;
+                if (sectionId.startsWith('sb-')) {
+                    sectionId = sectionId.replace('sb-', '') + 'Section';
+                } else if (!sectionId.endsWith('Section')) {
+                    sectionId = sectionId + 'Section';
+                }
+                window.sidebar.showSection(sectionId);
+            }
+        };
+
+        window.addEventListener('hashchange', () => {
+            const hash = window.location.hash || '#dashboard';
+            const name = hash.replace('#', '');
+            let sectionId = name + 'Section';
+            if (!document.getElementById(sectionId)) sectionId = 'dashboardSection';
+            window.sidebar.showSection(sectionId);
+        });
+
+        window.setSidebarActive();
+    </script>
 </body>
 </html>

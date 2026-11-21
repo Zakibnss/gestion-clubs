@@ -296,21 +296,31 @@
     return out;
   }
 
+  /** Une ligne appartient au groupe par `group_id` OU par `group_type`. */
+  function belongsToGroup(row, candidates) {
+    if (!row) return false;
+    var id = row.group_id == null ? '' : String(row.group_id).trim().toLowerCase();
+    var type = row.group_type == null ? '' : String(row.group_type).trim().toLowerCase();
+    if (!id && !type) return false;
+    return (!!id && candidates.indexOf(id) !== -1) ||
+           (!!type && candidates.indexOf(type) !== -1);
+  }
+
   /** Filtre les créneaux récurrents appartenant au groupe de l'adhérent. */
   function matchingTrainingRows(rows, group, member) {
     var candidates = groupCandidates(group, member);
     return (rows || []).filter(function (row) {
-      if (!row) return false;
       // is_active est déjà filtré côté SQL ; on garde un garde-fou local.
-      if (row.is_active === false || row.is_active === 0) return false;
+      if (row && (row.is_active === false || row.is_active === 0)) return false;
+      return belongsToGroup(row, candidates);
+    });
+  }
 
-      if (Object.prototype.hasOwnProperty.call(row, 'group_id')) {
-        if (!row.group_id) return false;
-        return candidates.indexOf(String(row.group_id).trim().toLowerCase()) !== -1;
-      }
-
-      var type = row.group_type == null ? '' : String(row.group_type).trim().toLowerCase();
-      return !!type && candidates.indexOf(type) !== -1;
+  /** Filtre les séances ponctuelles appartenant au groupe de l'adhérent. */
+  function matchingSessionRows(rows, group, member) {
+    var candidates = groupCandidates(group, member);
+    return (rows || []).filter(function (row) {
+      return belongsToGroup(row, candidates);
     });
   }
 
@@ -393,11 +403,14 @@
     // select('*') + filtrage local : compatible avec les schémas où le
     // rattachement se fait par `group_id` ET ceux où il se fait par
     // `group_type` (aucune colonne absente référencée dans la requête).
+    // Pas de filtre SQL sur `club_id` : selon les bases cette colonne est
+    // absente ou différente de members.club_id ; c'est le groupe qui fait foi.
     var recurring = [];
     try {
-      var slotsQuery = client.from('training_sessions').select('*').eq('is_active', true);
-      if (member.club_id) slotsQuery = slotsQuery.eq('club_id', member.club_id);
-      var resSlots = await slotsQuery;
+      var resSlots = await client
+        .from('training_sessions')
+        .select('*')
+        .eq('is_active', true);
       if (resSlots.error) throw resSlots.error;
       recurring = matchingTrainingRows(resSlots.data || [], group, member);
     } catch (err) {
@@ -452,17 +465,19 @@
     }
 
     /* 4. Séances ponctuelles réelles (jamais générées) --------------- */
+    // Même logique que training_sessions : on ne filtre pas en SQL sur
+    // `group_id`, sinon les séances rattachées uniquement par `group_type`
+    // (libellé du groupe) disparaissent. Le filtrage local accepte les deux.
     var extras = [];
     try {
       var resExtra = await client
         .from('sessions')
-        .select('id, session_date, start_time, end_time, status, group_type')
-        .eq('group_id', member.current_group_id)
+        .select('id, session_date, start_time, end_time, status, group_id, group_type')
         .gte('session_date', today)
         .neq('status', 'cancelled')
         .order('session_date', { ascending: true })
         .order('start_time', { ascending: true });
-      if (!resExtra.error) extras = resExtra.data || [];
+      if (!resExtra.error) extras = matchingSessionRows(resExtra.data || [], group, member);
     } catch (err) {
       // Les séances ponctuelles sont optionnelles : un échec ne bloque pas le planning.
       console.warn('[next-sessions] sessions', err);
@@ -828,6 +843,7 @@
     normalizeTime: normalizeTime,
     groupCandidates: groupCandidates,
     matchingTrainingRows: matchingTrainingRows,
+    matchingSessionRows: matchingSessionRows,
     formatDayOfWeek: formatDayOfWeek,
     formatLongDateFr: formatLongDateFr,
     formatShortDateFr: formatShortDateFr,

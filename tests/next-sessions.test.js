@@ -159,15 +159,17 @@ test('getUpcomingSessions : planning vide mais séance ponctuelle existante', as
     training_sessions: [],
     sessions: [{
       id: 's1', session_date: '2026-11-21', start_time: '10:00:00',
-      end_time: '12:00:00', status: 'waiting', group_type: 'Stage'
+      end_time: '12:00:00', status: 'waiting', group_id: null, group_type: 'Adultes'
     }]
   });
-  const data = await api.getUpcomingSessions('KYO001', 10, { client });
+  // 23:00 le 20 nov. à Alger : la séance du 21 est bien dans le futur.
+  const now = new Date('2026-11-20T22:00:00Z');
+  const data = await api.getUpcomingSessions('KYO001', 10, { client, now });
   assert.equal(data.message, null);
   assert.equal(data.sessions.length, 1);
   assert.equal(data.sessions[0].type, 'extra');
   assert.equal(data.sessions[0].startTime, '10:00');
-  assert.equal(data.sessions[0].notes, 'Stage');
+  assert.equal(data.sessions[0].notes, 'Adultes');
 });
 
 /* ------------------------------------------------------------------------ */
@@ -208,6 +210,78 @@ test('matchingTrainingRows accepte group_id ou group_type selon le schéma', () 
   assert.deepEqual(H.matchingTrainingRows(rows, group, MEMBER).map(r => r.id), ['a', 'b']);
 });
 
+test('matchingSessionRows accepte group_id OU group_type (et refuse les autres groupes)', () => {
+  const group = { id: 'group-1', name: 'Adultes', is_active: true };
+  const rows = [
+    { id: 'a', group_id: 'group-1', group_type: null },
+    { id: 'b', group_id: null, group_type: 'adultes' },
+    { id: 'c', group_id: 'group-2', group_type: 'Adultes' },
+    { id: 'd', group_id: 'group-2', group_type: 'Tout' },
+    { id: 'e', group_id: null, group_type: null }
+  ];
+  assert.deepEqual(H.matchingSessionRows(rows, group, MEMBER).map(r => r.id), ['a', 'b', 'c']);
+});
+
+test('getUpcomingSessions : séance future rattachée par group_type uniquement', async () => {
+  const client = makeClient({
+    members: MEMBER,
+    training_sessions: [],
+    sessions: [{
+      id: 's-type', session_date: '2026-11-23', start_time: '14:00:00',
+      end_time: '16:00:00', status: 'waiting', group_id: null, group_type: 'Adultes'
+    }]
+  });
+  const data = await api.getUpcomingSessions('KYO001', 5, { client });
+
+  assert.equal(data.message, null);
+  assert.equal(data.sessions.length, 1);
+  assert.equal(data.sessions[0].id, 's-type');
+  assert.equal(data.sessions[0].type, 'extra');
+  assert.equal(data.sessions[0].date, '2026-11-23');
+
+  const sessionCall = client.calls.find(c => c.table === 'sessions');
+  assert.equal(sessionCall.filters.group_id, undefined); // pas de filtre SQL sur group_id
+  const slotCall = client.calls.find(c => c.table === 'training_sessions');
+  assert.equal(slotCall.filters.club_id, undefined);      // ni sur club_id
+});
+
+test('getUpcomingSessions : séance future rattachée par group_id uniquement', async () => {
+  const client = makeClient({
+    members: MEMBER,
+    training_sessions: [],
+    sessions: [{
+      id: 's-id', session_date: '2026-11-24', start_time: '18:00:00',
+      end_time: null, status: 'waiting', group_id: 'group-1', group_type: null
+    }]
+  });
+  const data = await api.getUpcomingSessions('KYO001', 5, { client });
+
+  assert.equal(data.sessions.length, 1);
+  assert.equal(data.sessions[0].id, 's-id');
+  assert.equal(data.sessions[0].startTime, '18:00');
+});
+
+test('getUpcomingSessions : séances des autres groupes ignorées', async () => {
+  const client = makeClient({
+    members: MEMBER,
+    training_sessions: [],
+    sessions: [
+      {
+        id: 's-other', session_date: '2026-11-23', start_time: '10:00:00',
+        end_time: null, status: 'waiting', group_id: 'group-2', group_type: 'Tout'
+      },
+      {
+        id: 's-past', session_date: '2026-09-26', start_time: '10:00:00',
+        end_time: null, status: 'waiting', group_id: 'group-1', group_type: null
+      }
+    ]
+  });
+  const data = await api.getUpcomingSessions('KYO001', 5, { client });
+
+  assert.deepEqual(data.sessions, []);
+  assert.equal(data.reason, 'no_slots');
+});
+
 test('getUpcomingSessions : séances ponctuelles triées et dédupliquées', async () => {
   const client = makeClient({
     members: MEMBER,
@@ -217,11 +291,11 @@ test('getUpcomingSessions : séances ponctuelles triées et dédupliquées', asy
     sessions: [
       {
         id: 's1', session_date: '2026-11-21', start_time: '10:00:00',
-        end_time: null, status: 'waiting', group_type: null
+        end_time: null, status: 'waiting', group_id: 'group-1', group_type: null
       },
       {
         id: 's2', session_date: '2026-11-22', start_time: '09:00:00',
-        end_time: null, status: 'waiting', group_type: null
+        end_time: null, status: 'waiting', group_id: null, group_type: 'Adultes'
       }
     ]
   });

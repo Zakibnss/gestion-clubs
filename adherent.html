@@ -7,329 +7,525 @@
     <link rel="icon" type="image/png" href="logo_site.png">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
+        /* ============================================================
+           Design professionnel — rouge / noir / doré
+           ============================================================ */
+        :root {
+            --red: #c8102e;
+            --red-dark: #8f0b20;
+            --red-soft: rgba(200, 16, 46, 0.16);
+            --gold: #ffd700;
+            --gold-soft: rgba(255, 215, 0, 0.13);
+            --gold-line: rgba(255, 215, 0, 0.28);
+
+            --bg: #0a0a0a;
+            --bg-2: #0f0f0f;
+            --surface: #141414;
+            --surface-2: #1b1b1b;
+            --surface-3: #232323;
+
+            --text: #f5f5f5;
+            --muted: #a3a3a3;
+            --border: rgba(255, 255, 255, 0.08);
+            --border-strong: rgba(255, 255, 255, 0.16);
+
+            --success: #34d399;
+            --danger: #ff4d5e;
+            --warning: #fbbf24;
+
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+            --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.35);
+            --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.5);
+
+            --radius: 18px;
+            --radius-sm: 12px;
+            --transition: 180ms ease;
+
+            --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+                'Helvetica Neue', Arial, 'Noto Kufi Arabic', 'Noto Sans Arabic',
+                sans-serif;
+
+            color-scheme: dark;
+        }
+
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        :root {
-            --primary-color: #c8102e;
-            --secondary-color: #1a1a1a;
-            --accent-color: #ffd700;
-            --success-color: #28a745;
-            --danger-color: #dc3545;
-            --warning-color: #ffc107;
-            --bg-primary: #ffffff;
-            --bg-secondary: #f8f9fa;
-            --bg-tertiary: #e9ecef;
-            --text-primary: #212529;
-            --text-secondary: #6c757d;
-            --border-color: #dee2e6;
-            --shadow-sm: 0 2px 4px rgba(0,0,0,0.1);
-            --shadow-md: 0 4px 8px rgba(0,0,0,0.15);
-            --shadow-lg: 0 8px 16px rgba(0,0,0,0.2);
-            --transition: all 0.3s ease;
+        ::selection {
+            background: rgba(255, 215, 0, 0.3);
+            color: #fff;
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
+            font-family: var(--font);
+            background:
+                radial-gradient(1100px 560px at 50% -12%, rgba(200, 16, 46, 0.20), transparent 62%),
+                radial-gradient(820px 420px at 100% 0%, rgba(255, 215, 0, 0.06), transparent 55%),
+                var(--bg);
+            background-attachment: fixed;
+            color: var(--text);
             line-height: 1.6;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
+            -webkit-font-smoothing: antialiased;
+            text-rendering: optimizeLegibility;
         }
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-            flex: 1;
-        }
-
-        /* Bouton langue */
-        .lang-toggle {
-            position: fixed;
-            top: 15px;
-            right: 15px;
-            z-index: 1000;
-            background: rgba(255,255,255,0.2);
-            border: 1px solid rgba(255,255,255,0.4);
-            color: white;
-            padding: 8px 18px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-size: 0.95rem;
-            font-weight: 600;
-            backdrop-filter: blur(5px);
-            transition: var(--transition);
-        }
-
-        .lang-toggle:hover {
-            background: rgba(255,255,255,0.35);
-            transform: scale(1.05);
-        }
-
-        /* Header Styles */
+        /* -------------------- Header -------------------- */
         .header {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            padding: 30px 0;
-            box-shadow: var(--shadow-md);
-            text-align: center;
-            margin-bottom: 30px;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: rgba(10, 10, 10, 0.82);
+            border-bottom: 1px solid var(--border);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+        }
+
+        .header-inner {
+            max-width: 980px;
+            margin: 0 auto;
+            padding: 13px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 13px;
+            min-width: 0;
         }
 
         .logo {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: white;
-            padding: 10px;
-            margin: 0 auto 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
+            flex: 0 0 auto;
+            width: 46px;
+            height: 46px;
+            border-radius: 13px;
+            display: grid;
+            place-items: center;
+            font-size: 1.35rem;
+            background: linear-gradient(135deg, var(--red), var(--red-dark));
+            box-shadow:
+                inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+                0 6px 18px rgba(200, 16, 46, 0.35);
+        }
+
+        .header-title {
+            min-width: 0;
         }
 
         .header-title h1 {
-            font-size: 2.2rem;
+            font-size: 1.05rem;
             font-weight: 700;
-            margin-bottom: 10px;
+            letter-spacing: 0.01em;
+            line-height: 1.25;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .header-title p {
-            font-size: 1.1rem;
-            opacity: 0.9;
+            font-size: 0.78rem;
+            color: var(--muted);
+            line-height: 1.3;
         }
 
-        /* Member Card */
+        /* -------------------- Sélecteur FR / AR -------------------- */
+        .lang-switch {
+            flex: 0 0 auto;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .lang-btn {
+            appearance: none;
+            -webkit-appearance: none;
+            border: 0;
+            background: transparent;
+            color: var(--muted);
+            font: inherit;
+            font-size: 0.76rem;
+            font-weight: 700;
+            letter-spacing: 0.07em;
+            padding: 7px 15px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition:
+                background var(--transition),
+                color var(--transition),
+                box-shadow var(--transition);
+        }
+
+        .lang-btn:hover {
+            color: var(--text);
+        }
+
+        .lang-btn.is-active {
+            background: linear-gradient(135deg, var(--red), var(--red-dark));
+            color: #fff;
+            box-shadow: 0 4px 14px rgba(200, 16, 46, 0.42);
+        }
+
+        .lang-btn:focus-visible {
+            outline: 2px solid var(--gold);
+            outline-offset: 2px;
+        }
+
+        /* -------------------- Layout -------------------- */
+        .container {
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 28px 20px 40px;
+            flex: 1;
+        }
+
+        /* -------------------- Carte adhérent -------------------- */
         .member-card {
-            background: var(--bg-primary);
-            border-radius: 20px;
+            background: linear-gradient(180deg, var(--surface), var(--bg-2));
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
             box-shadow: var(--shadow-lg);
             overflow: hidden;
-            margin-bottom: 30px;
-            transition: var(--transition);
+            margin-bottom: 28px;
         }
 
         .member-header {
-            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            padding: 25px;
-            text-align: center;
             position: relative;
+            padding: 34px 24px 28px;
+            text-align: center;
+            background:
+                radial-gradient(560px 210px at 50% 0%, rgba(200, 16, 46, 0.36), transparent 72%);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .member-header::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+            opacity: 0.55;
         }
 
         .member-photo-container {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
         }
 
         .member-photo {
-            width: 150px;
-            height: 150px;
+            width: 128px;
+            height: 128px;
             border-radius: 50%;
             object-fit: cover;
-            border: 5px solid rgba(255,255,255,0.3);
             margin: 0 auto;
             display: block;
-            background: var(--bg-tertiary);
+            background: var(--surface-3);
+            border: 3px solid rgba(255, 215, 0, 0.85);
+            box-shadow:
+                0 0 0 6px rgba(255, 215, 0, 0.08),
+                0 14px 34px rgba(0, 0, 0, 0.55);
         }
 
         .member-name {
-            font-size: 1.8rem;
-            font-weight: 700;
-            margin-bottom: 5px;
+            font-size: 1.62rem;
+            font-weight: 750;
+            letter-spacing: -0.01em;
+            line-height: 1.2;
         }
 
         .member-id {
-            font-size: 1.1rem;
-            opacity: 0.9;
-            font-weight: 500;
+            display: inline-block;
+            margin-top: 9px;
+            padding: 4px 13px;
+            font-size: 0.72rem;
+            font-weight: 700;
+            letter-spacing: 0.09em;
+            text-transform: uppercase;
+            color: var(--gold);
+            background: var(--gold-soft);
+            border: 1px solid var(--gold-line);
+            border-radius: 999px;
         }
 
         .member-content {
-            padding: 30px;
+            padding: 26px;
         }
 
         .info-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
+            grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+            gap: 18px;
         }
 
+        /* -------------------- Sections d'information -------------------- */
         .info-section {
-            margin-bottom: 25px;
+            background: var(--surface-2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 18px 18px 8px;
+            margin-bottom: 18px;
         }
 
         .info-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            color: var(--primary-color);
-            margin-bottom: 15px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: var(--gold);
+            margin-bottom: 12px;
+            padding-bottom: 11px;
+            border-bottom: 1px solid var(--border);
         }
 
         .info-row {
             display: flex;
+            align-items: baseline;
             justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border-color);
+            gap: 18px;
+            padding: 11px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .info-row:last-child {
+            border-bottom: 0;
         }
 
         .info-label {
-            font-weight: 600;
-            color: var(--text-primary);
+            color: var(--muted);
+            font-weight: 500;
+            font-size: 0.85rem;
         }
 
         .info-value {
-            color: var(--text-secondary);
+            color: var(--text);
+            font-weight: 600;
+            font-size: 0.9rem;
             text-align: right;
+            overflow-wrap: anywhere;
         }
 
-        /* Mois non payés */
+        /* -------------------- Mois non payés -------------------- */
         .months-list {
             display: flex;
             flex-wrap: wrap;
-            gap: 8px;
+            gap: 7px;
             justify-content: flex-end;
         }
 
         .month-chip {
             padding: 4px 12px;
-            border-radius: 15px;
-            font-size: 0.85rem;
+            border-radius: 999px;
+            font-size: 0.78rem;
             font-weight: 600;
-            background: rgba(220, 53, 69, 0.12);
-            color: var(--danger-color);
-            border: 1px solid rgba(220, 53, 69, 0.4);
+            background: rgba(255, 77, 94, 0.12);
+            color: var(--danger);
+            border: 1px solid rgba(255, 77, 94, 0.32);
+            white-space: nowrap;
         }
 
         .month-chip.ok {
-            background: rgba(40, 167, 69, 0.12);
-            color: var(--success-color);
-            border-color: rgba(40, 167, 69, 0.4);
+            background: rgba(52, 211, 153, 0.12);
+            color: var(--success);
+            border-color: rgba(52, 211, 153, 0.32);
         }
 
         .count-badge {
             display: inline-block;
-            min-width: 32px;
-            text-align: center;
+            min-width: 30px;
             padding: 2px 10px;
-            border-radius: 12px;
-            background: var(--danger-color);
-            color: white;
+            border-radius: 999px;
+            background: var(--red);
+            color: #fff;
+            font-size: 0.78rem;
             font-weight: 700;
+            text-align: center;
         }
 
         .count-badge.zero {
-            background: var(--success-color);
+            background: var(--success);
+            color: #06281c;
         }
 
-        /* Stats présence */
+        /* -------------------- Statistiques de présence -------------------- */
         .attendance-stats {
-            display: flex;
-            gap: 15px;
-            justify-content: space-around;
-            flex-wrap: wrap;
-            margin-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin: 4px 0 12px;
         }
 
         .stat-box {
-            flex: 1;
-            min-width: 120px;
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 15px 10px;
+            background: linear-gradient(180deg, var(--surface-3), var(--surface-2));
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 16px 12px;
             text-align: center;
+            min-width: 0;
         }
 
         .stat-number {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-color);
+            font-size: 1.75rem;
+            font-weight: 800;
+            line-height: 1.1;
+            color: var(--gold);
         }
 
         .stat-label {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
+            margin-top: 4px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            letter-spacing: 0.07em;
+            text-transform: uppercase;
+            color: var(--muted);
         }
 
-        /* Subscription Status */
+        .session-chip {
+            flex: 0 1 168px;
+            min-width: 150px;
+        }
+
+        .session-chip .stat-number {
+            font-size: 1.05rem;
+        }
+
+        .session-chip--extra {
+            border-color: var(--gold-line);
+            background: linear-gradient(180deg, rgba(255, 215, 0, 0.1), var(--surface-2));
+        }
+
+        .session-kind {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 2px 9px;
+            border-radius: 999px;
+            font-size: 0.64rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            color: var(--muted);
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--border);
+        }
+
+        .session-chip--extra .session-kind {
+            color: var(--gold);
+            background: var(--gold-soft);
+            border-color: var(--gold-line);
+        }
+
+        /* -------------------- Statut d'abonnement -------------------- */
         .subscription-status {
             display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 600;
+            padding: 5px 14px;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            border: 1px solid transparent;
         }
 
         .status-active {
-            background: rgba(40, 167, 69, 0.2);
-            color: var(--success-color);
-            border: 1px solid var(--success-color);
+            background: rgba(52, 211, 153, 0.14);
+            color: var(--success);
+            border-color: rgba(52, 211, 153, 0.4);
         }
 
         .status-expired {
-            background: rgba(220, 53, 69, 0.2);
-            color: var(--danger-color);
-            border: 1px solid var(--danger-color);
+            background: rgba(255, 77, 94, 0.14);
+            color: var(--danger);
+            border-color: rgba(255, 77, 94, 0.4);
         }
 
         .status-warning {
-            background: rgba(255, 193, 7, 0.2);
-            color: var(--warning-color);
-            border: 1px solid var(--warning-color);
+            background: rgba(251, 191, 36, 0.14);
+            color: var(--warning);
+            border-color: rgba(251, 191, 36, 0.4);
         }
 
-        /* Alert Messages */
+        /* -------------------- Alertes -------------------- */
         .alert {
-            padding: 15px 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
             display: flex;
             align-items: center;
             gap: 10px;
+            padding: 14px 16px;
+            border-radius: var(--radius-sm);
+            margin-top: 6px;
+            font-size: 0.88rem;
         }
 
         .alert-warning {
-            background: rgba(255, 193, 7, 0.1);
-            border: 1px solid var(--warning-color);
-            color: var(--warning-color);
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.35);
+            border-left: 3px solid var(--warning);
+            color: var(--warning);
         }
 
-        /* Footer */
+        .alert strong {
+            color: inherit;
+        }
+
+        /* -------------------- Footer -------------------- */
         .footer {
-            background: var(--secondary-color);
-            color: white;
+            border-top: 1px solid var(--border);
+            background: rgba(10, 10, 10, 0.6);
+            color: var(--muted);
             text-align: center;
-            padding: 20px 0;
+            padding: 22px 16px;
             margin-top: auto;
+            font-size: 0.82rem;
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-            .container {
-                padding: 15px;
-            }
+        .footer p + p {
+            margin-top: 5px;
+            font-size: 0.76rem;
+            opacity: 0.85;
+        }
 
-            .header-title h1 {
-                font-size: 1.8rem;
-            }
+        /* -------------------- Chargement / erreur -------------------- */
+        .spinner {
+            width: 42px;
+            height: 42px;
+            margin: 44px auto;
+            border: 3px solid var(--border-strong);
+            border-top-color: var(--gold);
+            border-radius: 50%;
+            animation: spin 0.9s linear infinite;
+        }
 
-            .info-grid {
-                grid-template-columns: 1fr;
-            }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
 
-            .member-photo {
-                width: 120px;
-                height: 120px;
-            }
+        #loadingState p,
+        #errorState p {
+            color: var(--muted);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        /* -------------------- RTL (arabe) -------------------- */
+        [dir="rtl"] .header-title,
+        [dir="rtl"] .brand {
+            text-align: right;
         }
 
         [dir="rtl"] .info-value {
@@ -340,37 +536,136 @@
             justify-content: flex-start;
         }
 
-        /* Loading Spinner */
-        .spinner {
-            border: 4px solid var(--border-color);
-            border-top: 4px solid var(--primary-color);
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 40px auto;
+        [dir="rtl"] .alert-warning {
+            border-left: 1px solid rgba(251, 191, 36, 0.35);
+            border-right: 3px solid var(--warning);
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        /* -------------------- Responsive -------------------- */
+        @media (max-width: 640px) {
+            .header-inner {
+                padding: 11px 14px;
+                gap: 10px;
+            }
+
+            .logo {
+                width: 40px;
+                height: 40px;
+                border-radius: 11px;
+                font-size: 1.15rem;
+            }
+
+            .header-title h1 {
+                font-size: 0.92rem;
+            }
+
+            .header-title p {
+                font-size: 0.7rem;
+            }
+
+            .lang-btn {
+                padding: 6px 11px;
+                font-size: 0.7rem;
+            }
+
+            .container {
+                padding: 18px 12px 32px;
+            }
+
+            .member-header {
+                padding: 28px 16px 24px;
+            }
+
+            .member-photo {
+                width: 106px;
+                height: 106px;
+            }
+
+            .member-name {
+                font-size: 1.3rem;
+            }
+
+            .member-content {
+                padding: 16px;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            .info-section {
+                padding: 15px 14px 6px;
+                margin-bottom: 14px;
+            }
+
+            .info-row {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 2px;
+            }
+
+            .info-value,
+            [dir="rtl"] .info-value {
+                text-align: left;
+                font-size: 0.92rem;
+            }
+
+            .months-list,
+            [dir="rtl"] .months-list {
+                justify-content: flex-start;
+            }
+
+            .attendance-stats {
+                gap: 8px;
+            }
+
+            .stat-box {
+                padding: 13px 8px;
+            }
+
+            .stat-number {
+                font-size: 1.4rem;
+            }
+
+            .stat-label {
+                font-size: 0.62rem;
+            }
         }
 
-        .hidden {
-            display: none !important;
+        @media (prefers-reduced-motion: reduce) {
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.001ms !important;
+                transition-duration: 0.001ms !important;
+            }
+
+            .spinner {
+                animation: none;
+            }
         }
     </style>
 </head>
 <body>
     <!-- Header -->
-    <div class="header">
-        <button id="langToggle" class="lang-toggle" onclick="toggleLang()">🌐 العربية</button>
-        <div class="logo">🥋</div>
-        <div class="header-title">
-            <h1>Kyokushin Karaté Club</h1>
-            <p data-i18n="subtitle">Informations de l'adhérent</p>
+    <header class="header">
+        <div class="header-inner">
+            <div class="brand">
+                <div class="logo" aria-hidden="true">🥋</div>
+                <div class="header-title">
+                    <h1 data-i18n="clubName">Kyokushin Karaté Club</h1>
+                    <p data-i18n="subtitle">Informations de l'adhérent</p>
+                </div>
+            </div>
+            <div class="lang-switch" role="group" aria-label="Langue / اللغة">
+                <button type="button" class="lang-btn is-active" data-lang="fr"
+                        aria-pressed="true" lang="fr">FR</button>
+                <button type="button" class="lang-btn" data-lang="ar"
+                        aria-pressed="false" lang="ar">AR</button>
+            </div>
         </div>
-    </div>
+    </header>
 
     <div class="container">
         <!-- Member Information Card -->
@@ -475,7 +770,7 @@
 
                 <!-- Alert for expiring subscription -->
                 <div id="subscriptionAlert" class="alert alert-warning hidden">
-                    ⚠️ <strong data-i18n="expiringSoon">Attention:</strong>&nbsp;<span data-i18n="expiringSoonMsg">L'abonnement expire bientôt!</span>
+                    ⚠️ <strong data-i18n="alertTitle">Attention:</strong>&nbsp;<span data-i18n="alertMsg">L'abonnement expire bientôt!</span>
                 </div>
             </div>
         </div>
@@ -511,6 +806,8 @@
 
     <!-- Socle commun de calcul des abonnements (fin effective depuis les mois payés) -->
     <script src="js/subscription-core.js?v=20261103"></script>
+    <!-- Génération des prochaines séances (planning + extras - annulations) -->
+    <script src="js/next-sessions.js?v=20261120"></script>
 
     <script>
         // Configuration Supabase
@@ -522,11 +819,13 @@
         // ============================
         // INTERNATIONALISATION FR / AR
         // ============================
-        let currentLang = localStorage.getItem('adherent_lang') || 'fr';
+        let currentLang = localStorage.getItem('adherent_lang') === 'ar' ? 'ar' : 'fr';
 
         const I18N = {
             fr: {
+                clubName: "Kyokushin Karaté Club",
                 subtitle: "Informations de l'adhérent",
+                memberId: "ID :",
                 personalInfo: "📋 Informations personnelles",
                 fullName: "Nom complet:",
                 birthDate: "Date de naissance:",
@@ -556,6 +855,8 @@
                 nextSessions: "🗓️ Prochaines séances",
                 noSession: "Aucune séance planifiée",
                 noGroup: "Aucun groupe assigné",
+                training: "Entraînement",
+                extraSession: "Séance supplémentaire",
                 monthly: "Mensuel", quarterly: "Trimestriel", biannual: "Semestriel", annual: "Annuel",
                 loading: "Chargement des informations de l'adhérent...",
                 notFound: "Adhérent non trouvé",
@@ -564,11 +865,12 @@
                 footerNote: "Cette page affiche les informations d'un adhérent via scan de QR code",
                 alertTitle: "Attention:",
                 alertMsg: "L'abonnement expire bientôt!",
-                switchBtn: "🌐 العربية",
                 locale: "fr-FR"
             },
             ar: {
+                clubName: "نادي كيوكوشين كاراتيه",
                 subtitle: "معلومات العضو",
+                memberId: "المعرف:",
                 personalInfo: "📋 المعلومات الشخصية",
                 fullName: "الاسم الكامل:",
                 birthDate: "تاريخ الميلاد:",
@@ -598,6 +900,8 @@
                 nextSessions: "🗓️ الحصص القادمة",
                 noSession: "لا توجد حصص مبرمجة",
                 noGroup: "لا توجد مجموعة مسندة",
+                training: "حصة تدريبية",
+                extraSession: "حصة إضافية",
                 monthly: "شهري", quarterly: "ثلاثي", biannual: "نصف سنوي", annual: "سنوي",
                 loading: "جارٍ تحميل معلومات العضو...",
                 notFound: "لم يتم العثور على العضو",
@@ -606,7 +910,6 @@
                 footerNote: "هذه الصفحة تعرض معلومات العضو عبر مسح رمز QR",
                 alertTitle: "تنبيه:",
                 alertMsg: "سينتهي الاشتراك قريباً!",
-                switchBtn: "🌐 Français",
                 locale: "ar-DZ"
             }
         };
@@ -614,19 +917,37 @@
         function t(key) { return I18N[currentLang][key] || I18N.fr[key] || key; }
 
         function applyStaticTranslations() {
-            document.documentElement.lang = currentLang;
-            document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+            const lang = currentLang;
+            document.documentElement.lang = lang;
+            document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 el.textContent = t(el.dataset.i18n);
             });
-            document.getElementById('langToggle').textContent = t('switchBtn');
+
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                const active = btn.dataset.lang === lang;
+                btn.classList.toggle('is-active', active);
+                btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+            });
         }
 
-        function toggleLang() {
-            currentLang = currentLang === 'fr' ? 'ar' : 'fr';
-            localStorage.setItem('adherent_lang', currentLang);
+        function setLang(lang) {
+            if (lang !== 'fr' && lang !== 'ar') return;
+            if (lang === currentLang) return;
+
+            currentLang = lang;
+            localStorage.setItem('adherent_lang', lang);
             applyStaticTranslations();
-            if (window._memberRenderData) renderMember(window._memberRenderData);
+
+            if (window._memberRenderData) {
+                renderMember(window._memberRenderData);
+            }
+        }
+
+        // Conservé pour compatibilité (ancien bouton unique)
+        function toggleLang() {
+            setLang(currentLang === 'fr' ? 'ar' : 'fr');
         }
 
         // Fonction pour calculer la date de fin d'abonnement
@@ -866,7 +1187,10 @@
                     else results.attPrevMonths++;
                 });
 
-                // Prochaines séances du groupe de l'adhérent
+                // Prochaines séances du groupe de l'adhérent (futures uniquement).
+                // Planning récurrent : training_sessions. Séances ponctuelles réelles :
+                // table `sessions`, rattachée par group_id OU group_type du groupe.
+                // On réutilise le module testé de member-info.html.
                 results.nextSessions = [];
                 results.groupId = null;
                 let groupId = member.current_group_id;
@@ -880,20 +1204,39 @@
                     groupId = gm?.[0]?.group_id;
                 }
                 results.groupId = groupId || null;
+
                 if (groupId) {
-                    const { data: upcoming } = await supabase
-                        .from('sessions')
-                        .select('session_date, start_time')
-                        .eq('group_id', groupId)
-                        .gte('session_date', nowMonth + '-01')
-                        .neq('status', 'cancelled')
-                        .order('session_date', { ascending: true })
-                        .limit(8);
-                    // Ne garder que les séances à venir (>= aujourd'hui)
-                    const today = new Date().toISOString().slice(0, 10);
-                    results.nextSessions = (upcoming || [])
-                        .filter(s => s.session_date >= today)
-                        .slice(0, 5);
+                    if (typeof UpcomingSessions !== 'undefined' &&
+                        typeof UpcomingSessions.getUpcomingSessionsData === 'function') {
+                        const planned = await UpcomingSessions.getUpcomingSessionsData(
+                            memberId, 5, { client: supabase }
+                        );
+
+                        results.groupId =
+                            (planned.groups && planned.groups[0] && planned.groups[0].id) ||
+                            results.groupId;
+
+                        results.nextSessions = (planned.sessions || []).map(s => ({
+                            session_date: s.date,
+                            start_time: s.startTime,
+                            label: s.label,
+                            kind: s.kind
+                        }));
+                    } else {
+                        // Repli : uniquement les séances explicitement enregistrées
+                        const { data: upcoming } = await supabase
+                            .from('sessions')
+                            .select('session_date, start_time')
+                            .eq('group_id', groupId)
+                            .gte('session_date', nowMonth + '-01')
+                            .neq('status', 'cancelled')
+                            .order('session_date', { ascending: true })
+                            .limit(8);
+                        const today = new Date().toISOString().slice(0, 10);
+                        results.nextSessions = (upcoming || [])
+                            .filter(s => s.session_date >= today)
+                            .slice(0, 5);
+                    }
                 }
             } catch (err) {
                 console.error('Erreur données supplémentaires:', err);
@@ -917,7 +1260,7 @@
             // Identité
             document.getElementById('memberFullName').textContent = `${member.last_name} ${member.first_name}`;
             document.getElementById('memberFullNameDetail').textContent = `${member.last_name} ${member.first_name}`;
-            document.getElementById('memberIdDisplay').textContent = `ID: ${member.id}`;
+            document.getElementById('memberIdDisplay').textContent = `${t('memberId')} ${member.id}`;
             document.getElementById('memberDob').textContent = formatDate(member.dob);
             document.getElementById('memberAge').textContent = `${age} ${t('years')}`;
             document.getElementById('memberBloodType').textContent = member.blood_type || t('notProvided');
@@ -966,16 +1309,17 @@
                 nsList.innerHTML = `<span style="color:var(--text-secondary)">${t('noSession')}</span>`;
             } else {
                 nsList.innerHTML = extra.nextSessions.map(s => `
-                    <div class="stat-box" style="min-width:150px;flex:0 1 auto;">
-                        <div class="stat-number" style="font-size:1.1rem;">${formatSessionDate(s.session_date)}</div>
+                    <div class="stat-box session-chip${s.kind === 'extra' ? ' session-chip--extra' : ''}">
+                        <div class="stat-number">${formatSessionDate(s.session_date)}</div>
                         <div class="stat-label">🕒 ${(s.start_time || '').slice(0, 5)}</div>
+                        <span class="session-kind">${t(s.kind === 'extra' ? 'extraSession' : 'training')}</span>
                     </div>`).join('');
             }
 
             // Alerte expiration proche
             if (daysLeft <= 7 && daysLeft >= 0) {
                 document.querySelector('#subscriptionAlert strong').textContent = t('alertTitle');
-                document.querySelector('#subscriptionAlert span[data-i18n="expiringSoonMsg"]').textContent = t('alertMsg');
+                document.querySelector('#subscriptionAlert span[data-i18n="alertMsg"]').textContent = t('alertMsg');
                 document.getElementById('subscriptionAlert').classList.remove('hidden');
             } else {
                 document.getElementById('subscriptionAlert').classList.add('hidden');
@@ -1018,6 +1362,10 @@
 
         // Initialisation au chargement de la page
         document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.addEventListener('click', () => setLang(btn.dataset.lang));
+            });
+
             applyStaticTranslations();
 
             const memberId = getMemberIdFromURL();
