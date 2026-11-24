@@ -177,12 +177,30 @@ function findGroupCache(id) {
     return v2GroupsCache.find(g => g.id === id);
 }
 
+// Les colonnes de pause n'existent que si la migration 016 a été appliquée.
+// loadGroups() lit `groups` avec select('*') : la présence des deux clés dans
+// une ligne cache suffit à savoir si le schéma les prend en charge.
+function groupsSupportPause() {
+    const sample = v2GroupsCache && v2GroupsCache[0];
+    return !!(sample &&
+        Object.prototype.hasOwnProperty.call(sample, 'pause_start_date') &&
+        Object.prototype.hasOwnProperty.call(sample, 'pause_end_date'));
+}
+
 async function openGroupModal(groupId) {
     const modal = document.getElementById('groupModal');
     const form = document.getElementById('groupForm');
     form.reset();
     document.getElementById('groupId').value = groupId || '';
     document.getElementById('groupModalTitle').textContent = groupId ? '✏️ Modifier le groupe' : '➕ Nouveau groupe';
+
+    const supportsPause = groupsSupportPause();
+    const pauseFields = document.getElementById('groupPauseFields');
+    if (pauseFields) pauseFields.style.display = supportsPause ? '' : 'none';
+    if (!supportsPause) {
+        document.getElementById('groupPauseStart').value = '';
+        document.getElementById('groupPauseEnd').value = '';
+    }
 
     if (groupId) {
         const card = findGroupCache(groupId);
@@ -226,9 +244,10 @@ async function handleGroupSubmit(e) {
         if (cb.checked && tm.value) schedule[d.key] = tm.value;
     });
 
-    const pauseStart = document.getElementById('groupPauseStart').value || null;
-    const pauseEnd = document.getElementById('groupPauseEnd').value || null;
-    if (pauseStart && pauseEnd && pauseStart > pauseEnd) {
+    const supportsPause = groupsSupportPause();
+    const pauseStart = supportsPause ? (document.getElementById('groupPauseStart').value || null) : null;
+    const pauseEnd = supportsPause ? (document.getElementById('groupPauseEnd').value || null) : null;
+    if (supportsPause && pauseStart && pauseEnd && pauseStart > pauseEnd) {
         showMessage('groupMessage', 'La fin de pause doit être après son début.', 'danger');
         return;
     }
@@ -241,10 +260,14 @@ async function handleGroupSubmit(e) {
         start_date: document.getElementById('groupStartDate').value || null,
         end_date: document.getElementById('groupEndDate').value || null,
         planned_sessions_count: parseInt(document.getElementById('groupPlannedCount').value, 10) || null,
-        pause_start_date: pauseStart,
-        pause_end_date: pauseEnd,
         schedule
     };
+    // Ne jamais envoyer une colonne absente du schéma live : PostgREST
+    // refuserait toute l'écriture avec « Could not find ... in schema cache ».
+    if (supportsPause) {
+        payload.pause_start_date = pauseStart;
+        payload.pause_end_date = pauseEnd;
+    }
 
     const id = document.getElementById('groupId').value;
     try {
